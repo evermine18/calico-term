@@ -72,9 +72,3 @@ const TerminalComponent: React.FC<TerminalProps> = ({ onData }) => {
 };
 
 export default TerminalComponent;
-  return (
-    <div ref={containerRef} className="terminal-container h-full w-full" />
-  );
-};
-
-export default TerminalComponent;
