@@ -18,7 +18,7 @@ const TerminalComponent: React.FC<TerminalProps> = ({ onData }) => {
 
     const terminal = new Terminal({
       cursorBlink: true,
-      convertEOL: true,
+      convertEOL: false,
       theme: { background: "#1e1e1e", foreground: "#ffffff" },
     });
 
@@ -32,7 +32,7 @@ const TerminalComponent: React.FC<TerminalProps> = ({ onData }) => {
     };
 
     const handleOutput = (_: unknown, data: string) => {
-      terminal.write(data.replace(/\n/g, "\r\n"));
+      terminal.write(data);
     };
 
     terminal.onData(handleInput);
