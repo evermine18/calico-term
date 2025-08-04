@@ -70,7 +70,5 @@ body {
 
 .drag-region {
   -webkit-app-region: drag;
-
-  background-color: #ccc;
   cursor: move;
 }

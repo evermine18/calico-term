@@ -62,6 +62,10 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
   setupTerminal();
+  ipcMain.on("app-close", () => {
+    closeTerminal();
+    app.quit();
+  });
 });
 
 // Quit when all windows are closed, except on macOS. There, it's common

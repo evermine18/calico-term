@@ -1,11 +1,12 @@
 import { Terminal } from "@xterm/xterm";
-import TerminalComponent from "./components/terminal";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { TerminalTab } from "./components/terminal-tab";
+import { Check, Pencil } from "lucide-react";
 
 type TerminalTab = {
   id: string;
   title: string;
+  mode: "normal" | "edit";
   terminal: Terminal;
 };
 
@@ -14,22 +15,26 @@ function App(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Create the first terminal on load
-  useEffect(() => {
-    if (tabs.length === 0) {
-      addTab();
-    }
-  }, []);
-
   const addTab = () => {
     const id = crypto.randomUUID();
-    const newTab = {
+    const newTab: TerminalTab = {
       id,
       title: `Terminal ${tabs.length + 1}`,
-      terminal: new Terminal(), // Assuming you need to create the instance
+      mode: "normal",
+      terminal: new Terminal(),
     };
     setTabs((prev) => [...prev, newTab]);
     setActiveTab(id);
+  };
+
+  const updateTabTitle = (id: string, title: string) => {
+    setTabs((prev) =>
+      prev.map((tab) => (tab.id === id ? { ...tab, title } : tab))
+    );
+  };
+
+  const closeApp = () => {
+    window.electron?.ipcRenderer.send("app-close");
   };
 
   const closeTab = (id: string) => {
@@ -58,6 +63,7 @@ function App(): React.JSX.Element {
       const newTab = {
         id,
         title: `${tab.title} (Copy)`,
+        mode: tab.mode,
         terminal: new Terminal(),
       };
       setTabs((prev) => [...prev, newTab]);
@@ -73,32 +79,42 @@ function App(): React.JSX.Element {
     >
       {/* Header with window controls */}
       <div className="bg-gray-900/95 backdrop-blur-xl border-b border-gray-700/30 px-4 py-1 flex items-center justify-between shadow-2xl">
-        <div className="drag-region flex w-full items-center gap-3">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-400 transition-colors cursor-pointer shadow-sm"></div>
-              <div className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-400 transition-colors cursor-pointer shadow-sm"></div>
-              <div
-                className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-400 transition-colors cursor-pointer shadow-sm"
-                onClick={toggleFullscreen}
-              ></div>
-            </div>
-            <div className="flex items-center gap-2 text-gray-400 text-sm">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path
-                  fillRule="evenodd"
-                  d="M3 4a1 1 0 011-1h12a1 1 0 011 1v1a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 8a1 1 0 011-1h12a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1V8z"
-                  clipRule="evenodd"
-                ></path>
-              </svg>
-              <span className="font-mono">Calico Term</span>
-            </div>
+        <div className="flex items-center gap-2 w-full">
+          <div className="flex items-center gap-2 ">
+            <div
+              className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-400 transition-colors cursor-pointer shadow-sm"
+              onClick={closeApp}
+            ></div>
+            <div className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-400 transition-colors cursor-pointer shadow-sm"></div>
+            <div
+              className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-400 transition-colors cursor-pointer shadow-sm"
+              onClick={toggleFullscreen}
+            ></div>
           </div>
 
-          <div className="flex items-center gap-2 text-gray-400 text-xs">
-            <span className="px-2 py-1 bg-gray-800/50 rounded border border-gray-700/50 font-mono">
-              {tabs.length} tab{tabs.length !== 1 ? "s" : ""}
-            </span>
+          <div className="drag-region flex w-full items-center gap-2 left-0 right-0">
+            <div className="flex items-center gap-3">
+              <div className=" flex items-center gap-2 text-gray-400 text-sm">
+                <svg
+                  className="w-4 h-4"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M3 4a1 1 0 011-1h12a1 1 0 011 1v1a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 8a1 1 0 011-1h12a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1V8z"
+                    clipRule="evenodd"
+                  ></path>
+                </svg>
+                <span className="font-mono">Calico Term</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 text-gray-400 text-xs">
+              <span className="px-2 py-1 bg-gray-800/50 rounded border border-gray-700/50 font-mono">
+                {tabs.length} tab{tabs.length !== 1 ? "s" : ""}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -106,7 +122,7 @@ function App(): React.JSX.Element {
       {/* Tabs Header */}
       <div className="bg-gray-900/95 backdrop-blur-md border-b border-gray-700/30 px-4 py-2 flex items-center gap-1 shadow-xl overflow-hidden">
         <div className="flex items-center gap-1 flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
-          {tabs.map((tab, index) => (
+          {tabs.map((tab) => (
             <div
               key={tab.id}
               className={`
@@ -136,47 +152,64 @@ function App(): React.JSX.Element {
               ></div>
 
               {/* Tab title */}
-              <span className="truncate flex-1 select-none">{tab.title}</span>
-
-              {/* Action buttons */}
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                {/* Duplicate button */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    duplicateTab(tab.id);
-                  }}
-                  className="w-5 h-5 rounded flex items-center justify-center text-gray-400 
-                           hover:text-blue-400 hover:bg-blue-500/20 transition-all duration-150
-                           active:scale-90"
-                  title="Duplicate tab"
-                >
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+              {tab.mode === "edit" ? (
+                <>
+                  <span
+                    id={`tab-title-measure-${tab.id}`}
+                    style={{
+                      position: "absolute",
+                      visibility: "hidden",
+                      whiteSpace: "pre",
+                      fontSize: "1rem",
+                      fontFamily: "inherit",
+                      fontWeight: "500",
+                      padding: "0",
+                    }}
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                    />
-                  </svg>
-                </button>
-
-                {/* Close button */}
-                {tabs.length > 1 && (
+                    {tab.title || " "}
+                  </span>
+                  <input
+                    value={tab.title}
+                    onChange={(e) => updateTabTitle(tab.id, e.target.value)}
+                    style={{
+                      width: `calc(${document.getElementById(`tab-title-measure-${tab.id}`)?.offsetWidth || 50}px + 1ch)`,
+                      minWidth: "40px",
+                      maxWidth: "180px",
+                    }}
+                  />
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      closeTab(tab.id);
+                      setTabs((prev) =>
+                        prev.map((t) =>
+                          t.id === tab.id ? { ...t, mode: "normal" } : t
+                        )
+                      );
                     }}
                     className="w-5 h-5 rounded flex items-center justify-center text-gray-400 
-                             hover:text-red-400 hover:bg-red-500/20 transition-all duration-150
-                             active:scale-90"
-                    title="Close tab"
+                           hover:text-blue-400 hover:bg-blue-500/20 transition-all duration-150
+                           active:scale-90"
+                    title="Apply title"
+                  >
+                    <Check />
+                  </button>
+                </>
+              ) : (
+                <span className="truncate flex-1 select-none">{tab.title}</span>
+              )}
+
+              {/* Action buttons */}
+              {tab.mode === "normal" && (
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      duplicateTab(tab.id);
+                    }}
+                    className="w-5 h-5 rounded flex items-center justify-center text-gray-400 
+                           hover:text-blue-400 hover:bg-blue-500/20 transition-all duration-150
+                           active:scale-90"
+                    title="Duplicate tab"
                   >
                     <svg
                       className="w-3 h-3"
@@ -188,13 +221,59 @@ function App(): React.JSX.Element {
                         strokeLinecap="round"
                         strokeLinejoin="round"
                         strokeWidth={2}
-                        d="M6 18L18 6M6 6l12 12"
+                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
                       />
                     </svg>
                   </button>
-                )}
-              </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setTabs((prev) =>
+                        prev.map((t) =>
+                          t.id === tab.id ? { ...t, mode: "edit" } : t
+                        )
+                      );
+                    }}
+                    className={
+                      "w-5 h-5 rounded flex items-center justify-center text-gray-400 " +
+                      "hover:text-yellow-400 hover:bg-yellow-500/20 transition-all duration-150 " +
+                      "active:scale-90"
+                    }
+                    title="Edit title"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  {/* Close button */}
+                  {tabs.length > 1 && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        closeTab(tab.id);
+                      }}
+                      className="w-5 h-5 rounded flex items-center justify-center text-gray-400 
+                             hover:text-red-400 hover:bg-red-500/20 transition-all duration-150
+                             active:scale-90"
+                      title="Close tab"
+                    >
+                      <svg
+                        className="w-3 h-3"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M6 18L18 6M6 6l12 12"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              )}
 
+              {/* Tab ID for debugging */}
               {/* Active tab indicator */}
               {activeTab === tab.id && (
                 <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>

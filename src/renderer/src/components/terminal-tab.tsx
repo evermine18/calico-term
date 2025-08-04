@@ -13,6 +13,7 @@ export const TerminalTab: React.FC<{
   const termRef = useRef<Terminal | null>(null);
   const fitRef = useRef<FitAddon | null>(null);
   const initializedRef = useRef(false); // Prevents re-initialization
+  onClose = onClose || (() => {});
 
   useEffect(() => {
     if (!containerRef.current) return;

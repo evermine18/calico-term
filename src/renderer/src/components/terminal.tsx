@@ -18,7 +18,6 @@ const TerminalComponent: React.FC<TerminalProps> = ({ onData }) => {
 
     const terminal = new Terminal({
       cursorBlink: true,
-      convertEOL: false,
       theme: { background: "#1e1e1e", foreground: "#ffffff" },
     });
 
