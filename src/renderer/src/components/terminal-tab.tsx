@@ -4,7 +4,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useEffect, useRef } from "react";
 import "@xterm/xterm/css/xterm.css";
 
-export const TerminalTab: React.FC<{
+export const TerminalPanel: React.FC<{
   tabId: string;
   active: boolean;
   onClose?: (id: string) => void;
