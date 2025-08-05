@@ -3,6 +3,7 @@ import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
+import { Unicode11Addon } from "@xterm/addon-unicode11";
 
 interface TerminalPanelProps {
   tabId: string;
@@ -56,6 +57,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
     const terminal = new Terminal({
       cursorBlink: true,
+      allowProposedApi: true,
       theme: {
         background: "#1e1e1e",
         foreground: "#ffffff",
@@ -66,8 +68,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     });
 
     const fitAddon = new FitAddon();
+    const unicode11Addon = new Unicode11Addon();
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(new WebLinksAddon());
+    terminal.loadAddon(unicode11Addon);
+    terminal.unicode.activeVersion = "11";
 
     terminal.onData((data) => {
       window.electron.ipcRenderer.send("terminal-input", { tabId, data });

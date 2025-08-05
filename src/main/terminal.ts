@@ -13,17 +13,23 @@ export function setupTerminal() {
       return;
     }
 
-    const ptyProcess = spawn(
-      process.platform === "win32" ? "powershell.exe" : "bash",
-      [],
-      {
-        name: "xterm-color",
-        cols: 80,
-        rows: 24,
-        cwd: process.env.HOME || process.env.USERPROFILE,
-        env: process.env,
-      }
-    );
+    const shell = process.platform === "win32" ? "powershell.exe" : "bash";
+    const args =
+      process.platform === "win32"
+        ? [
+            "-NoExit",
+            "-Command",
+            "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; chcp 65001 > $null",
+          ]
+        : [];
+
+    const ptyProcess = spawn(shell, args, {
+      name: "xterm-color",
+      cols: 80,
+      rows: 24,
+      cwd: process.env.HOME || process.env.USERPROFILE,
+      env: process.env,
+    });
 
     terminals[tabId] = ptyProcess;
 
