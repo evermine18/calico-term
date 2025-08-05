@@ -1,98 +1,152 @@
-import { FitAddon } from "@xterm/addon-fit";
-import { Terminal } from "@xterm/xterm";
-import { WebLinksAddon } from "@xterm/addon-web-links";
 import { useEffect, useRef } from "react";
+import { Terminal } from "@xterm/xterm";
+import { FitAddon } from "@xterm/addon-fit";
+import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 
-export const TerminalPanel: React.FC<{
+interface TerminalPanelProps {
   tabId: string;
   active: boolean;
   onClose?: (id: string) => void;
-}> = ({ tabId, active, onClose }) => {
+}
+
+export const TerminalPanel: React.FC<TerminalPanelProps> = ({
+  tabId,
+  active,
+  onClose = () => {},
+}) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const termRef = useRef<Terminal | null>(null);
-  const fitRef = useRef<FitAddon | null>(null);
-  const initializedRef = useRef(false); // Prevents re-initialization
-  onClose = onClose || (() => {});
+  const terminalRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
+  const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const isInitializedRef = useRef(false);
 
+  /**
+   * Safely fits the terminal to the container size.
+   * Skips fitting when container is not visible.
+   */
+  const safeFit = () => {
+    const container = containerRef.current;
+    const terminal = terminalRef.current;
+    const fitAddon = fitAddonRef.current;
+
+    if (!container || !terminal || !fitAddon) return;
+
+    const width = container.clientWidth;
+    const height = container.clientHeight;
+    if (width === 0 || height === 0) return; // Avoid fitting when hidden
+
+    fitAddon.fit();
+    terminal.refresh(0, terminal.buffer.active.length - 1);
+
+    window.electron.ipcRenderer.send("terminal-resize", {
+      tabId,
+      cols: terminal.cols,
+      rows: terminal.rows,
+    });
+  };
+
+  /**
+   * Initialize the terminal instance and event listeners.
+   */
   useEffect(() => {
-    if (!containerRef.current) return;
-    if (initializedRef.current) return; // Prevents double initialization on the same mount
+    if (!containerRef.current || isInitializedRef.current) return;
 
-    initializedRef.current = true;
+    isInitializedRef.current = true;
 
     const terminal = new Terminal({
       cursorBlink: true,
-      theme: { background: "#1e1e1e", foreground: "#ffffff" },
+      theme: {
+        background: "#1e1e1e",
+        foreground: "#ffffff",
+      },
       fontFamily: "Cascadia Code, monospace",
       fontSize: 14,
+      // scrollback: 50000, // Optional: increase scrollback for large output
     });
 
     const fitAddon = new FitAddon();
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(new WebLinksAddon());
 
-    const handleInput = (data: string) => {
+    terminal.onData((data) => {
       window.electron.ipcRenderer.send("terminal-input", { tabId, data });
-    };
+    });
 
     const handleOutput = (_: unknown, incomingId: string, data: string) => {
-      if (incomingId === tabId) terminal.write(data);
+      if (incomingId === tabId) {
+        terminal.write(data);
+      }
     };
 
-    terminal.onData(handleInput);
     window.electron.ipcRenderer.on("terminal-output", handleOutput);
 
-    const fit = () => {
-      fitAddon.fit();
-      window.electron.ipcRenderer.send("terminal-resize", {
-        tabId,
-        cols: terminal.cols,
-        rows: terminal.rows,
-      });
-    };
-
     terminal.open(containerRef.current);
-    fit();
+    document.fonts.ready.then(safeFit);
     terminal.focus();
-    window.addEventListener("resize", fit);
 
-    // Create the PTY in the main process (ignored if it already exists)
+    // Create PTY instance
     window.electron.ipcRenderer.send("terminal-create", tabId);
 
-    termRef.current = terminal;
-    fitRef.current = fitAddon;
+    terminalRef.current = terminal;
+    fitAddonRef.current = fitAddon;
 
     return () => {
-      window.removeEventListener("resize", fit);
+      resizeObserverRef.current?.disconnect();
       window.electron.ipcRenderer.removeListener(
         "terminal-output",
         handleOutput
       );
       terminal.dispose();
-      termRef.current = null;
-      fitRef.current = null;
-
-      // IMPORTANT: Release the flag for the second mount in StrictMode
-      initializedRef.current = false;
-
-      // Do NOT kill the PTY here
-      // window.electron.ipcRenderer.send("terminal-kill", tabId);
+      terminalRef.current = null;
+      fitAddonRef.current = null;
+      isInitializedRef.current = false;
     };
   }, [tabId]);
 
-  // If the tab is active, adjust and focus.
+  /**
+   * Attach resize observer only when the tab is active.
+   */
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // Disconnect any existing observer
+    resizeObserverRef.current?.disconnect();
+    resizeObserverRef.current = null;
+
+    if (!active) return;
+
+    // Ensure layout is ready
+    requestAnimationFrame(() => {
+      safeFit(); // Initial fit on activation
+
+      const observer = new ResizeObserver((entries) => {
+        const { width, height } = entries[0].contentRect;
+        if (width && height) {
+          // Minimal debounce via microtask
+          Promise.resolve().then(safeFit);
+        }
+      });
+
+      observer.observe(container);
+      resizeObserverRef.current = observer;
+    });
+  }, [active]);
+
+  /**
+   * Focus the terminal when tab becomes active.
+   */
   useEffect(() => {
     if (active) {
-      termRef.current?.focus();
-      fitRef.current?.fit();
+      terminalRef.current?.focus();
     }
   }, [active]);
 
   return (
     <div
       ref={containerRef}
-      className="terminal-container flex-1 overflow-hidden  h-full w-full"
+      className="terminal-container flex-1 overflow-hidden h-full w-full"
       style={{ display: active ? "block" : "none" }}
     />
   );

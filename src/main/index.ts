@@ -1,8 +1,36 @@
-import { app, shell, BrowserWindow, ipcMain } from "electron";
+import { app, shell, BrowserWindow, ipcMain, Menu } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
 import { setupTerminal, closeTerminal } from "./terminal";
+
+function createContextMenu(): Menu {
+  const contextMenu = Menu.buildFromTemplate([
+    {
+      label: "Copy",
+      accelerator: "CmdOrCtrl+C",
+      role: "copy",
+    },
+    {
+      label: "Paste",
+      accelerator: "CmdOrCtrl+V",
+      role: "paste",
+    },
+    {
+      label: "Cut",
+      accelerator: "CmdOrCtrl+X",
+      role: "cut",
+    },
+    { type: "separator" },
+    {
+      label: "Select All",
+      accelerator: "CmdOrCtrl+A",
+      role: "selectAll",
+    },
+  ]);
+
+  return contextMenu;
+}
 
 function createWindow(): void {
   // Create the browser window.
@@ -16,7 +44,21 @@ function createWindow(): void {
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
+      disableBlinkFeatures: "Auxclick",
     },
+  });
+
+  if (!is.dev) {
+    Menu.setApplicationMenu(null); //! Caution
+  }
+  const contextMenu = createContextMenu();
+
+  mainWindow.webContents.on("context-menu", (_event, params) => {
+    contextMenu.popup({ window: mainWindow, x: params.x, y: params.y });
+  });
+
+  mainWindow.on("ready-to-show", () => {
+    mainWindow.show();
   });
 
   mainWindow.on("ready-to-show", () => {
@@ -48,7 +90,10 @@ app.whenReady().then(() => {
   // and ignore CommandOrControl + R in production.
   // see https://github.com/alex8088/electron-toolkit/tree/master/packages/utils
   app.on("browser-window-created", (_, window) => {
-    optimizer.watchWindowShortcuts(window);
+    if (is.dev) {
+      // Open DevTools by default in development
+      optimizer.watchWindowShortcuts(window);
+    }
   });
 
   // IPC test

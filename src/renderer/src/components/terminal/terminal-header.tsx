@@ -1,6 +1,6 @@
 import { TerminalTab } from "@renderer/types/terminal";
 import { Terminal } from "@xterm/xterm";
-import { Check, Pencil } from "lucide-react";
+
 import TabsList from "./tabs-list";
 
 export default function TerminalHeader({
