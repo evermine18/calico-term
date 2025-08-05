@@ -31,6 +31,28 @@ export function setupTerminal() {
       for (const w of require("electron").BrowserWindow.getAllWindows()) {
         w.webContents.send("terminal-output", tabId, data);
       }
+      // Detecta errores comunes en la salida
+      const errorPatterns = [
+        /error/i,
+        /failed/i,
+        /denied/i,
+        /not found/i,
+        /no such file/i,
+        /permission/i,
+        /command not found/i,
+        /could not/i,
+        /fatal/i,
+        /segmentation fault/i,
+        /connection refused/i,
+        /connection timed out/i,
+        /unknown host/i,
+      ];
+      if (errorPatterns.some((pat) => pat.test(data))) {
+        for (const w of require("electron").BrowserWindow.getAllWindows()) {
+          w.webContents.send("terminal-error", tabId, data);
+        }
+        console.error(`Error detected in terminal ${tabId}: ${data}`);
+      }
     });
 
     ptyProcess.onExit(() => {
@@ -39,9 +61,6 @@ export function setupTerminal() {
   });
 
   ipcMain.on("terminal-input", (_event, { tabId, data }) => {
-    console.log(`Sending data to terminal ${tabId}: ${data}`);
-    console.log(`Terminals: ${Object.keys(terminals)}`);
-
     terminals[tabId]?.write(data);
   });
 
