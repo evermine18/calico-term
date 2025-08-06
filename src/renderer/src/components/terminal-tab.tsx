@@ -8,13 +8,11 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 interface TerminalPanelProps {
   tabId: string;
   active: boolean;
-  onClose?: (id: string) => void;
 }
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   tabId,
   active,
-  onClose = () => {},
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);

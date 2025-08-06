@@ -1,0 +1,43 @@
+import { Bot, Loader } from "lucide-react";
+
+interface AssistantMessageProps {
+  message: string;
+  timestamp: string;
+  isTyping?: boolean;
+}
+
+export default function AssistantMessage({
+  message,
+  timestamp,
+  isTyping = false,
+}: AssistantMessageProps) {
+  return (
+    <div className="flex justify-start animate-fade-in">
+      <div className="flex items-start space-x-2 max-w-[85%]">
+        <div className="flex-shrink-0 w-8 h-8 bg-[var(--color-background-mute)] rounded-full flex items-center justify-center">
+          <Bot size={16} className="text-[var(--color-text-2)]" />
+        </div>
+        <div className="bg-[var(--color-background-soft)] text-[var(--color-text)] rounded-2xl rounded-bl-sm px-4 py-2">
+          {isTyping ? (
+            <div className="flex items-center space-x-1">
+              <Loader
+                size={14}
+                className="animate-spin text-[var(--color-text-2)]"
+              />
+              <span className="text-sm text-[var(--color-text-2)]">
+                Typing...
+              </span>
+            </div>
+          ) : (
+            <>
+              <p className="text-sm leading-relaxed">{message}</p>
+              <span className="text-xs text-[var(--color-text-2)] mt-1 block">
+                {timestamp}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
