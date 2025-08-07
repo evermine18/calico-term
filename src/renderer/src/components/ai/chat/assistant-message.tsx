@@ -1,5 +1,5 @@
 import { Bot, Loader } from "lucide-react";
-
+import Markdown from "@renderer/components/markdownRenderers";
 interface AssistantMessageProps {
   message: string;
   timestamp: string;
@@ -12,7 +12,7 @@ export default function AssistantMessage({
   isTyping = false,
 }: AssistantMessageProps) {
   return (
-    <div className="flex justify-start animate-fade-in">
+    <div className="flex justify-start animate-fade-in selectable-section">
       <div className="flex items-start space-x-2 max-w-[85%]">
         <div className="flex-shrink-0 w-8 h-8 bg-[var(--color-background-mute)] rounded-full flex items-center justify-center">
           <Bot size={16} className="text-[var(--color-text-2)]" />
@@ -30,7 +30,9 @@ export default function AssistantMessage({
             </div>
           ) : (
             <>
-              <p className="text-sm leading-relaxed">{message}</p>
+              <p className="text-sm leading-relaxed break-words">
+                <Markdown content={message} />
+              </p>
               <span className="text-xs text-[var(--color-text-2)] mt-1 block">
                 {timestamp}
               </span>

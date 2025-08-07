@@ -72,3 +72,12 @@ body {
   -webkit-app-region: drag;
   cursor: move;
 }
+
+.selectable-section {
+  -webkit-app-region: no-drag;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+
+}

@@ -1,4 +1,4 @@
-import { Bot, X, RotateCcw, Plus } from "lucide-react";
+import { Bot, X, Plus } from "lucide-react";
 
 interface ChatHeaderProps {
   onClose: () => void;
@@ -21,7 +21,7 @@ export default function ChatHeader({ onClose, onNewChat }: ChatHeaderProps) {
         <button
           onClick={onNewChat}
           className="p-2 hover:bg-white/10 rounded-lg transition-colors"
-          title="Nueva conversación"
+          title="New Chat"
         >
           <Plus size={16} />
         </button>

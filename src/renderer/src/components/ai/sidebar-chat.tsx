@@ -6,7 +6,6 @@ import {
   MessageInput,
   UserMessage,
 } from "./chat";
-import { MessageCircle } from "lucide-react";
 
 export default function AISidebarChat() {
   const { aiSidebarOpen, setAiSidebarOpen } = useAppContext();
@@ -16,14 +15,13 @@ export default function AISidebarChat() {
       id: 1,
       type: "assistant",
       content: "Hi, how can I assist you today?",
-      timestamp: new Date().toLocaleTimeString("es-ES", {
+      timestamp: new Date().toLocaleTimeString("en-EN", {
         hour: "2-digit",
         minute: "2-digit",
       }),
     },
   ]);
   const [isTyping, setIsTyping] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const scrollToBottom = () => {
@@ -34,26 +32,34 @@ export default function AISidebarChat() {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const simulateAIResponse = async (_userMessage) => {
+  const sendMessageToAI = async (messages) => {
     setIsTyping(true);
+    try {
+      const response = await window.electron.ipcRenderer.invoke(
+        "send-ai-message",
+        messages
+      );
+      console.log("AI response:", response);
+      if (!response) {
+        setIsTyping(false);
+        return;
+      }
 
-    // Simular tiempo de respuesta
-    await new Promise((resolve) =>
-      setTimeout(resolve, 1000 + Math.random() * 2000)
-    );
-
-    const newMessage = {
-      id: Date.now(),
-      type: "assistant",
-      content: "Test AI response",
-      timestamp: new Date().toLocaleTimeString("es-ES", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-    setIsTyping(false);
+      const newMessage = {
+        id: Date.now(),
+        type: "assistant",
+        content: response,
+        timestamp: new Date().toLocaleTimeString("en-EN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages((prev) => [...prev, newMessage]);
+    } catch (error) {
+      console.error("Error sending message to AI:", error);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const handleSendMessage = async (messageText) => {
@@ -61,14 +67,14 @@ export default function AISidebarChat() {
       id: Date.now(),
       type: "user",
       content: messageText,
-      timestamp: new Date().toLocaleTimeString("es-ES", {
+      timestamp: new Date().toLocaleTimeString("en-EN", {
         hour: "2-digit",
         minute: "2-digit",
       }),
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    await simulateAIResponse(messageText);
+    await sendMessageToAI([...messages, userMessage]);
   };
 
   const handleNewChat = () => {
@@ -77,7 +83,7 @@ export default function AISidebarChat() {
         id: 1,
         type: "assistant",
         content: "Hi, how can I assist you today?",
-        timestamp: new Date().toLocaleTimeString("es-ES", {
+        timestamp: new Date().toLocaleTimeString("en-EN", {
           hour: "2-digit",
           minute: "2-digit",
         }),
@@ -94,46 +100,35 @@ export default function AISidebarChat() {
         onNewChat={handleNewChat}
       />
 
-      {!isMinimized && (
-        <>
-          <div className="flex-1 overflow-y-auto p-4 bg-[var(--color-background)]">
-            <div className="flex flex-col gap-3">
-              {messages.map((message) =>
-                message.type === "user" ? (
-                  <UserMessage
-                    key={message.id}
-                    message={message.content}
-                    timestamp={message.timestamp}
-                  />
-                ) : (
-                  <AssistantMessage
-                    key={message.id}
-                    message={message.content}
-                    timestamp={message.timestamp}
-                  />
-                )
-              )}
+      <>
+        <div className="flex-1 overflow-y-auto p-4 bg-[var(--color-background)]">
+          <div className="flex flex-col gap-3">
+            {messages.map((message) =>
+              message.type === "user" ? (
+                <UserMessage
+                  key={message.id}
+                  message={message.content}
+                  timestamp={message.timestamp}
+                />
+              ) : (
+                <AssistantMessage
+                  key={message.id}
+                  message={message.content}
+                  timestamp={message.timestamp}
+                />
+              )
+            )}
 
-              {isTyping && (
-                <AssistantMessage isTyping={true} message={""} timestamp={""} />
-              )}
+            {isTyping && (
+              <AssistantMessage isTyping={true} message={""} timestamp={""} />
+            )}
 
-              <div ref={messagesEndRef} />
-            </div>
-          </div>
-
-          <MessageInput onSendMessage={handleSendMessage} disabled={isTyping} />
-        </>
-      )}
-
-      {isMinimized && (
-        <div className="p-4 text-center text-gray-400 bg-[var(--color-background)] flex-1 flex items-center justify-center">
-          <div>
-            <MessageCircle size={24} className="mx-auto mb-2" />
-            <p className="text-sm">Chat minimizado</p>
+            <div ref={messagesEndRef} />
           </div>
         </div>
-      )}
+
+        <MessageInput onSendMessage={handleSendMessage} disabled={isTyping} />
+      </>
     </div>
   );
 }

@@ -7,7 +7,7 @@ interface UserMessageProps {
 
 export default function UserMessage({ message, timestamp }: UserMessageProps) {
   return (
-    <div className="flex justify-end animate-fade-in">
+    <div className="flex justify-end animate-fade-in selectable-section">
       <div className="flex items-start space-x-2 max-w-[85%]">
         <div className="bg-[var(--color-background-soft)] text-[var(--color-text)] rounded-2xl rounded-br-sm px-4 py-3">
           <p className="text-sm leading-relaxed">{message}</p>
