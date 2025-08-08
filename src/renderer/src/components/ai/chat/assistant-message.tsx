@@ -1,5 +1,5 @@
 import { Bot, Loader } from "lucide-react";
-import Markdown from "@renderer/components/markdownRenderers";
+import MarkdownPreview from "@uiw/react-markdown-preview";
 interface AssistantMessageProps {
   message: string;
   timestamp: string;
@@ -13,11 +13,12 @@ export default function AssistantMessage({
 }: AssistantMessageProps) {
   return (
     <div className="flex justify-start animate-fade-in selectable-section">
-      <div className="flex items-start space-x-2 max-w-[85%]">
+      <div className="flex items-start space-x-2 max-w-[90%] min-w-0">
         <div className="flex-shrink-0 w-8 h-8 bg-[var(--color-background-mute)] rounded-full flex items-center justify-center">
           <Bot size={16} className="text-[var(--color-text-2)]" />
         </div>
-        <div className="bg-[var(--color-background-soft)] text-[var(--color-text)] rounded-2xl rounded-bl-sm px-4 py-2">
+
+        <div className="bg-[var(--color-background-soft)] text-[var(--color-text)] rounded-2xl rounded-bl-sm px-2 py-2 w-full min-w-0 max-w-full overflow-hidden">
           {isTyping ? (
             <div className="flex items-center space-x-1">
               <Loader
@@ -30,9 +31,11 @@ export default function AssistantMessage({
             </div>
           ) : (
             <>
-              <p className="text-sm leading-relaxed break-words">
-                <Markdown content={message} />
-              </p>
+              <MarkdownPreview
+                source={message}
+                style={{ padding: 1, background: "transparent" }}
+              />
+
               <span className="text-xs text-[var(--color-text-2)] mt-1 block">
                 {timestamp}
               </span>
