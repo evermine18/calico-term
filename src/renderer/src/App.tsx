@@ -28,17 +28,21 @@ function App(): React.JSX.Element {
         {/* Header with window controls */}
         <div className="bg-gray-900/95 backdrop-blur-xl border-b border-gray-700/30 px-4 py-1 flex items-center justify-between shadow-2xl">
           <div className="flex items-center gap-2 w-full">
-            <div className="flex items-center gap-2 ">
-              <div
-                className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-400 transition-colors cursor-pointer shadow-sm"
-                onClick={closeApp}
-              ></div>
-              <div className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-400 transition-colors cursor-pointer shadow-sm"></div>
-              <div
-                className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-400 transition-colors cursor-pointer shadow-sm"
-                onClick={toggleFullscreen}
-              ></div>
-            </div>
+            {window.platform?.os !== "darwin" ? (
+              <div className="flex items-center gap-2 ">
+                <div
+                  className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-400 transition-colors cursor-pointer shadow-sm"
+                  onClick={closeApp}
+                ></div>
+                <div className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-400 transition-colors cursor-pointer shadow-sm"></div>
+                <div
+                  className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-400 transition-colors cursor-pointer shadow-sm"
+                  onClick={toggleFullscreen}
+                ></div>
+              </div>
+            ) : (
+              <div className="ml-16"></div>
+            )}
 
             <div className="drag-region flex w-full items-center gap-2 left-0 right-0">
               <div className="flex items-center gap-3">
