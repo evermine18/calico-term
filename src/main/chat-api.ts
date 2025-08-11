@@ -1,5 +1,3 @@
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
-
 type ChatMessage = {
   id: number;
   type: string;
