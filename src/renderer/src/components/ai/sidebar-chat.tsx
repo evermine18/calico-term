@@ -10,6 +10,8 @@ import {
 export default function AISidebarChat() {
   const { aiSidebarOpen, setAiSidebarOpen, selectedModel } = useAppContext();
 
+  const [width, setWidth] = useState(384);
+  const resizingRef = useRef(false);
   const [messages, setMessages] = useState([
     {
       id: 1,
@@ -23,7 +25,34 @@ export default function AISidebarChat() {
   ]);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
-
+  const startResizing = (e: React.MouseEvent) => {
+    e.preventDefault();
+    resizingRef.current = true;
+    document.body.style.userSelect = "none";
+  };
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return;
+      // Sidebar está anclada a la derecha: calculamos desde el borde derecho.
+      const newWidth = Math.min(
+        700,
+        Math.max(260, window.innerWidth - e.clientX)
+      );
+      setWidth(newWidth);
+    };
+    const stopResizing = () => {
+      if (resizingRef.current) {
+        resizingRef.current = false;
+        document.body.style.userSelect = "";
+      }
+    };
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", stopResizing);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, []);
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -96,7 +125,15 @@ export default function AISidebarChat() {
   if (!aiSidebarOpen) return null;
 
   return (
-    <div className="absolute right-0 top-0 bottom-0 w-96 h-full bg-[var(--color-background-soft)] border-l border-[var(--color-background-mute)] flex flex-col z-50">
+    <div
+      className="absolute right-0 top-0 bottom-0 h-full bg-[var(--color-background-soft)] border-l border-[var(--color-background-mute)] flex flex-col z-50"
+      style={{ width }}
+    >
+      <div
+        onMouseDown={startResizing}
+        className="absolute left-0 top-0 h-full w-1 cursor-ew-resize bg-transparent hover:bg-[var(--color-background-mute)] active:bg-[var(--color-background-mute)] z-10" // <- añadido z-10
+        title="Resize sidebar"
+      />
       <ChatHeader
         onClose={() => setAiSidebarOpen(false)}
         onNewChat={handleNewChat}
