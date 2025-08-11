@@ -3,7 +3,7 @@ import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
 import { setupTerminal, closeTerminal } from "./terminal";
-import { sendChat } from "./chat-api";
+import { getModels, sendChat } from "./chat-api";
 
 function createContextMenu(): Menu {
   const contextMenu = Menu.buildFromTemplate([
@@ -97,8 +97,15 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle("send-ai-message", async (_event, messages) => {
-    return await sendChat(messages);
+  ipcMain.handle(
+    "send-ai-message",
+    async (_event, basepath, selectedModel, messages) => {
+      return await sendChat(basepath, selectedModel, messages);
+    }
+  );
+
+  ipcMain.handle("get-ai-models", async (_event, basepath) => {
+    return await getModels(basepath);
   });
 
   // IPC test

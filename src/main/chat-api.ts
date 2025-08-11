@@ -7,7 +7,11 @@ type ChatMessage = {
   timestamp: string;
 };
 
-export async function sendChat(messages: ChatMessage[]): Promise<string> {
+export async function sendChat(
+  basepath: string,
+  selectedModel: string,
+  messages: ChatMessage[]
+): Promise<string> {
   const parsedMessages = parseMessages(messages);
   // Append a developer message to the chat history at the start
   const dev_prompt = {
@@ -29,14 +33,14 @@ Rules:
   };
   //https://api.openai.com/v1/chat/completions
   try {
-    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+    const res = await fetch(`${basepath}/v1/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4.1",
+        model: selectedModel,
         messages: [dev_prompt, ...parsedMessages],
       }),
     });
@@ -63,4 +67,31 @@ function parseMessages(
     role: msg.type === "user" ? "user" : "assistant",
     content: msg.content,
   }));
+}
+
+export async function getModels(basepath: string): Promise<string[]> {
+  try {
+    const res = await fetch(`${basepath}/v1/models`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`,
+      },
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(`OpenAI API error: ${res.status} - ${errorText}`);
+    }
+
+    const data = await res.json();
+    if (data.data) {
+      const ids: string[] = data.data.map((item) => item.id);
+      return ids;
+    }
+    throw new Error("Unexpected response format from OpenAI API");
+  } catch (error) {
+    console.error("Error sending chat to OpenAI:", error);
+    throw error;
+  }
 }

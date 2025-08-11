@@ -8,7 +8,7 @@ import {
 } from "./chat";
 
 export default function AISidebarChat() {
-  const { aiSidebarOpen, setAiSidebarOpen } = useAppContext();
+  const { aiSidebarOpen, setAiSidebarOpen, selectedModel } = useAppContext();
 
   const [messages, setMessages] = useState([
     {
@@ -37,6 +37,8 @@ export default function AISidebarChat() {
     try {
       const response = await window.electron.ipcRenderer.invoke(
         "send-ai-message",
+        "https://api.openai.com",
+        selectedModel,
         messages
       );
       console.log("AI response:", response);
