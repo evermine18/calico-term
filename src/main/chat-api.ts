@@ -1,3 +1,5 @@
+import { net } from "electron";
+
 type ChatMessage = {
   id: number;
   type: string;
@@ -32,7 +34,7 @@ Rules:
   };
   //https://api.openai.com/v1/chat/completions
   try {
-    const res = await fetch(`${basepath}/v1/chat/completions`, {
+    const res = await net.fetch(`${basepath}/v1/chat/completions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -73,7 +75,7 @@ export async function getModels(
   apiKey: string
 ): Promise<string[]> {
   try {
-    const res = await fetch(`${basepath}/v1/models`, {
+    const res = await net.fetch(`${basepath}/v1/models`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
