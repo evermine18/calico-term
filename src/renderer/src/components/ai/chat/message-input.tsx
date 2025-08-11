@@ -1,4 +1,6 @@
-import { Send } from "lucide-react";
+import { Label } from "@renderer/components/ui/label";
+import { Toggle } from "@renderer/components/ui/toggle";
+import { Send, Terminal } from "lucide-react";
 import { useRef, useState } from "react";
 
 interface MessageInputProps {
@@ -30,6 +32,12 @@ export default function MessageInput({
 
   return (
     <div className="p-4 border-t bg-[var(--color-background-soft)] border-[var(--color-background-mute)]">
+      <div className="flex items-center justify-between mb-2">
+        <Toggle aria-label="Toggle italic">
+          <Terminal className="h-2 w-2" />
+          <Label>Show Terminal</Label>
+        </Toggle>
+      </div>
       <div className="flex items-end space-x-2">
         <div className="flex-1 relative">
           <textarea
