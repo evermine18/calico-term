@@ -29,7 +29,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         setApiKey(key);
       },
     }),
-    [aiSidebarOpen]
+    [aiSidebarOpen, apiUrl, selectedModel, apiKey]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
