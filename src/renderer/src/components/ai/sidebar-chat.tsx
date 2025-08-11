@@ -6,11 +6,12 @@ import {
   MessageInput,
   UserMessage,
 } from "./chat";
+import { useTerminalContext } from "@renderer/contexts/terminal-context";
 
 export default function AISidebarChat() {
   const { aiSidebarOpen, setAiSidebarOpen, selectedModel, apiKey } =
     useAppContext();
-
+  const { getActive } = useTerminalContext();
   const [width, setWidth] = useState(384);
   const resizingRef = useRef(false);
   const [messages, setMessages] = useState([
@@ -65,6 +66,10 @@ export default function AISidebarChat() {
 
   const sendMessageToAI = async (messages) => {
     setIsTyping(true);
+    const api = getActive();
+    const screen = api?.getVisibleText() ?? "";
+    console.log("Visible text:", screen);
+
     try {
       const response = await window.electron.ipcRenderer.invoke(
         "send-ai-message",

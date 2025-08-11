@@ -4,6 +4,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
+import { useTerminalContext } from "@renderer/contexts/terminal-context";
 
 interface TerminalPanelProps {
   tabId: string;
@@ -14,6 +15,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   tabId,
   active,
 }) => {
+  const { setActive } = useTerminalContext();
+
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
@@ -94,7 +97,37 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
+    // Exposing API
+    const api: TerminalAPI = {
+      getVisibleText() {
+        const t = terminalRef.current!;
+        const b = t.buffer.active;
+        const start = b.viewportY;
+        const end = start + t.rows - 1;
+        let out = "";
+        for (let y = start; y <= end; y++) {
+          out += (b.getLine(y)?.translateToString(true) ?? "") + "\n";
+        }
+        // Remove empty lines
+        out = out.replace(/^\n/gm, "");
+        return out;
+      },
+      getAllBufferText() {
+        const t = terminalRef.current!;
+        const b = t.buffer.active;
+        let out = "";
+        for (let y = 0; y < b.length; y++) {
+          out += (b.getLine(y)?.translateToString(true) ?? "") + "\n";
+        }
+        return out;
+      },
+    };
+
+    // si esta Terminal debe ser la activa al montarse:
+    if (active) setActive(api);
+
     return () => {
+      setActive(null);
       resizeObserverRef.current?.disconnect();
       window.electron.ipcRenderer.removeListener(
         "terminal-output",
