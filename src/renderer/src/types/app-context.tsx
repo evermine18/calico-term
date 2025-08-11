@@ -5,4 +5,6 @@ type AppContextType = {
   setApiUrl: (url: string) => void;
   selectedModel: string;
   setSelectedModel: (model: string) => void;
+  apiKey: string;
+  setApiKey: (key: string) => void;
 };

@@ -1,15 +1,17 @@
-import { Bot, Loader } from "lucide-react";
+import { Bot, CircleX, Loader } from "lucide-react";
 import MarkdownPreview from "@uiw/react-markdown-preview";
 interface AssistantMessageProps {
   message: string;
   timestamp: string;
   isTyping?: boolean;
+  error?: boolean;
 }
 
 export default function AssistantMessage({
   message,
   timestamp,
   isTyping = false,
+  error = false,
 }: AssistantMessageProps) {
   return (
     <div className="flex justify-start animate-fade-in selectable-section">
@@ -31,6 +33,13 @@ export default function AssistantMessage({
             </div>
           ) : (
             <>
+              {error ? (
+                <div className="text-red-400">
+                  <CircleX className="inline mr-1" size={18} />
+                  <span>Error: </span>
+                </div>
+              ) : null}
+
               <MarkdownPreview
                 source={message}
                 style={{ padding: 1, background: "transparent" }}

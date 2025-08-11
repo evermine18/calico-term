@@ -28,7 +28,7 @@ function App(): React.JSX.Element {
           }`}
         >
           {/* Header with window controls */}
-          <div className="bg-gray-900/95 backdrop-blur-xl border-b border-gray-700/30 px-4 py-1 flex items-center justify-between shadow-2xl">
+          <div className="bg-gray-900/95 backdrop-blur-xl border-b border-gray-700/30 px-4 py-1 flex items-center justify-between shadow-2xl ">
             <div className="flex items-center gap-2 w-full">
               {window.platform?.os !== "darwin" ? (
                 <div className="flex items-center gap-2 ">

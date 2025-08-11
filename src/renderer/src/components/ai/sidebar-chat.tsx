@@ -8,7 +8,8 @@ import {
 } from "./chat";
 
 export default function AISidebarChat() {
-  const { aiSidebarOpen, setAiSidebarOpen, selectedModel } = useAppContext();
+  const { aiSidebarOpen, setAiSidebarOpen, selectedModel, apiKey } =
+    useAppContext();
 
   const [width, setWidth] = useState(384);
   const resizingRef = useRef(false);
@@ -16,6 +17,7 @@ export default function AISidebarChat() {
     {
       id: 1,
       type: "assistant",
+      error: false,
       content: "Hi, how can I assist you today?",
       timestamp: new Date().toLocaleTimeString("en-EN", {
         hour: "2-digit",
@@ -67,6 +69,7 @@ export default function AISidebarChat() {
       const response = await window.electron.ipcRenderer.invoke(
         "send-ai-message",
         "https://api.openai.com",
+        apiKey,
         selectedModel,
         messages
       );
@@ -79,6 +82,7 @@ export default function AISidebarChat() {
       const newMessage = {
         id: Date.now(),
         type: "assistant",
+        error: false,
         content: response,
         timestamp: new Date().toLocaleTimeString("en-EN", {
           hour: "2-digit",
@@ -87,7 +91,18 @@ export default function AISidebarChat() {
       };
       setMessages((prev) => [...prev, newMessage]);
     } catch (error) {
-      console.error("Error sending message to AI:", error);
+      const errorMSG = {
+        id: Date.now(),
+        type: "assistant",
+        error: true,
+        content: `\n\n\`\`\`\n${error}\n\`\`\``,
+        timestamp: new Date().toLocaleTimeString("en-EN", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      };
+      setMessages((prev) => [...prev, errorMSG]);
+      console.error("Error sending message to AI: ", error);
     } finally {
       setIsTyping(false);
     }
@@ -97,6 +112,7 @@ export default function AISidebarChat() {
     const userMessage = {
       id: Date.now(),
       type: "user",
+      error: false,
       content: messageText,
       timestamp: new Date().toLocaleTimeString("en-EN", {
         hour: "2-digit",
@@ -113,6 +129,7 @@ export default function AISidebarChat() {
       {
         id: 1,
         type: "assistant",
+        error: false,
         content: "Hi, how can I assist you today?",
         timestamp: new Date().toLocaleTimeString("en-EN", {
           hour: "2-digit",
@@ -126,12 +143,12 @@ export default function AISidebarChat() {
 
   return (
     <div
-      className="absolute right-0 top-0 bottom-0 h-full bg-[var(--color-background-soft)] border-l border-[var(--color-background-mute)] flex flex-col z-50"
+      className="absolute right-0 top-0 bottom-0 h-full bg-[var(--color-background-soft)] border-l border-[var(--color-background-mute)] flex flex-col z-10"
       style={{ width }}
     >
       <div
         onMouseDown={startResizing}
-        className="absolute left-0 top-0 h-full w-1 cursor-ew-resize bg-transparent hover:bg-[var(--color-background-mute)] active:bg-[var(--color-background-mute)] z-10" // <- añadido z-10
+        className="absolute left-0 top-0 h-full w-1 cursor-ew-resize bg-transparent hover:bg-[var(--color-background-mute)] active:bg-[var(--color-background-mute)] z-1"
         title="Resize sidebar"
       />
       <ChatHeader
@@ -154,6 +171,7 @@ export default function AISidebarChat() {
                   key={message.id}
                   message={message.content}
                   timestamp={message.timestamp}
+                  error={message.error}
                 />
               )
             )}

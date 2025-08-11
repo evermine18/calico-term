@@ -14,18 +14,28 @@ import { Label } from "@renderer/components/ui/label";
 import { ModelsSelector } from "./model-combobox";
 import { useAppContext } from "@renderer/contexts/app-context";
 import { useState } from "react";
+import { Eye } from "lucide-react";
 
 export default function SettingsDialog({ children }) {
-  const { apiUrl, setApiUrl, selectedModel, setSelectedModel } =
-    useAppContext();
+  const {
+    apiUrl,
+    setApiUrl,
+    apiKey,
+    setApiKey,
+    selectedModel,
+    setSelectedModel,
+  } = useAppContext();
   const [localSettings, setLocalSettings] = useState({
     apiUrl: apiUrl || "",
+    apiKey: apiKey || "",
     selectedModel: selectedModel || "",
   });
   const [open, setOpen] = useState(false);
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const handleSave = () => {
     setApiUrl(localSettings.apiUrl);
+    setApiKey(localSettings.apiKey);
     setSelectedModel(localSettings.selectedModel);
     setOpen(false);
   };
@@ -43,10 +53,10 @@ export default function SettingsDialog({ children }) {
         </DialogHeader>
         <div className="grid gap-4">
           <div className="grid gap-3">
-            <Label htmlFor="name-1">API URL</Label>
+            <Label htmlFor="api-url">Base API URL</Label>
             <Input
-              id="name-1"
-              name="name"
+              id="api-url"
+              name="Api Url"
               defaultValue={localSettings.apiUrl}
               onChange={(e) =>
                 setLocalSettings({ ...localSettings, apiUrl: e.target.value })
@@ -54,9 +64,32 @@ export default function SettingsDialog({ children }) {
             />
           </div>
           <div className="grid gap-3">
+            <Label htmlFor="api-key">API Key</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="api-key"
+                name="Api Key"
+                type={showApiKey ? "text" : "password"}
+                defaultValue={localSettings.apiKey}
+                onChange={(e) =>
+                  setLocalSettings({ ...localSettings, apiKey: e.target.value })
+                }
+              />
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowApiKey(!showApiKey);
+                }}
+              >
+                <Eye />
+              </Button>
+            </div>
+          </div>
+          <div className="grid gap-3">
             <Label htmlFor="model">Model</Label>
             <ModelsSelector
               url={localSettings.apiUrl}
+              apiKey={localSettings.apiKey}
               currentValue={localSettings.selectedModel}
               onValueChange={(model) =>
                 setLocalSettings({ ...localSettings, selectedModel: model })

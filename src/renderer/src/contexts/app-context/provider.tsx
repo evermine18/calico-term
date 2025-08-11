@@ -7,6 +7,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [selectedModel, setSelectedModel] = useState(
     localStorage.getItem("selectedModel") || ""
   );
+  const [apiKey, setApiKey] = useState(localStorage.getItem("apiKey") || "");
 
   const value: AppContextType = useMemo(
     () => ({
@@ -21,6 +22,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       setSelectedModel: (model: string) => {
         localStorage.setItem("selectedModel", model);
         setSelectedModel(model);
+      },
+      apiKey,
+      setApiKey: (key: string) => {
+        localStorage.setItem("apiKey", key);
+        setApiKey(key);
       },
     }),
     [aiSidebarOpen]

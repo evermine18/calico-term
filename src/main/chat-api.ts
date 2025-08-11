@@ -9,6 +9,7 @@ type ChatMessage = {
 
 export async function sendChat(
   basepath: string,
+  apiKey: string,
   selectedModel: string,
   messages: ChatMessage[]
 ): Promise<string> {
@@ -37,7 +38,7 @@ Rules:
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
         model: selectedModel,
@@ -69,13 +70,16 @@ function parseMessages(
   }));
 }
 
-export async function getModels(basepath: string): Promise<string[]> {
+export async function getModels(
+  basepath: string,
+  apiKey: string
+): Promise<string[]> {
   try {
     const res = await fetch(`${basepath}/v1/models`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        Authorization: `Bearer ${apiKey}`,
       },
     });
 

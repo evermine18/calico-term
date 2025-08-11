@@ -19,10 +19,12 @@ import { useEffect, useState } from "react";
 
 export function ModelsSelector({
   url,
+  apiKey,
   currentValue,
   onValueChange,
 }: {
   url: string;
+  apiKey: string;
   currentValue?: string;
   onValueChange?: (model: string) => void;
 }) {
@@ -34,7 +36,8 @@ export function ModelsSelector({
     try {
       const models = await window.electron.ipcRenderer.invoke(
         "get-ai-models",
-        url
+        url,
+        apiKey
       );
       setModels(models);
     } catch (error) {
@@ -50,7 +53,7 @@ export function ModelsSelector({
 
   useEffect(() => {
     fetchModels();
-  }, [url]);
+  }, [url, apiKey]);
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

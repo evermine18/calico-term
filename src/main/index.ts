@@ -99,13 +99,13 @@ app.whenReady().then(() => {
 
   ipcMain.handle(
     "send-ai-message",
-    async (_event, basepath, selectedModel, messages) => {
-      return await sendChat(basepath, selectedModel, messages);
+    async (_event, basepath, apiKey, selectedModel, messages) => {
+      return await sendChat(basepath, apiKey, selectedModel, messages);
     }
   );
 
-  ipcMain.handle("get-ai-models", async (_event, basepath) => {
-    return await getModels(basepath);
+  ipcMain.handle("get-ai-models", async (_event, basepath, apiKey) => {
+    return await getModels(basepath, apiKey);
   });
 
   // IPC test
