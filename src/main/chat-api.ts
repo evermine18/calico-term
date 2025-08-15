@@ -11,8 +11,10 @@ export async function sendChat(
   basepath: string,
   apiKey: string,
   selectedModel: string,
-  messages: ChatMessage[]
+  messages: ChatMessage[],
+  terminalContent = undefined
 ): Promise<string> {
+  let context = [];
   const parsedMessages = parseMessages(messages);
   // Append a developer message to the chat history at the start
   const dev_prompt = {
@@ -32,6 +34,16 @@ Rules:
 6. Mention risks and possible mitigations if relevant.  
 7. Use variables ($APP, $ENV) for reusability and avoid obscure one-liners if they reduce clarity.`,
   };
+  context.push(dev_prompt);
+  if (terminalContent) {
+    context = [
+      {
+        role: "developer",
+        content: `The users current Terminal context is:\n\n${terminalContent}`,
+      },
+    ];
+  }
+  context.push(...parsedMessages);
   //https://api.openai.com/v1/chat/completions
   try {
     const res = await net.fetch(`${basepath}/v1/chat/completions`, {
@@ -42,7 +54,7 @@ Rules:
       },
       body: JSON.stringify({
         model: selectedModel,
-        messages: [dev_prompt, ...parsedMessages],
+        messages: context,
       }),
     });
 

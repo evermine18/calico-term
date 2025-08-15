@@ -76,7 +76,8 @@ export default function AISidebarChat() {
         "https://api.openai.com",
         apiKey,
         selectedModel,
-        messages
+        messages,
+        screen
       );
       console.log("AI response:", response);
       if (!response) {

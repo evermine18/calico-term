@@ -99,8 +99,21 @@ app.whenReady().then(() => {
 
   ipcMain.handle(
     "send-ai-message",
-    async (_event, basepath, apiKey, selectedModel, messages) => {
-      return await sendChat(basepath, apiKey, selectedModel, messages);
+    async (
+      _event,
+      basepath,
+      apiKey,
+      selectedModel,
+      messages,
+      terminalContent = undefined
+    ) => {
+      return await sendChat(
+        basepath,
+        apiKey,
+        selectedModel,
+        messages,
+        terminalContent
+      );
     }
   );
 
