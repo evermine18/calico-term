@@ -23,6 +23,32 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const isInitializedRef = useRef(false);
 
+  // Exposing API
+  const api: TerminalAPI = {
+    getVisibleText() {
+      const t = terminalRef.current!;
+      const b = t.buffer.active;
+      const start = b.viewportY;
+      const end = start + t.rows - 1;
+      let out = "";
+      for (let y = start; y <= end; y++) {
+        out += (b.getLine(y)?.translateToString(true) ?? "") + "\n";
+      }
+      // Remove empty lines
+      out = out.replace(/^\n/gm, "");
+      return out;
+    },
+    getAllBufferText() {
+      const t = terminalRef.current!;
+      const b = t.buffer.active;
+      let out = "";
+      for (let y = 0; y < b.length; y++) {
+        out += (b.getLine(y)?.translateToString(true) ?? "") + "\n";
+      }
+      return out;
+    },
+  };
+
   /**
    * Safely fits the terminal to the container size.
    * Skips fitting when container is not visible.
@@ -97,35 +123,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
 
-    // Exposing API
-    const api: TerminalAPI = {
-      getVisibleText() {
-        const t = terminalRef.current!;
-        const b = t.buffer.active;
-        const start = b.viewportY;
-        const end = start + t.rows - 1;
-        let out = "";
-        for (let y = start; y <= end; y++) {
-          out += (b.getLine(y)?.translateToString(true) ?? "") + "\n";
-        }
-        // Remove empty lines
-        out = out.replace(/^\n/gm, "");
-        return out;
-      },
-      getAllBufferText() {
-        const t = terminalRef.current!;
-        const b = t.buffer.active;
-        let out = "";
-        for (let y = 0; y < b.length; y++) {
-          out += (b.getLine(y)?.translateToString(true) ?? "") + "\n";
-        }
-        return out;
-      },
-    };
-
-    // si esta Terminal debe ser la activa al montarse:
-    if (active) setActive(api);
-
     return () => {
       setActive(null);
       resizeObserverRef.current?.disconnect();
@@ -150,7 +147,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     // Disconnect any existing observer
     resizeObserverRef.current?.disconnect();
     resizeObserverRef.current = null;
-
+    if (active) setActive(api);
     if (!active) return;
 
     // Ensure layout is ready
