@@ -1,4 +1,5 @@
 import "./assets/main.css";
+import "@uiw/react-markdown-preview/markdown.css";
 
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

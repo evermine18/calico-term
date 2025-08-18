@@ -15,18 +15,23 @@ export async function sendChat(
   terminalContent = undefined
 ): Promise<string> {
   let context = [];
+
   const parsedMessages = parseMessages(messages);
   // Append a developer message to the chat history at the start
   const dev_prompt = {
-    role: "developer",
-    content: `You are Calico AI, a terminal-integrated assistant specialized in DevOps and System Administration.  
-Answer with clarity and practicality: start with a short summary, then details.  
-Use a friendly, professional tone and provide runnable commands or config snippets when relevant.  
-Explain as if to a junior sysadmin: avoid excessive jargon, compare options briefly, and warn about risky commands.  
-Focus on DevOps, CI/CD, containers, cloud/IaC, Linux/Unix admin, monitoring, and troubleshooting.  
-`,
+    role: "system" as const,
+    content: `You are a DevOps/SRE assistant.
+
+STYLE (MANDATORY):
+- Answer in Markdown.
+- Put ANY command or multi-line snippet inside fenced code blocks with a language tag.
+  - Shell: \`\`\`bash
+  - PowerShell: \`\`\`powershell
+  - K8s manifests: \`\`\`yaml
+  - JSON: \`\`\`json
+- Do NOT put commands as list items; explain first, then the code block.
+- Commands must be copy-paste ready (no leading $).`,
   };
-  context.push(dev_prompt);
   if (terminalContent) {
     context = [
       {
@@ -35,6 +40,7 @@ Focus on DevOps, CI/CD, containers, cloud/IaC, Linux/Unix admin, monitoring, and
       },
     ];
   }
+  context.push(dev_prompt);
   context.push(...parsedMessages);
   //https://api.openai.com/v1/chat/completions
   try {

@@ -1,5 +1,6 @@
 import { Bot, CircleX, Loader } from "lucide-react";
 import MarkdownPreview from "@uiw/react-markdown-preview";
+
 interface AssistantMessageProps {
   message: string;
   timestamp: string;
@@ -43,6 +44,7 @@ export default function AssistantMessage({
               <MarkdownPreview
                 source={message}
                 style={{ padding: 1, background: "transparent" }}
+                className="wmde-markdown wmde-markdown-color bg-amber-300 text-amber-500"
               />
 
               <span className="text-xs text-[var(--color-text-2)] mt-1 block">
