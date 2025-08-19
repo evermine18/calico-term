@@ -3,6 +3,7 @@ import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
 import { setupTerminal, closeTerminal } from "./terminal";
+import { getModels, sendChat } from "./chat-api";
 
 function createContextMenu(): Menu {
   const contextMenu = Menu.buildFromTemplate([
@@ -96,6 +97,30 @@ app.whenReady().then(() => {
     }
   });
 
+  ipcMain.handle(
+    "send-ai-message",
+    async (
+      _event,
+      basepath,
+      apiKey,
+      selectedModel,
+      messages,
+      terminalContent = undefined
+    ) => {
+      return await sendChat(
+        basepath,
+        apiKey,
+        selectedModel,
+        messages,
+        terminalContent
+      );
+    }
+  );
+
+  ipcMain.handle("get-ai-models", async (_event, basepath, apiKey) => {
+    return await getModels(basepath, apiKey);
+  });
+
   // IPC test
   ipcMain.on("ping", () => console.log("pong"));
 
@@ -108,7 +133,13 @@ app.whenReady().then(() => {
   });
   setupTerminal();
   ipcMain.on("app-close", () => {
-    closeTerminal();
+    console.log("App close requested");
+    app.quit();
+  });
+  app.once("before-quit", async (event) => {
+    event.preventDefault();
+    BrowserWindow.getAllWindows().forEach((w) => w.hide());
+    await closeTerminal();
     app.quit();
   });
 });
@@ -118,7 +149,6 @@ app.whenReady().then(() => {
 // explicitly with Cmd + Q.
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") {
-    closeTerminal();
     app.quit();
   }
 });

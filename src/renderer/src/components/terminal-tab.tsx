@@ -4,23 +4,50 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
+import { useTerminalContext } from "@renderer/contexts/terminal-context";
 
 interface TerminalPanelProps {
   tabId: string;
   active: boolean;
-  onClose?: (id: string) => void;
 }
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   tabId,
   active,
-  onClose = () => {},
 }) => {
+  const { setActive } = useTerminalContext();
+
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const isInitializedRef = useRef(false);
+
+  // Exposing API
+  const api: TerminalAPI = {
+    getVisibleText() {
+      const t = terminalRef.current!;
+      const b = t.buffer.active;
+      const start = b.viewportY;
+      const end = start + t.rows - 1;
+      let out = "";
+      for (let y = start; y <= end; y++) {
+        out += (b.getLine(y)?.translateToString(true) ?? "") + "\n";
+      }
+      // Remove empty lines
+      out = out.replace(/^\n/gm, "");
+      return out;
+    },
+    getAllBufferText() {
+      const t = terminalRef.current!;
+      const b = t.buffer.active;
+      let out = "";
+      for (let y = 0; y < b.length; y++) {
+        out += (b.getLine(y)?.translateToString(true) ?? "") + "\n";
+      }
+      return out;
+    },
+  };
 
   /**
    * Safely fits the terminal to the container size.
@@ -97,6 +124,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     fitAddonRef.current = fitAddon;
 
     return () => {
+      setActive(null);
       resizeObserverRef.current?.disconnect();
       window.electron.ipcRenderer.removeListener(
         "terminal-output",
@@ -119,7 +147,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     // Disconnect any existing observer
     resizeObserverRef.current?.disconnect();
     resizeObserverRef.current = null;
-
+    if (active) setActive(api);
     if (!active) return;
 
     // Ensure layout is ready

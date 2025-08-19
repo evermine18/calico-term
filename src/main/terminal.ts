@@ -1,7 +1,6 @@
 import { spawn } from "node-pty";
 import { ipcMain } from "electron";
 
-let ptyProcess: any = null;
 let terminals: Record<string, any> = {};
 
 export function setupTerminal() {
@@ -37,7 +36,7 @@ export function setupTerminal() {
       for (const w of require("electron").BrowserWindow.getAllWindows()) {
         w.webContents.send("terminal-output", tabId, data);
       }
-      // Detecta errores comunes en la salida
+      // Check for common error patterns in the output
       const errorPatterns = [
         /error/i,
         /failed/i,
@@ -76,7 +75,7 @@ export function setupTerminal() {
 
   ipcMain.on("terminal-kill", (_event, tabId: string) => {
     if (!terminals[tabId]) {
-      console.log(`terminal-kill: ${tabId} no existe, saltando`);
+      console.log(`terminal-kill: ${tabId} does not exist, skipping`);
       return;
     }
     console.log(`Killing terminal: ${tabId}`);
@@ -85,8 +84,13 @@ export function setupTerminal() {
   });
 }
 
-export function closeTerminal() {
-  if (ptyProcess) {
-    ptyProcess.kill();
-  }
+export async function closeTerminal(): Promise<void> {
+  const promises = Object.values(terminals).map((proc) => {
+    return new Promise<void>((resolve) => {
+      proc.onExit(resolve);
+      proc.kill();
+    });
+  });
+  await Promise.all(promises);
+  terminals = {};
 }
