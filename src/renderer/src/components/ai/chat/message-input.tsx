@@ -5,11 +5,15 @@ import { useRef, useState } from "react";
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
+  enableTerminalContext: boolean;
+  setEnableTerminalContext: (enabled: boolean) => void;
   disabled?: boolean;
 }
 
 export default function MessageInput({
   onSendMessage,
+  enableTerminalContext,
+  setEnableTerminalContext,
   disabled,
 }: MessageInputProps) {
   const [inputText, setInputText] = useState("");
@@ -33,7 +37,11 @@ export default function MessageInput({
   return (
     <div className="p-4 border-t bg-[var(--color-background-soft)] border-[var(--color-background-mute)]">
       <div className="flex items-center justify-between mb-2">
-        <Toggle aria-label="Toggle italic">
+        <Toggle
+          aria-label="Toggle italic"
+          pressed={enableTerminalContext}
+          onPressedChange={(pressed) => setEnableTerminalContext(pressed)}
+        >
           <Terminal className="h-2 w-2" />
           <Label>Show Terminal</Label>
         </Toggle>

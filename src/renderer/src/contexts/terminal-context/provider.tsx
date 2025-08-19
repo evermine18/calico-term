@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef } from "react";
+import { useMemo, useCallback, useRef } from "react";
 import { TerminalContext } from "./context";
 
 export const TerminalProvider = ({

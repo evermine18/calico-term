@@ -11,6 +11,7 @@ import { useTerminalContext } from "@renderer/contexts/terminal-context";
 export default function AISidebarChat() {
   const { aiSidebarOpen, setAiSidebarOpen, selectedModel, apiKey } =
     useAppContext();
+  const [enableTerminalContext, setEnableTerminalContext] = useState(false);
   const { getActive } = useTerminalContext();
   const [width, setWidth] = useState(384);
   const resizingRef = useRef(false);
@@ -68,7 +69,6 @@ export default function AISidebarChat() {
     setIsTyping(true);
     const api = getActive();
     const screen = api?.getVisibleText() ?? "";
-    console.log("Visible text:", screen);
 
     try {
       const response = await window.electron.ipcRenderer.invoke(
@@ -77,7 +77,7 @@ export default function AISidebarChat() {
         apiKey,
         selectedModel,
         messages,
-        screen
+        enableTerminalContext ? screen : undefined
       );
       console.log("AI response:", response);
       if (!response) {
@@ -190,7 +190,12 @@ export default function AISidebarChat() {
           </div>
         </div>
 
-        <MessageInput onSendMessage={handleSendMessage} disabled={isTyping} />
+        <MessageInput
+          onSendMessage={handleSendMessage}
+          enableTerminalContext={enableTerminalContext}
+          setEnableTerminalContext={setEnableTerminalContext}
+          disabled={isTyping}
+        />
       </>
     </div>
   );

@@ -21,24 +21,21 @@ export async function sendChat(
   const dev_prompt = {
     role: "system" as const,
     content: `You are a DevOps/SRE assistant.
-
 STYLE (MANDATORY):
 - Answer in Markdown.
 - Put ANY command or multi-line snippet inside fenced code blocks with a language tag.
-  - Shell: \`\`\`bash
-  - PowerShell: \`\`\`powershell
-  - K8s manifests: \`\`\`yaml
-  - JSON: \`\`\`json
 - Do NOT put commands as list items; explain first, then the code block.
-- Commands must be copy-paste ready (no leading $).`,
+- Commands must be copy-paste ready (no leading $).
+- Answer ONLY what the user explicitly asks.
+- If highly relevant, you may add ONE short extra tip or recommendation at the end, formatted as a blockquote (>).
+`,
   };
   if (terminalContent) {
-    context = [
-      {
-        role: "developer",
-        content: `The users current Terminal context is:\n\n${terminalContent}`,
-      },
-    ];
+    context.push({
+      role: "developer",
+      content: `The users current Terminal context is:\n\n${terminalContent}`,
+    });
+    console.log("[AI Chat] Terminal context detected!");
   }
   context.push(dev_prompt);
   context.push(...parsedMessages);

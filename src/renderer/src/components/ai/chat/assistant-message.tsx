@@ -44,7 +44,6 @@ export default function AssistantMessage({
               <MarkdownPreview
                 source={message}
                 style={{ padding: 1, background: "transparent" }}
-                className="wmde-markdown wmde-markdown-color bg-amber-300 text-amber-500"
               />
 
               <span className="text-xs text-[var(--color-text-2)] mt-1 block">
