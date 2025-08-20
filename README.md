@@ -1,6 +1,6 @@
 # Calico Term
 
-[![Release](https://img.shields.io/github/v/release/<your-username>/calico-term?style=flat-square)](https://github.com/evermine18/calico-term/releases)
+[![Release](https://img.shields.io/github/v/release/evermine18/calico-term?style=flat-square)](https://github.com/evermine18/calico-term/releases)
 [![License](https://img.shields.io/github/license/evermine18/calico-term?style=flat-square)](LICENSE)
 
 A modern cross-platform terminal emulator powered by Electron, Vite, React, and xterm.js, featuring an AI assistant for generating safe and reproducible shell commands.
