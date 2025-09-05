@@ -5,6 +5,8 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { useTerminalContext } from "@renderer/contexts/terminal-context";
+import useCopyNotification from "@renderer/hooks/useCopyNotification";
+import CopyNotification from "./terminal/copy-notification";
 
 interface TerminalPanelProps {
   tabId: string;
@@ -22,6 +24,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const isInitializedRef = useRef(false);
+  const { notificationState, copyText, handleComplete } = useCopyNotification();
 
   // Exposing API
   const api: TerminalAPI = {
@@ -93,7 +96,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       fontSize: 14,
       // scrollback: 50000, // Optional: increase scrollback for large output
     });
-
+    terminal.onSelectionChange((e) => {
+      const text = terminal.getSelection();
+      if (text) {
+        copyText(text, null);
+      }
+    });
     const fitAddon = new FitAddon();
     const unicode11Addon = new Unicode11Addon();
     terminal.loadAddon(fitAddon);
@@ -177,10 +185,17 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   }, [active]);
 
   return (
-    <div
-      ref={containerRef}
-      className="terminal-container flex-1 overflow-hidden h-full w-full"
-      style={{ display: active ? "block" : "none" }}
-    />
+    <>
+      <div
+        ref={containerRef}
+        className="terminal-container flex-1 overflow-hidden h-full w-full"
+        style={{ display: active ? "block" : "none" }}
+      />
+      <CopyNotification
+        isVisible={notificationState.isVisible}
+        position={notificationState.position}
+        onComplete={handleComplete}
+      />
+    </>
   );
 };

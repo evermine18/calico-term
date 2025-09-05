@@ -6,6 +6,11 @@ declare global {
     platform: {
       os: string;
     };
-    api: unknown;
+    api: {
+      clipboard: {
+        writeText: (text: string) => void;
+        readText: () => string;
+      };
+    };
   }
 }
