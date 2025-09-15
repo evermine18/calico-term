@@ -96,7 +96,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       fontSize: 14,
       // scrollback: 50000, // Optional: increase scrollback for large output
     });
-    terminal.onSelectionChange((e) => {
+    terminal.onSelectionChange((_) => {
       const text = terminal.getSelection();
       if (text) {
         copyText(text, null);

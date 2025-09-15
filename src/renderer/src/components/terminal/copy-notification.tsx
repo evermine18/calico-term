@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Check } from "lucide-react";
 
 const CopyNotification = ({
@@ -31,6 +31,7 @@ const CopyNotification = ({
         clearTimeout(completeTimer);
       };
     }
+    return undefined;
   }, [isVisible, onComplete]);
 
   if (!isVisible || phase === "hidden") return null;
