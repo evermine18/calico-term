@@ -1,13 +1,11 @@
 import { Terminal } from "@xterm/xterm";
-import { Check, Pencil, TerminalSquare, X, Copy, Edit2, XCircle } from "lucide-react";
-import { useState, useEffect, useRef } from "react";
+import { Check, TerminalSquare, X, Copy, Edit2, XCircle } from "lucide-react";
+import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 
 export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
   const [draggedTab, setDraggedTab] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; tabId: string } | null>(null);
-  const [hoveredTab, setHoveredTab] = useState<string | null>(null);
-  const dragCounter = useRef(0);
 
   // Cerrar menú contextual al hacer click fuera
   useEffect(() => {
@@ -171,7 +169,7 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
   return (
     <>
       <div className="flex items-center gap-1.5 flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-cyan-600/40 scrollbar-track-transparent">
-        {tabs.map((tab, index) => (
+        {tabs.map((tab) => (
           <div
             key={tab.id}
             draggable={tab.mode === "normal"}
@@ -179,8 +177,6 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
             onDragOver={handleDragOver}
             onDrop={(e) => handleDrop(e, tab.id)}
             onDragEnd={handleDragEnd}
-            onMouseEnter={() => setHoveredTab(tab.id)}
-            onMouseLeave={() => setHoveredTab(null)}
             title={tab.title}
             className={`tab-item
                 relative group flex items-center gap-2 px-3 py-2 rounded-lg
