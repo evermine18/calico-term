@@ -39,20 +39,19 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
   };
 
   return (
-    <div className="flex items-center gap-1 flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
+    <div className="flex items-center gap-1.5 flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-cyan-600/40 scrollbar-track-transparent">
       {tabs.map((tab) => (
         <div
           key={tab.id}
           className={`
-                relative group flex items-center gap-2 px-4 py-2.5 rounded-t-lg
-                text-sm font-medium transition-all duration-200 border-t border-l border-r
-                min-w-0 max-w-48 flex-shrink-0 cursor-pointer
-                transform hover:scale-105 hover:-translate-y-0.5
-                ${
-                  activeTab === tab.id
-                    ? "bg-gray-800 text-gray-100 border-blue-500/50 shadow-lg shadow-blue-500/10 z-10"
-                    : "bg-gray-800/30 text-gray-400 border-gray-700/30 hover:bg-gray-800/60 hover:text-gray-200 hover:border-gray-600/50"
-                }
+                relative group flex items-center gap-2.5 px-4 py-2.5 rounded-t-md
+                text-sm font-medium border-t border-l border-r
+                min-w-[120px] max-w-[240px] flex-shrink-0 cursor-pointer
+                transition-colors duration-100
+                ${activeTab === tab.id
+              ? "bg-slate-800/90 text-gray-100 border-cyan-500/60 shadow-lg shadow-cyan-500/10 z-10"
+              : "bg-slate-900/40 text-gray-400 border-slate-700/40 hover:bg-slate-800/50 hover:text-cyan-100 hover:border-cyan-500/30"
+            }
               `}
           onClick={() => setActiveTab(tab.id)}
           onContextMenu={(e) => {
@@ -62,11 +61,10 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
         >
           {/* Status indicator */}
           <div
-            className={`w-2 h-2 rounded-full flex-shrink-0 transition-all duration-200 ${
-              activeTab === tab.id
-                ? "bg-green-400 shadow-sm shadow-green-400/50"
-                : "bg-gray-500 group-hover:bg-blue-400"
-            }`}
+            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors duration-100 ${activeTab === tab.id
+              ? "bg-cyan-400 shadow-sm shadow-cyan-400/50"
+              : "bg-slate-500 group-hover:bg-cyan-400/70"
+              }`}
           ></div>
 
           {/* Tab title */}
@@ -89,11 +87,13 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
               <input
                 value={tab.title}
                 onChange={(e) => updateTabTitle(tab.id, e.target.value)}
+                className="bg-slate-900/60 border border-cyan-500/50 rounded px-2 py-0.5 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500"
                 style={{
                   width: `calc(${document.getElementById(`tab-title-measure-${tab.id}`)?.offsetWidth || 50}px + 1ch)`,
                   minWidth: "40px",
                   maxWidth: "180px",
                 }}
+                autoFocus
               />
               <button
                 onClick={(e) => {
@@ -104,12 +104,11 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
                     )
                   );
                 }}
-                className="w-5 h-5 rounded flex items-center justify-center text-gray-400 
-                           hover:text-blue-400 hover:bg-blue-500/20 transition-all duration-150
-                           active:scale-90"
+                className="w-5 h-5 rounded flex items-center justify-center text-gray-500 
+                           hover:text-green-400 hover:bg-green-500/15 transition-colors duration-75"
                 title="Apply title"
               >
-                <Check />
+                <Check size={14} />
               </button>
             </>
           ) : (
@@ -118,15 +117,14 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
 
           {/* Action buttons */}
           {tab.mode === "normal" && (
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-100">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   duplicateTab(tab.id);
                 }}
-                className="w-5 h-5 rounded flex items-center justify-center text-gray-400 
-                           hover:text-blue-400 hover:bg-blue-500/20 transition-all duration-150
-                           active:scale-90"
+                className="w-5 h-5 rounded flex items-center justify-center text-gray-500 
+                           hover:text-cyan-400 hover:bg-cyan-500/15 transition-colors duration-75"
                 title="Duplicate tab"
               >
                 <svg
@@ -152,11 +150,8 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
                     )
                   );
                 }}
-                className={
-                  "w-5 h-5 rounded flex items-center justify-center text-gray-400 " +
-                  "hover:text-yellow-400 hover:bg-yellow-500/20 transition-all duration-150 " +
-                  "active:scale-90"
-                }
+                className="w-5 h-5 rounded flex items-center justify-center text-gray-500 
+                           hover:text-amber-400 hover:bg-amber-500/15 transition-colors duration-75"
                 title="Edit title"
               >
                 <Pencil size={14} />
@@ -168,9 +163,8 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
                     e.stopPropagation();
                     closeTab(tab.id);
                   }}
-                  className="w-5 h-5 rounded flex items-center justify-center text-gray-400 
-                             hover:text-red-400 hover:bg-red-500/20 transition-all duration-150
-                             active:scale-90"
+                  className="w-5 h-5 rounded flex items-center justify-center text-gray-500 
+                             hover:text-red-400 hover:bg-red-500/15 transition-colors duration-75"
                   title="Close tab"
                 >
                   <svg
@@ -191,10 +185,9 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
             </div>
           )}
 
-          {/* Tab ID for debugging */}
           {/* Active tab indicator */}
           {activeTab === tab.id && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 via-cyan-400 to-blue-500"></div>
           )}
         </div>
       ))}

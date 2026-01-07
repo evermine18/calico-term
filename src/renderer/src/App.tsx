@@ -25,22 +25,21 @@ function App(): React.JSX.Element {
       <AppProvider>
         <TerminalProvider>
           <div
-            className={`h-screen flex flex-col relative bg-gray-950 text-gray-100 transition-all duration-300 ${
-              isFullscreen ? "fixed inset-0 z-50" : ""
-            }`}
+            className={`h-screen flex flex-col relative bg-slate-950 text-gray-100 transition-all duration-300 ${isFullscreen ? "fixed inset-0 z-50" : ""
+              }`}
           >
             {/* Header with window controls */}
-            <div className="bg-gray-900/95 backdrop-blur-xl border-b border-gray-700/30 px-4 py-1 flex items-center justify-between shadow-2xl ">
+            <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/40 px-4 py-1.5 flex items-center justify-between shadow-xl">
               <div className="flex items-center gap-2 w-full">
                 {window.platform?.os !== "darwin" ? (
-                  <div className="flex items-center gap-2 ">
+                  <div className="flex items-center gap-2.5">
                     <div
-                      className="w-3 h-3 rounded-full bg-red-500 hover:bg-red-400 transition-colors cursor-pointer shadow-sm"
+                      className="w-3 h-3 rounded-full bg-red-500/90 hover:bg-red-400 transition-colors cursor-pointer shadow-sm"
                       onClick={closeApp}
                     ></div>
-                    <div className="w-3 h-3 rounded-full bg-yellow-500 hover:bg-yellow-400 transition-colors cursor-pointer shadow-sm"></div>
+                    <div className="w-3 h-3 rounded-full bg-amber-500/90 hover:bg-amber-400 transition-colors cursor-pointer shadow-sm"></div>
                     <div
-                      className="w-3 h-3 rounded-full bg-green-500 hover:bg-green-400 transition-colors cursor-pointer shadow-sm"
+                      className="w-3 h-3 rounded-full bg-green-500/90 hover:bg-green-400 transition-colors cursor-pointer shadow-sm"
                       onClick={toggleFullscreen}
                     ></div>
                   </div>
@@ -50,9 +49,9 @@ function App(): React.JSX.Element {
 
                 <div className="drag-region flex w-full items-center gap-2 left-0 right-0">
                   <div className="flex items-center gap-3">
-                    <div className=" flex items-center gap-2 text-gray-400 text-sm">
+                    <div className="flex items-center gap-2 text-gray-400 text-sm">
                       <svg
-                        className="w-4 h-4"
+                        className="w-4 h-4 text-cyan-400"
                         fill="currentColor"
                         viewBox="0 0 20 20"
                       >
@@ -62,12 +61,12 @@ function App(): React.JSX.Element {
                           clipRule="evenodd"
                         ></path>
                       </svg>
-                      <span className="font-mono">Calico Term</span>
+                      <span className="font-semibold tracking-wide text-gray-300">Calico Term</span>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 text-gray-400 text-xs">
-                    <span className="px-2 py-1 bg-gray-800/50 rounded border border-gray-700/50 font-mono">
+                    <span className="px-2.5 py-1 bg-slate-800/60 rounded border border-slate-700/50 font-mono text-cyan-400/80">
                       {tabs.length} tab{tabs.length !== 1 ? "s" : ""}
                     </span>
                   </div>
@@ -83,13 +82,13 @@ function App(): React.JSX.Element {
               setActiveTab={setActiveTab}
             />
             {/* Terminal Content */}
-            <div className="flex-1 bg-gray-950 relative overflow-hidden pb-8">
+            <div className="flex-1 bg-slate-950 relative overflow-hidden pb-8">
               <AISidebarChat />
               {tabs.length === 0 ? (
                 <div className="h-full flex items-center justify-center text-gray-500">
                   <div className="text-center">
                     <svg
-                      className="w-16 h-16 mx-auto mb-4 opacity-50"
+                      className="w-16 h-16 mx-auto mb-4 opacity-40 text-cyan-400"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -97,15 +96,15 @@ function App(): React.JSX.Element {
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        strokeWidth={1}
+                        strokeWidth={1.5}
                         d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
                       />
                     </svg>
-                    <p className="text-lg font-medium mb-2">
+                    <p className="text-lg font-semibold mb-2 text-gray-400">
                       No terminal sessions
                     </p>
-                    <p className="text-sm opacity-75">
-                      Click the + button to create a new terminal
+                    <p className="text-sm text-gray-500">
+                      Press <kbd className="px-2 py-1 bg-slate-800/60 border border-slate-700/50 rounded text-xs font-mono text-cyan-400/80">+</kbd> to create a new terminal
                     </p>
                   </div>
                 </div>
@@ -113,11 +112,10 @@ function App(): React.JSX.Element {
                 tabs.map((tab) => (
                   <div
                     key={tab.id}
-                    className={`absolute inset-0 transition-all duration-300 ${
-                      activeTab === tab.id
+                    className={`absolute inset-0 transition-all duration-300 ${activeTab === tab.id
                         ? "opacity-100 scale-100"
                         : "opacity-0 scale-95 pointer-events-none"
-                    }`}
+                      }`}
                   >
                     <TerminalPanel
                       tabId={tab.id}
@@ -129,24 +127,24 @@ function App(): React.JSX.Element {
             </div>
 
             {/* Status Bar */}
-            <div className="bg-gray-900/95 backdrop-blur-md border-t border-gray-700/30 px-4 py-2 flex items-center justify-between text-xs text-gray-400">
+            <div className="bg-slate-900/95 backdrop-blur-md border-t border-slate-700/40 px-4 py-2 flex items-center justify-between text-xs text-gray-400">
               <div className="flex items-center gap-4">
-                <span className="flex items-center gap-1">
-                  <div className="w-2 h-2 rounded-full bg-green-400"></div>
-                  Connected
+                <span className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400/50"></div>
+                  <span className="text-cyan-400/90 font-medium">Connected</span>
                 </span>
                 {activeTab && (
-                  <span className="font-mono">
+                  <span className="font-mono text-gray-500">
                     {tabs.find((t) => t.id === activeTab)?.title}
                   </span>
                 )}
               </div>
               <div className="flex items-center gap-4">
-                <span>UTF-8</span>
-                <span>LF</span>
-                <span className="flex items-center gap-1">
+                <span className="text-gray-500">UTF-8</span>
+                <span className="text-gray-500">LF</span>
+                <span className="flex items-center gap-1.5">
                   <svg
-                    className="w-3 h-3"
+                    className="w-3 h-3 text-cyan-400/70"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -156,7 +154,7 @@ function App(): React.JSX.Element {
                       clipRule="evenodd"
                     ></path>
                   </svg>
-                  Shell
+                  <span className="text-gray-500">Shell</span>
                 </span>
               </div>
             </div>
