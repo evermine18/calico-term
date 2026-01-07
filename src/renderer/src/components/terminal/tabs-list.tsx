@@ -1,5 +1,5 @@
 import { Terminal } from "@xterm/xterm";
-import { Check, Pencil } from "lucide-react";
+import { Check, Pencil, TerminalSquare } from "lucide-react";
 
 export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
   const updateTabTitle = (id: string, title: string) => {
@@ -44,13 +44,13 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
         <div
           key={tab.id}
           className={`
-                relative group flex items-center gap-2.5 px-4 py-2.5 rounded-t-md
-                text-sm font-medium border-t border-l border-r
-                min-w-[120px] max-w-[240px] flex-shrink-0 cursor-pointer
-                transition-colors duration-100
+                relative group flex items-center gap-2 px-3 py-2 rounded-lg
+                text-sm font-medium border-l-[3px] border-r border-t border-b
+                min-w-[110px] max-w-[200px] flex-shrink-0 cursor-pointer
+                backdrop-blur-md transition-all duration-100
                 ${activeTab === tab.id
-              ? "bg-slate-800/90 text-gray-100 border-cyan-500/60 shadow-lg shadow-cyan-500/10 z-10"
-              : "bg-slate-900/40 text-gray-400 border-slate-700/40 hover:bg-slate-800/50 hover:text-cyan-100 hover:border-cyan-500/30"
+              ? "bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-gray-100 border-l-cyan-400 border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-xl shadow-cyan-500/20 z-10"
+              : "bg-slate-900/60 text-gray-400 border-l-slate-700/50 border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-cyan-100 hover:border-l-cyan-400/50 hover:shadow-lg hover:shadow-cyan-500/10"
             }
               `}
           onClick={() => setActiveTab(tab.id)}
@@ -59,13 +59,15 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
             // Here you could add a context menu
           }}
         >
-          {/* Status indicator */}
+          {/* Terminal Icon */}
           <div
-            className={`w-1.5 h-1.5 rounded-full flex-shrink-0 transition-colors duration-100 ${activeTab === tab.id
-              ? "bg-cyan-400 shadow-sm shadow-cyan-400/50"
-              : "bg-slate-500 group-hover:bg-cyan-400/70"
+            className={`flex-shrink-0 transition-colors duration-100 ${activeTab === tab.id
+              ? "text-cyan-400"
+              : "text-slate-500 group-hover:text-cyan-400/70"
               }`}
-          ></div>
+          >
+            <TerminalSquare size={14} strokeWidth={2} />
+          </div>
 
           {/* Tab title */}
           {tab.mode === "edit" ? (
@@ -112,7 +114,7 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
               </button>
             </>
           ) : (
-            <span className="truncate flex-1 select-none">{tab.title}</span>
+            <span className="truncate flex-1 select-none font-medium">{tab.title}</span>
           )}
 
           {/* Action buttons */}
@@ -185,10 +187,6 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
             </div>
           )}
 
-          {/* Active tab indicator */}
-          {activeTab === tab.id && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-500 via-cyan-400 to-blue-500"></div>
-          )}
         </div>
       ))}
     </div>
