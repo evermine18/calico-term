@@ -9,6 +9,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@renderer/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@renderer/components/ui/select";
 import { Input } from "@renderer/components/ui/input";
 import { Label } from "@renderer/components/ui/label";
 import { ModelsSelector } from "./model-combobox";
@@ -32,11 +39,14 @@ export default function SettingsDialog({ children }) {
     setApiKey,
     selectedModel,
     setSelectedModel,
+    historyRetentionDays,
+    setHistoryRetentionDays,
   } = useAppContext();
   const [localSettings, setLocalSettings] = useState({
     apiUrl: apiUrl || "",
     apiKey: apiKey || "",
     selectedModel: selectedModel || "",
+    historyRetentionDays: historyRetentionDays || 1,
   });
   const [open, setOpen] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
@@ -86,6 +96,7 @@ export default function SettingsDialog({ children }) {
     setApiUrl(localSettings.apiUrl);
     setApiKey(localSettings.apiKey);
     setSelectedModel(localSettings.selectedModel);
+    setHistoryRetentionDays(localSettings.historyRetentionDays);
     setOpen(false);
   };
 
@@ -162,6 +173,57 @@ export default function SettingsDialog({ children }) {
                     setLocalSettings({ ...localSettings, selectedModel: model })
                   }
                 />
+              </div>
+            </div>
+
+            {/* Command History Retention Section */}
+            <div className="space-y-4 pt-3 border-t border-slate-700/40">
+              <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
+                <div className="w-1 h-4 bg-cyan-500 rounded-full"></div>
+                Command History
+              </div>
+
+              <div className="grid gap-2.5 pl-3">
+                <Label htmlFor="retention-days" className="text-gray-300 text-sm">
+                  History Retention Period
+                </Label>
+                <div className="text-xs text-gray-400 mb-2">
+                  Commands older than this period will be automatically deleted (pinned commands are kept forever)
+                </div>
+                <div className="flex items-center gap-3">
+                  <Select
+                    value={localSettings.historyRetentionDays.toString()}
+                    onValueChange={(value) =>
+                      setLocalSettings({
+                        ...localSettings,
+                        historyRetentionDays: parseFloat(value),
+                      })
+                    }
+                  >
+                    <SelectTrigger className="flex-1 bg-slate-800/60 border-slate-700/50 text-gray-100 hover:bg-slate-800 focus:border-cyan-500/50 focus:ring-cyan-500/20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700/50">
+                      <SelectItem value="0.04167" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">1 hour</SelectItem>
+                      <SelectItem value="0.125" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">3 hours</SelectItem>
+                      <SelectItem value="0.25" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">6 hours</SelectItem>
+                      <SelectItem value="0.5" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">12 hours</SelectItem>
+                      <SelectItem value="1" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">1 day</SelectItem>
+                      <SelectItem value="2" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">2 days</SelectItem>
+                      <SelectItem value="3" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">3 days</SelectItem>
+                      <SelectItem value="7" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">1 week</SelectItem>
+                      <SelectItem value="14" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">2 weeks</SelectItem>
+                      <SelectItem value="30" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">1 month</SelectItem>
+                      <SelectItem value="90" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">3 months</SelectItem>
+                      <SelectItem value="365" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">1 year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <span className="text-xs text-gray-400 min-w-fit">
+                    {localSettings.historyRetentionDays < 1
+                      ? `${Math.round(localSettings.historyRetentionDays * 24)}h`
+                      : `${localSettings.historyRetentionDays}d`}
+                  </span>
+                </div>
               </div>
             </div>
 

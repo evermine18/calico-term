@@ -2,7 +2,7 @@ import { TerminalTab } from "@renderer/types/terminal";
 import { Terminal } from "@xterm/xterm";
 
 import TabsList from "./tabs-list";
-import { Bot, Cog, Plus } from "lucide-react";
+import { Bot, Cog, Plus, Clock } from "lucide-react";
 import { useAppContext } from "@renderer/contexts/app-context";
 import SettingsDialog from "../app-settings/dialog";
 
@@ -24,7 +24,7 @@ export default function TerminalHeader({
     setActiveTab(id);
   };
 
-  const { setAiSidebarOpen } = useAppContext();
+  const { setAiSidebarOpen, setHistoryDialogOpen } = useAppContext();
 
   return (
     <div className="bg-slate-900/95 backdrop-blur-md border-b border-slate-700/40 px-4 py-2.5 flex items-center gap-2 shadow-xl overflow-hidden">
@@ -47,6 +47,20 @@ export default function TerminalHeader({
         title="New terminal (Ctrl+Shift+T)"
       >
         <Plus size={18} />
+      </button>
+
+      <button
+        onClick={() => setHistoryDialogOpen(true)}
+        className="
+            flex items-center justify-center w-9 h-9 rounded-md
+            bg-slate-800/60 text-gray-400 border border-slate-700/50
+            hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50
+            transition-all duration-150 flex-shrink-0
+            shadow-sm
+          "
+        title="Command History"
+      >
+        <Clock size={18} />
       </button>
 
       <button
