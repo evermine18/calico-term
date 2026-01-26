@@ -7,17 +7,21 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { useTerminalContext } from "@renderer/contexts/terminal-context";
 import useCopyNotification from "@renderer/hooks/useCopyNotification";
 import CopyNotification from "./terminal/copy-notification";
+import { useAppContext } from "@renderer/contexts/app-context";
 
 interface TerminalPanelProps {
   tabId: string;
   active: boolean;
+  tabTitle?: string;
 }
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   tabId,
   active,
+  tabTitle = "Terminal",
 }) => {
   const { setActive } = useTerminalContext();
+  const { addCommandToHistory } = useAppContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -131,6 +135,31 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     terminal.unicode.activeVersion = "11";
 
     terminal.onData((data) => {
+      // Capturar comandos cuando se presiona Enter
+      if (data === '\r') {
+        // Read the current line from the terminal buffer
+        const buffer = terminal.buffer.active;
+        const cursorY = buffer.cursorY;
+        const line = buffer.getLine(cursorY);
+
+        if (line) {
+          // Get the complete line text
+          let lineText = line.translateToString(true);
+
+          // Clean the prompt and special characters
+          // Detect common prompt patterns and remove them
+          lineText = lineText.replace(/^\[?[\w\-\.]+@[\w\-\.]+.*?\]?\s*[\$#>]\s*/, ''); // bash/zsh style
+          lineText = lineText.replace(/^PS\s+[\w\:\\\>]+>\s*/, ''); // PowerShell style
+          lineText = lineText.replace(/^C:\\.*?>\s*/, ''); // Windows cmd style
+          lineText = lineText.replace(/^.*?[$#>]\s*/, ''); // Generic prompt
+
+          const cmd = lineText.trim();
+          if (cmd && cmd.length > 0) {
+            addCommandToHistory(cmd, tabId, tabTitle);
+          }
+        }
+      }
+
       window.electron.ipcRenderer.send("terminal-input", { tabId, data });
     });
 
