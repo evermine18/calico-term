@@ -7,17 +7,21 @@ import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { useTerminalContext } from "@renderer/contexts/terminal-context";
 import useCopyNotification from "@renderer/hooks/useCopyNotification";
 import CopyNotification from "./terminal/copy-notification";
+import { useAppContext } from "@renderer/contexts/app-context";
 
 interface TerminalPanelProps {
   tabId: string;
   active: boolean;
+  tabTitle?: string;
 }
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   tabId,
   active,
+  tabTitle = "Terminal",
 }) => {
   const { setActive } = useTerminalContext();
+  const { addCommandToHistory } = useAppContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -89,11 +93,32 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       cursorBlink: true,
       allowProposedApi: true,
       theme: {
-        background: "#1e1e1e",
-        foreground: "#ffffff",
+        background: "#020617",
+        foreground: "#e2e8f0",
+        cursor: "#06b6d4",
+        cursorAccent: "#020617",
+        selectionBackground: "#06b6d4",
+        selectionForeground: "#020617",
+        black: "#1e293b",
+        red: "#ef4444",
+        green: "#10b981",
+        yellow: "#f59e0b",
+        blue: "#06b6d4",
+        magenta: "#a855f7",
+        cyan: "#22d3ee",
+        white: "#cbd5e1",
+        brightBlack: "#475569",
+        brightRed: "#f87171",
+        brightGreen: "#34d399",
+        brightYellow: "#fbbf24",
+        brightBlue: "#22d3ee",
+        brightMagenta: "#c084fc",
+        brightCyan: "#67e8f9",
+        brightWhite: "#f1f5f9",
       },
-      fontFamily: "Cascadia Code, monospace",
+      fontFamily: "Cascadia Code, Consolas, 'Courier New', monospace",
       fontSize: 14,
+      lineHeight: 1.2,
       // scrollback: 50000, // Optional: increase scrollback for large output
     });
     terminal.onSelectionChange((_) => {
@@ -110,6 +135,31 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     terminal.unicode.activeVersion = "11";
 
     terminal.onData((data) => {
+      // Capturar comandos cuando se presiona Enter
+      if (data === '\r') {
+        // Read the current line from the terminal buffer
+        const buffer = terminal.buffer.active;
+        const cursorY = buffer.cursorY;
+        const line = buffer.getLine(cursorY);
+
+        if (line) {
+          // Get the complete line text
+          let lineText = line.translateToString(true);
+
+          // Clean the prompt and special characters
+          // Detect common prompt patterns and remove them
+          lineText = lineText.replace(/^\[?[\w\-\.]+@[\w\-\.]+.*?\]?\s*[\$#>]\s*/, ''); // bash/zsh style
+          lineText = lineText.replace(/^PS\s+[\w\:\\\>]+>\s*/, ''); // PowerShell style
+          lineText = lineText.replace(/^C:\\.*?>\s*/, ''); // Windows cmd style
+          lineText = lineText.replace(/^.*?[$#>]\s*/, ''); // Generic prompt
+
+          const cmd = lineText.trim();
+          if (cmd && cmd.length > 0) {
+            addCommandToHistory(cmd, tabId, tabTitle);
+          }
+        }
+      }
+
       window.electron.ipcRenderer.send("terminal-input", { tabId, data });
     });
 

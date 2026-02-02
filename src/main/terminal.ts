@@ -13,13 +13,13 @@ function getDefaultShell(): string {
     return "powershell.exe";
   }
 
-  // En macOS, intentar obtener el shell del usuario desde $SHELL
-  // o desde /etc/passwd
+  // On macOS, try to get the user's shell from $SHELL
+  // or from /etc/passwd
   if (process.env.SHELL) {
     return process.env.SHELL;
   }
 
-  // Fallback: zsh es el predeterminado en macOS Catalina+
+  // Fallback: zsh is the default on macOS Catalina+
   if (process.platform === "darwin") {
     return "/bin/zsh";
   }
@@ -160,17 +160,17 @@ export function setupTerminal() {
 
       ptyProcess.onExit(({ exitCode, signal }) => {
         console.log(
-          `Terminal ${tabId} exited with code ${exitCode}, signal ${signal}`
+          `Terminal ${tabId} exited with code ${exitCode}, signal ${signal}`,
         );
         delete terminals[tabId];
-        // Notificar al renderer que la terminal se cerró
+        // Notify the renderer that the terminal was closed
         for (const w of require("electron").BrowserWindow.getAllWindows()) {
           w.webContents.send("terminal-closed", tabId, exitCode);
         }
       });
     } catch (error) {
       console.error(`Failed to create terminal ${tabId}:`, error);
-      // Notificar al renderer del error
+      // Notify the renderer of the error
       for (const w of require("electron").BrowserWindow.getAllWindows()) {
         w.webContents.send("terminal-creation-failed", tabId, error.message);
       }
@@ -193,6 +193,16 @@ export function setupTerminal() {
     console.log(`Killing terminal: ${tabId}`);
     terminals[tabId].kill();
     delete terminals[tabId];
+  });
+
+  // Execute command in the active terminal
+  ipcMain.on("execute-command", (_event, command: string) => {
+    // Find the active terminal (the last used one)
+    const terminalIds = Object.keys(terminals);
+    if (terminalIds.length > 0) {
+      const lastTerminal = terminals[terminalIds[terminalIds.length - 1]];
+      lastTerminal?.write(command + "\r");
+    }
   });
 }
 

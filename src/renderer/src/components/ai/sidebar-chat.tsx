@@ -37,10 +37,10 @@ export default function AISidebarChat() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!resizingRef.current) return;
-      // Sidebar está anclada a la derecha: calculamos desde el borde derecho.
+      // Sidebar is anchored to the right: calculate from right edge
       const newWidth = Math.min(
         700,
-        Math.max(260, window.innerWidth - e.clientX)
+        Math.max(260, window.innerWidth - e.clientX),
       );
       setWidth(newWidth);
     };
@@ -77,7 +77,7 @@ export default function AISidebarChat() {
         apiKey,
         selectedModel,
         messages,
-        enableTerminalContext ? screen : undefined
+        enableTerminalContext ? screen : undefined,
       );
       console.log("AI response:", response);
       if (!response) {
@@ -149,12 +149,12 @@ export default function AISidebarChat() {
 
   return (
     <div
-      className="absolute right-0 top-0 bottom-0 h-full bg-[var(--color-background-soft)] border-l border-[var(--color-background-mute)] flex flex-col z-10"
+      className="absolute right-0 top-0 bottom-0 h-full bg-slate-900/95 backdrop-blur-md border-l border-slate-700/50 flex flex-col z-10 shadow-2xl"
       style={{ width }}
     >
       <div
         onMouseDown={startResizing}
-        className="absolute left-0 top-0 h-full w-1 cursor-ew-resize bg-transparent hover:bg-[var(--color-background-mute)] active:bg-[var(--color-background-mute)] z-1"
+        className="absolute left-0 top-0 h-full w-1 cursor-ew-resize bg-transparent hover:bg-cyan-500/30 active:bg-cyan-500/50 z-1 transition-colors"
         title="Resize sidebar"
       />
       <ChatHeader
@@ -163,7 +163,7 @@ export default function AISidebarChat() {
       />
 
       <>
-        <div className="flex-1 overflow-y-auto p-4 bg-[var(--color-background)]">
+        <div className="flex-1 overflow-y-auto p-4 bg-slate-950">
           <div className="flex flex-col gap-3">
             {messages.map((message) =>
               message.type === "user" ? (
@@ -179,7 +179,7 @@ export default function AISidebarChat() {
                   timestamp={message.timestamp}
                   error={message.error}
                 />
-              )
+              ),
             )}
 
             {isTyping && (

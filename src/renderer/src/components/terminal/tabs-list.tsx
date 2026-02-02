@@ -1,203 +1,205 @@
-import { Terminal } from "@xterm/xterm";
-import { Check, Pencil } from "lucide-react";
+import { useState } from 'react';
+import { TabItem } from './tab-item';
+import { TabContextMenu } from './tab-context-menu';
+import { TagsSubmenu } from './tags-submenu';
+import { useTabNavigation } from '../../hooks/useTabNavigation';
+import { useTags } from '../../hooks/useTags';
+import { useContextMenu } from '../../hooks/useContextMenu';
+import { TabsSubmenuState } from '../../types/tabs';
+import * as tabOps from '../../lib/tab-operations';
 
 export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
-  const updateTabTitle = (id: string, title: string) => {
-    setTabs((prev) =>
-      prev.map((tab) => (tab.id === id ? { ...tab, title } : tab))
-    );
+  const [draggedTab, setDraggedTab] = useState<string | null>(null);
+  const [tagsSubmenu, setTagsSubmenu] = useState<TabsSubmenuState | null>(null);
+
+  const customTags = useTags();
+  const { contextMenu, setContextMenu } = useContextMenu();
+
+  // Tab operation handlers
+  const handleCloseTab = (id: string) => {
+    tabOps.closeTab(id, tabs, activeTab, setTabs, setActiveTab);
   };
 
-  const closeTab = (id: string) => {
-    if (tabs.length === 1) return; // Do not close the last tab
-
-    window.electron?.ipcRenderer.send("terminal-kill", id);
-
-    const currentIndex = tabs.findIndex((tab) => tab.id === id);
-    const nextActiveIndex = currentIndex > 0 ? currentIndex - 1 : 1;
-
-    setTabs((prev) => prev.filter((t) => t.id !== id));
-
-    if (activeTab === id && tabs.length > 1) {
-      setActiveTab(tabs[nextActiveIndex]?.id ?? tabs[0]?.id);
-    }
+  const handleDuplicateTab = (tabId: string) => {
+    tabOps.duplicateTab(tabId, tabs, setTabs, setActiveTab);
   };
 
-  const duplicateTab = (tabId: string) => {
-    const tab = tabs.find((t) => t.id === tabId);
-    if (tab) {
-      const id = crypto.randomUUID();
-      const newTab = {
-        id,
-        title: `${tab.title} (Copy)`,
-        mode: tab.mode,
-        terminal: new Terminal(),
-      };
-      setTabs((prev) => [...prev, newTab]);
-      setActiveTab(id);
+  const handleCloseOtherTabs = (id: string) => {
+    tabOps.closeOtherTabs(id, tabs, setTabs, setActiveTab);
+  };
+
+  const handleCloseTabsToRight = (id: string) => {
+    tabOps.closeTabsToRight(id, tabs, setTabs);
+  };
+
+  const handleUpdateTabTitle = (id: string, title: string) => {
+    tabOps.updateTabTitle(id, title, setTabs);
+  };
+
+  const handleSetBadge = (tabId: string, tagId: string | null) => {
+    tabOps.setBadge(tabId, tagId, setTabs);
+  };
+
+  // Keyboard navigation
+  useTabNavigation({
+    tabs,
+    activeTab,
+    setActiveTab,
+    setTabs,
+    closeTab: handleCloseTab,
+    duplicateTab: handleDuplicateTab
+  });
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent, tabId: string) => {
+    setDraggedTab(tabId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', tabId);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetTabId: string) => {
+    e.preventDefault();
+    if (!draggedTab || draggedTab === targetTabId) return;
+
+    const draggedIndex = tabs.findIndex((t) => t.id === draggedTab);
+    const targetIndex = tabs.findIndex((t) => t.id === targetTabId);
+
+    const newTabs = [...tabs];
+    const [removed] = newTabs.splice(draggedIndex, 1);
+    newTabs.splice(targetIndex, 0, removed);
+
+    setTabs(newTabs);
+    setDraggedTab(null);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedTab(null);
+  };
+
+  // Context menu handlers
+  const handleContextMenu = (e: React.MouseEvent, tabId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setContextMenu({ x: e.clientX, y: e.clientY, tabId });
+  };
+
+  const handleTagsHover = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (!contextMenu) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    setTagsSubmenu({
+      x: rect.right + 5,
+      y: rect.top,
+      tabId: contextMenu.tabId
+    });
+  };
+
+  const handleTagsLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const relatedTarget = e.relatedTarget as HTMLElement;
+    if (!relatedTarget?.closest('.tags-submenu')) {
+      setTagsSubmenu(null);
     }
   };
 
   return (
-    <div className="flex items-center gap-1 flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-transparent">
-      {tabs.map((tab) => (
-        <div
-          key={tab.id}
-          className={`
-                relative group flex items-center gap-2 px-4 py-2.5 rounded-t-lg
-                text-sm font-medium transition-all duration-200 border-t border-l border-r
-                min-w-0 max-w-48 flex-shrink-0 cursor-pointer
-                transform hover:scale-105 hover:-translate-y-0.5
-                ${
-                  activeTab === tab.id
-                    ? "bg-gray-800 text-gray-100 border-blue-500/50 shadow-lg shadow-blue-500/10 z-10"
-                    : "bg-gray-800/30 text-gray-400 border-gray-700/30 hover:bg-gray-800/60 hover:text-gray-200 hover:border-gray-600/50"
-                }
-              `}
-          onClick={() => setActiveTab(tab.id)}
-          onContextMenu={(e) => {
-            e.preventDefault();
-            // Here you could add a context menu
+    <>
+      <div className="flex items-center gap-1.5 flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-cyan-600/40 scrollbar-track-transparent pt-2.5">
+        {tabs.map((tab) => (
+          <TabItem
+            key={tab.id}
+            tab={tab}
+            isActive={activeTab === tab.id}
+            isDragged={draggedTab === tab.id}
+            canClose={tabs.length > 1}
+            customTags={customTags}
+            onSelect={() => setActiveTab(tab.id)}
+            onDoubleClick={() => {
+              setTabs((prev) =>
+                prev.map((t) => (t.id === tab.id ? { ...t, mode: 'edit' } : t))
+              );
+            }}
+            onMiddleClick={() => {
+              if (tabs.length > 1) handleCloseTab(tab.id);
+            }}
+            onContextMenu={(e) => handleContextMenu(e, tab.id)}
+            onDragStart={(e) => handleDragStart(e, tab.id)}
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, tab.id)}
+            onDragEnd={handleDragEnd}
+            onTitleChange={handleUpdateTabTitle}
+            onFinishEdit={() => {
+              setTabs((prev) =>
+                prev.map((t) => (t.id === tab.id ? { ...t, mode: 'normal' } : t))
+              );
+            }}
+            onClose={() => handleCloseTab(tab.id)}
+          />
+        ))}
+      </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <TabContextMenu
+          contextMenu={contextMenu}
+          canCloseTab={tabs.length > 1}
+          canCloseOthers={tabs.length > 1}
+          canCloseToRight={
+            tabs.findIndex((t) => t.id === contextMenu.tabId) < tabs.length - 1
+          }
+          onRename={() => {
+            setTabs((prev) =>
+              prev.map((t) =>
+                t.id === contextMenu.tabId ? { ...t, mode: 'edit' } : t
+              )
+            );
+            setContextMenu(null);
           }}
-        >
-          {/* Status indicator */}
-          <div
-            className={`w-2 h-2 rounded-full flex-shrink-0 transition-all duration-200 ${
-              activeTab === tab.id
-                ? "bg-green-400 shadow-sm shadow-green-400/50"
-                : "bg-gray-500 group-hover:bg-blue-400"
-            }`}
-          ></div>
+          onDuplicate={() => {
+            handleDuplicateTab(contextMenu.tabId);
+            setContextMenu(null);
+          }}
+          onClose={() => {
+            if (tabs.length > 1) {
+              handleCloseTab(contextMenu.tabId);
+              setContextMenu(null);
+            }
+          }}
+          onCloseOthers={() => {
+            if (tabs.length > 1) {
+              handleCloseOtherTabs(contextMenu.tabId);
+              setContextMenu(null);
+            }
+          }}
+          onCloseToRight={() => {
+            const tabIndex = tabs.findIndex((t) => t.id === contextMenu.tabId);
+            if (tabIndex < tabs.length - 1) {
+              handleCloseTabsToRight(contextMenu.tabId);
+              setContextMenu(null);
+            }
+          }}
+          onTagsHover={handleTagsHover}
+          onTagsLeave={handleTagsLeave}
+        />
+      )}
 
-          {/* Tab title */}
-          {tab.mode === "edit" ? (
-            <>
-              <span
-                id={`tab-title-measure-${tab.id}`}
-                style={{
-                  position: "absolute",
-                  visibility: "hidden",
-                  whiteSpace: "pre",
-                  fontSize: "1rem",
-                  fontFamily: "inherit",
-                  fontWeight: "500",
-                  padding: "0",
-                }}
-              >
-                {tab.title || " "}
-              </span>
-              <input
-                value={tab.title}
-                onChange={(e) => updateTabTitle(tab.id, e.target.value)}
-                style={{
-                  width: `calc(${document.getElementById(`tab-title-measure-${tab.id}`)?.offsetWidth || 50}px + 1ch)`,
-                  minWidth: "40px",
-                  maxWidth: "180px",
-                }}
-              />
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setTabs((prev) =>
-                    prev.map((t) =>
-                      t.id === tab.id ? { ...t, mode: "normal" } : t
-                    )
-                  );
-                }}
-                className="w-5 h-5 rounded flex items-center justify-center text-gray-400 
-                           hover:text-blue-400 hover:bg-blue-500/20 transition-all duration-150
-                           active:scale-90"
-                title="Apply title"
-              >
-                <Check />
-              </button>
-            </>
-          ) : (
-            <span className="truncate flex-1 select-none">{tab.title}</span>
-          )}
-
-          {/* Action buttons */}
-          {tab.mode === "normal" && (
-            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  duplicateTab(tab.id);
-                }}
-                className="w-5 h-5 rounded flex items-center justify-center text-gray-400 
-                           hover:text-blue-400 hover:bg-blue-500/20 transition-all duration-150
-                           active:scale-90"
-                title="Duplicate tab"
-              >
-                <svg
-                  className="w-3 h-3"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setTabs((prev) =>
-                    prev.map((t) =>
-                      t.id === tab.id ? { ...t, mode: "edit" } : t
-                    )
-                  );
-                }}
-                className={
-                  "w-5 h-5 rounded flex items-center justify-center text-gray-400 " +
-                  "hover:text-yellow-400 hover:bg-yellow-500/20 transition-all duration-150 " +
-                  "active:scale-90"
-                }
-                title="Edit title"
-              >
-                <Pencil size={14} />
-              </button>
-              {/* Close button */}
-              {tabs.length > 1 && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    closeTab(tab.id);
-                  }}
-                  className="w-5 h-5 rounded flex items-center justify-center text-gray-400 
-                             hover:text-red-400 hover:bg-red-500/20 transition-all duration-150
-                             active:scale-90"
-                  title="Close tab"
-                >
-                  <svg
-                    className="w-3 h-3"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Tab ID for debugging */}
-          {/* Active tab indicator */}
-          {activeTab === tab.id && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
-          )}
-        </div>
-      ))}
-    </div>
+      {/* Tags Submenu */}
+      {tagsSubmenu && (
+        <TagsSubmenu
+          submenu={tagsSubmenu}
+          customTags={customTags}
+          tabs={tabs}
+          onTagSelect={(tagId) => {
+            handleSetBadge(tagsSubmenu.tabId, tagId);
+            setTagsSubmenu(null);
+            setContextMenu(null);
+          }}
+          onMouseLeave={() => setTagsSubmenu(null)}
+        />
+      )}
+    </>
   );
 }
