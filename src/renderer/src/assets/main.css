@@ -1,11 +1,5 @@
 @import './base.css';
 
-body {
-  background-image: url('./wavy-lines.svg');
-  background-size: cover;
-  user-select: none;
-}
-
 /* Scrollbar personalizada para app de terminal */
 ::-webkit-scrollbar {
   width: 10px;
