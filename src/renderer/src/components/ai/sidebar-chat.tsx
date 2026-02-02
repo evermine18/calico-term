@@ -37,7 +37,7 @@ export default function AISidebarChat() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!resizingRef.current) return;
-      // Sidebar está anclada a la derecha: calculamos desde el borde derecho.
+      // Sidebar is anchored to the right: calculate from right edge
       const newWidth = Math.min(
         700,
         Math.max(260, window.innerWidth - e.clientX)
