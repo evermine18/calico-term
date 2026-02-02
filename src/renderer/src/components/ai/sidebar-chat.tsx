@@ -40,7 +40,7 @@ export default function AISidebarChat() {
       // Sidebar is anchored to the right: calculate from right edge
       const newWidth = Math.min(
         700,
-        Math.max(260, window.innerWidth - e.clientX)
+        Math.max(260, window.innerWidth - e.clientX),
       );
       setWidth(newWidth);
     };
@@ -77,7 +77,7 @@ export default function AISidebarChat() {
         apiKey,
         selectedModel,
         messages,
-        enableTerminalContext ? screen : undefined
+        enableTerminalContext ? screen : undefined,
       );
       console.log("AI response:", response);
       if (!response) {
@@ -179,7 +179,7 @@ export default function AISidebarChat() {
                   timestamp={message.timestamp}
                   error={message.error}
                 />
-              )
+              ),
             )}
 
             {isTyping && (
