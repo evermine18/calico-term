@@ -41,14 +41,6 @@ cd calico-term
 npm install
 ```
 
-## Configuration
-
-To enable the AI assistant functionality, create a `.env` file in the project root and add your OpenAI API key:
-
-```bash
-OPENAI_API_KEY=<YOUR_OPENAI_API_KEY>
-```
-
 ## Usage
 
 Start the development environment with hot-reload:
