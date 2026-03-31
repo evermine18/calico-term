@@ -13,12 +13,14 @@ interface TerminalPanelProps {
   tabId: string;
   active: boolean;
   tabTitle?: string;
+  initialCommand?: string;
 }
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   tabId,
   active,
   tabTitle = "Terminal",
+  initialCommand,
 }) => {
   const { setActive } = useTerminalContext();
   const { addCommandToHistory } = useAppContext();
@@ -177,6 +179,14 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
     // Create PTY instance
     window.electron.ipcRenderer.send("terminal-create", tabId);
+
+    // If an initial command is provided, send it once the shell is ready
+    if (initialCommand) {
+      const cmd = initialCommand;
+      setTimeout(() => {
+        window.electron.ipcRenderer.send("terminal-input", { tabId, data: cmd + "\r" });
+      }, 900);
+    }
 
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;

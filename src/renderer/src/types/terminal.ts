@@ -5,4 +5,5 @@ export type TerminalTab = {
   title: string;
   mode: "normal" | "edit";
   terminal: Terminal;
+  initialCommand?: string;
 };

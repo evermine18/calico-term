@@ -7,6 +7,17 @@ type CommandHistoryEntry = {
   pinned?: boolean;
 };
 
+type SSHConnectionEntry = {
+  id: string;
+  name: string;
+  host: string;
+  port: number;
+  username: string;
+  identityFile?: string;
+  hasPassword?: boolean;
+  tags?: string[];
+};
+
 type AppContextType = {
   aiSidebarOpen: boolean;
   setAiSidebarOpen: (open: boolean) => void;
@@ -25,4 +36,8 @@ type AppContextType = {
   setHistoryDialogOpen: (open: boolean) => void;
   historyRetentionDays: number;
   setHistoryRetentionDays: (days: number) => void;
+  sshConnections: SSHConnectionEntry[];
+  addSSHConnection: (conn: SSHConnectionEntry) => void;
+  updateSSHConnection: (conn: SSHConnectionEntry) => void;
+  deleteSSHConnection: (id: string) => void;
 };

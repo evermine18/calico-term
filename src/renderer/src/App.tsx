@@ -7,12 +7,22 @@ import AISidebarChat from "./components/ai/sidebar-chat";
 import { ThemeProvider } from "./components/theme-provider";
 import { TerminalProvider } from "./contexts/terminal-context";
 import CommandHistoryDialog from "./components/command-history/dialog";
+import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
+import { buildSSHCommand } from "./types/ssh";
+import { Terminal } from "@xterm/xterm";
 
 function AppContent(): React.JSX.Element {
   const [tabs, setTabs] = useState<TerminalTab[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showHome, setShowHome] = useState(false);
   const { setHistoryDialogOpen } = useAppContext();
+
+  // Wrap setActiveTab so any tab click also dismisses the home overlay
+  const handleSetActiveTab = (id: string) => {
+    setActiveTab(id);
+    setShowHome(false);
+  };
 
   // Keyboard shortcut: Ctrl+H to open history
   useEffect(() => {
@@ -91,52 +101,55 @@ function AppContent(): React.JSX.Element {
         tabs={tabs}
         setTabs={setTabs}
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleSetActiveTab}
+        showHome={showHome}
+        setShowHome={setShowHome}
       />
       {/* Terminal Content */}
       <div className="flex-1 bg-slate-950 relative overflow-hidden pb-8">
         <AISidebarChat />
         <CommandHistoryDialog />
-        {tabs.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-gray-500">
-            <div className="text-center">
-              <svg
-                className="w-16 h-16 mx-auto mb-4 opacity-40 text-cyan-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={1.5}
-                  d="M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
-                />
-              </svg>
-              <p className="text-lg font-semibold mb-2 text-gray-400">
-                No terminal sessions
-              </p>
-              <p className="text-sm text-gray-500">
-                Press <kbd className="px-2 py-1 bg-slate-800/60 border border-slate-700/50 rounded text-xs font-mono text-cyan-400/80">+</kbd> to create a new terminal
-              </p>
-            </div>
-          </div>
-        ) : (
-          tabs.map((tab) => (
-            <div
-              key={tab.id}
-              className={`absolute inset-0 transition-all duration-300 ${activeTab === tab.id
+        {/* Terminals — always mounted to preserve PTY state */}
+        {tabs.map((tab) => (
+          <div
+            key={tab.id}
+            className={`absolute inset-0 transition-all duration-300 ${!showHome && activeTab === tab.id
                 ? "opacity-100 scale-100"
                 : "opacity-0 scale-95 pointer-events-none"
-                }`}
-            >
-              <TerminalPanel
-                tabId={tab.id}
-                active={activeTab === tab.id}
-                tabTitle={tab.title}
-              />
-            </div>
-          ))
+              }`}
+          >
+            <TerminalPanel
+              tabId={tab.id}
+              active={!showHome && activeTab === tab.id}
+              tabTitle={tab.title}
+              initialCommand={tab.initialCommand}
+            />
+          </div>
+        ))}
+
+        {/* Home overlay — shown when no tabs, or user toggled home */}
+        {(tabs.length === 0 || showHome) && (
+          <div className="absolute inset-0 bg-slate-950 z-10">
+            <SSHConnectionsHome
+              onConnect={(conn) => {
+                const id = crypto.randomUUID();
+                const command = buildSSHCommand(conn);
+                const newTab: TerminalTab = {
+                  id,
+                  title: conn.name,
+                  mode: "normal",
+                  terminal: new Terminal(),
+                  initialCommand: command,
+                };
+                // Register password-injection session BEFORE the terminal mounts
+                if (conn.hasPassword) {
+                  window.electron.ipcRenderer.send("ssh-session-init", id, conn.id);
+                }
+                setTabs((prev) => [...prev, newTab]);
+                handleSetActiveTab(id);
+              }}
+            />
+          </div>
         )}
       </div>
 

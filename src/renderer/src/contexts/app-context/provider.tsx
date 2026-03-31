@@ -18,6 +18,30 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.setItem("historyRetentionDays", days.toString());
     setHistoryRetentionDaysState(days);
   };
+
+  const [sshConnections, setSSHConnections] = useState<SSHConnectionEntry[]>(() => {
+    const stored = localStorage.getItem("sshConnections");
+    if (stored) {
+      try { return JSON.parse(stored); } catch { return []; }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("sshConnections", JSON.stringify(sshConnections));
+  }, [sshConnections]);
+
+  const addSSHConnection = (conn: SSHConnectionEntry) => {
+    setSSHConnections((prev) => [...prev, conn]);
+  };
+
+  const updateSSHConnection = (conn: SSHConnectionEntry) => {
+    setSSHConnections((prev) => prev.map((c) => (c.id === conn.id ? conn : c)));
+  };
+
+  const deleteSSHConnection = (id: string) => {
+    setSSHConnections((prev) => prev.filter((c) => c.id !== id));
+  };
   const [commandHistory, setCommandHistory] = useState<CommandHistoryEntry[]>(() => {
     const stored = localStorage.getItem("commandHistory");
     const retentionDays = parseFloat(localStorage.getItem("historyRetentionDays") || "1");
@@ -159,8 +183,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       setHistoryDialogOpen,
       historyRetentionDays,
       setHistoryRetentionDays,
+      sshConnections,
+      addSSHConnection,
+      updateSSHConnection,
+      deleteSSHConnection,
     }),
-    [aiSidebarOpen, apiUrl, selectedModel, apiKey, commandHistory, historyDialogOpen, historyRetentionDays]
+    [aiSidebarOpen, apiUrl, selectedModel, apiKey, commandHistory, historyDialogOpen, historyRetentionDays, sshConnections]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
