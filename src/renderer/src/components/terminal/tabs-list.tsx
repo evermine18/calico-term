@@ -114,7 +114,7 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
             tab={tab}
             isActive={activeTab === tab.id}
             isDragged={draggedTab === tab.id}
-            canClose={tabs.length > 1}
+            canClose={true}
             customTags={customTags}
             onSelect={() => setActiveTab(tab.id)}
             onDoubleClick={() => {

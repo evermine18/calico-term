@@ -17,11 +17,6 @@ export function closeTab(
   setTabs: React.Dispatch<React.SetStateAction<any[]>>,
   setActiveTab: (id: string) => void,
 ) {
-  if (tabs.length === 1) {
-    if (!confirm("Close the last terminal? The window will remain open."))
-      return;
-  }
-
   window.electron?.ipcRenderer.send("terminal-kill", id);
 
   const currentIndex = tabs.findIndex((tab) => tab.id === id);

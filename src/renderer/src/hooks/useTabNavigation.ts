@@ -33,7 +33,7 @@ export function useTabNavigation({
       // Ctrl + W - Close tab
       if (e.ctrlKey && e.key === "w") {
         e.preventDefault();
-        if (activeTab && tabs.length > 1) closeTab(activeTab);
+        if (activeTab) closeTab(activeTab);
       }
 
       // Ctrl + Shift + D - Duplicate tab
