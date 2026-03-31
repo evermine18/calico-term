@@ -11,7 +11,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [apiKey, setApiKey] = useState(localStorage.getItem("apiKey") || "");
   const [historyRetentionDays, setHistoryRetentionDaysState] = useState<number>(() => {
     const stored = localStorage.getItem("historyRetentionDays");
-    return stored ? parseInt(stored, 10) : 1;
+    return stored ? parseFloat(stored) : 1;
   });
 
   const setHistoryRetentionDays = (days: number) => {
@@ -20,7 +20,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   };
   const [commandHistory, setCommandHistory] = useState<CommandHistoryEntry[]>(() => {
     const stored = localStorage.getItem("commandHistory");
-    const retentionDays = parseInt(localStorage.getItem("historyRetentionDays") || "1", 10);
+    const retentionDays = parseFloat(localStorage.getItem("historyRetentionDays") || "1");
 
     if (stored) {
       try {
@@ -52,6 +52,44 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const addCommandToHistory = (command: string, tabId: string, tabTitle: string) => {
     const trimmed = command.trim();
     if (!trimmed) return;
+
+    // Filter out sensitive information patterns
+    const sensitivePatterns = [
+      // Password prompts (case insensitive)
+      /password[:\s]/i,
+      /passphrase[:\s]/i,
+      /passcode[:\s]/i,
+
+      // SSH/Authentication prompts
+      /['"]s password:/i,
+      /@[\w\-\.]+['"]s password:/i,
+
+      // Commands with password flags
+      /--password[=\s]/i,
+      /-p\s+['"][^'"]*['"]/i,  // -p "password"
+      /password=["']?[\w\S]+["']?/i,
+
+      // API keys and tokens
+      /api[_-]?key[=:\s]/i,
+      /token[=:\s]/i,
+      /secret[=:\s]/i,
+      /auth[_-]?token[=:\s]/i,
+
+      // Connection strings with credentials
+      /\/\/[\w]+:[\w\S]+@/,  // user:pass@host format
+
+      // Environment variable assignments with sensitive data
+      /export\s+\w*(PASSWORD|SECRET|TOKEN|KEY)\w*=/i,
+      /set\s+\w*(PASSWORD|SECRET|TOKEN|KEY)\w*=/i,
+    ];
+
+    // Check if command matches any sensitive pattern
+    const isSensitive = sensitivePatterns.some(pattern => pattern.test(trimmed));
+
+    if (isSensitive) {
+      console.log('[Command History] Skipped sensitive command');
+      return;
+    }
 
     const newEntry: CommandHistoryEntry = {
       id: crypto.randomUUID(),
