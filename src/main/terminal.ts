@@ -1,9 +1,66 @@
 import { spawn } from "node-pty";
-import { ipcMain } from "electron";
+import { ipcMain, safeStorage, app } from "electron";
 import os from "os";
 import fs from "fs";
+import path from "path";
 
 let terminals: Record<string, any> = {};
+
+// --- Secure password storage via safeStorage + encrypted file in userData ---
+
+function passwordsFilePath(): string {
+  return path.join(app.getPath("userData"), "ssh-passwords.enc");
+}
+
+function loadEncryptedPasswords(): Record<string, string> {
+  try {
+    const file = passwordsFilePath();
+    if (fs.existsSync(file)) {
+      return JSON.parse(fs.readFileSync(file, "utf8"));
+    }
+  } catch {
+    // Corrupt file — treat as empty
+  }
+  return {};
+}
+
+function saveEncryptedPasswords(store: Record<string, string>): void {
+  fs.writeFileSync(passwordsFilePath(), JSON.stringify(store), {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+}
+
+function storePassword(connId: string, plaintext: string): void {
+  if (!safeStorage.isEncryptionAvailable()) return;
+  const encrypted = safeStorage.encryptString(plaintext).toString("base64");
+  const store = loadEncryptedPasswords();
+  store[connId] = encrypted;
+  saveEncryptedPasswords(store);
+}
+
+function retrievePassword(connId: string): string | null {
+  if (!safeStorage.isEncryptionAvailable()) return null;
+  const store = loadEncryptedPasswords();
+  if (!store[connId]) return null;
+  try {
+    return safeStorage.decryptString(Buffer.from(store[connId], "base64"));
+  } catch {
+    return null;
+  }
+}
+
+function removePassword(connId: string): void {
+  const store = loadEncryptedPasswords();
+  delete store[connId];
+  saveEncryptedPasswords(store);
+}
+
+// --- SSH session password-injection state ---
+// Maps tabId -> connId for terminals awaiting a password prompt
+const sshPasswordSessions: Record<string, string> = {};
+// Tracks tabs that already injected the password (avoid re-injection on secondary prompts)
+const sshPasswordInjected = new Set<string>();
 
 /**
  * Detect the user's default shell on macOS
@@ -134,6 +191,21 @@ export function setupTerminal() {
         for (const w of require("electron").BrowserWindow.getAllWindows()) {
           w.webContents.send("terminal-output", tabId, data);
         }
+
+        // Auto-inject SSH password when the remote prompts for it
+        if (sshPasswordSessions[tabId] && !sshPasswordInjected.has(tabId)) {
+          // Match common SSH/sudo password prompts
+          if (/password\s*:/i.test(data) || /passphrase for key/i.test(data)) {
+            const connId = sshPasswordSessions[tabId];
+            const pwd = retrievePassword(connId);
+            if (pwd) {
+              sshPasswordInjected.add(tabId);
+              // Small delay so the prompt is fully rendered before sending
+              setTimeout(() => terminals[tabId]?.write(pwd + "\r"), 80);
+            }
+          }
+        }
+
         // Check for common error patterns in the output
         const errorPatterns = [
           /error/i,
@@ -163,6 +235,8 @@ export function setupTerminal() {
           `Terminal ${tabId} exited with code ${exitCode}, signal ${signal}`,
         );
         delete terminals[tabId];
+        delete sshPasswordSessions[tabId];
+        sshPasswordInjected.delete(tabId);
         // Notify the renderer that the terminal was closed
         for (const w of require("electron").BrowserWindow.getAllWindows()) {
           w.webContents.send("terminal-closed", tabId, exitCode);
@@ -193,6 +267,33 @@ export function setupTerminal() {
     console.log(`Killing terminal: ${tabId}`);
     terminals[tabId].kill();
     delete terminals[tabId];
+    delete sshPasswordSessions[tabId];
+    sshPasswordInjected.delete(tabId);
+  });
+
+  // Associate a terminal with an SSH connection so the password is auto-injected
+  ipcMain.on("ssh-session-init", (_event, tabId: string, connId: string) => {
+    sshPasswordSessions[tabId] = connId;
+    sshPasswordInjected.delete(tabId); // allow fresh injection
+  });
+
+  // Securely store a password for an SSH connection (encrypted via safeStorage)
+  ipcMain.handle(
+    "ssh-password-set",
+    (_event, connId: string, plaintext: string) => {
+      storePassword(connId, plaintext);
+    },
+  );
+
+  // Remove a stored password
+  ipcMain.on("ssh-password-delete", (_event, connId: string) => {
+    removePassword(connId);
+  });
+
+  // Check whether a stored password exists for a connection
+  ipcMain.handle("ssh-password-has", (_event, connId: string): boolean => {
+    const store = loadEncryptedPasswords();
+    return !!store[connId];
   });
 
   // Execute command in the active terminal
