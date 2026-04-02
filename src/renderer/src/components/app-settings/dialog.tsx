@@ -3,7 +3,6 @@ import {
   Dialog,
   DialogClose,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -16,12 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@renderer/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@renderer/components/ui/tabs";
 import { Input } from "@renderer/components/ui/input";
 import { Label } from "@renderer/components/ui/label";
 import { ModelsSelector } from "./model-combobox";
 import { useAppContext } from "@renderer/contexts/app-context";
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, Plus, X, Edit2, Check, Vault, User, KeyRound } from "lucide-react";
+import { Eye, EyeOff, Plus, X, Edit2, Check, Vault, User, KeyRound, Bot, Tag, ShieldCheck, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 interface Tag {
   id: string;
@@ -62,6 +62,8 @@ export default function SettingsDialog({ children }) {
   });
   const [open, setOpen] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
+  const [apiStatus, setApiStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
+  const [apiError, setApiError] = useState<string>("");
   const [tags, setTags] = useState<Tag[]>([]);
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#06b6d4");
@@ -81,11 +83,9 @@ export default function SettingsDialog({ children }) {
     }
   }, [open]);
 
-  // Save tags to localStorage
   const saveTags = (updatedTags: Tag[]) => {
     localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(updatedTags));
     setTags(updatedTags);
-    // Dispatch event to notify changes
     window.dispatchEvent(new Event('tags-updated'));
   };
 
@@ -169,8 +169,8 @@ export default function SettingsDialog({ children }) {
     <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger>{children}</DialogTrigger>
-      <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-hidden bg-slate-900 border-slate-700/40 shadow-xl">
-        <DialogHeader className="border-b border-slate-700/40 pb-4">
+      <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-hidden bg-slate-900 border-slate-700/40 shadow-xl flex flex-col">
+        <DialogHeader className="border-b border-slate-700/40 pb-4 shrink-0">
           <DialogTitle className="text-gray-100 flex items-center gap-2">
             <div className="w-8 h-8 bg-cyan-500/20 border border-cyan-500/30 rounded-lg flex items-center justify-center">
               <svg className="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
@@ -179,83 +179,120 @@ export default function SettingsDialog({ children }) {
             </div>
             Settings
           </DialogTitle>
-          <DialogDescription className="text-cyan-400/70 text-sm">
-            Configure your application preferences and terminal tags
-          </DialogDescription>
         </DialogHeader>
-        <div className="overflow-y-auto max-h-[calc(85vh-180px)] px-1">
-          <div className="grid gap-5 py-4">
-            {/* API Settings Section */}
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
-                <div className="w-1 h-4 bg-cyan-500 rounded-full"></div>
-                API Configuration
-              </div>
 
-              <div className="grid gap-2.5 pl-3">
-                <Label htmlFor="api-url" className="text-gray-300 text-sm">Base API URL</Label>
+        <Tabs defaultValue="ai" className="flex flex-col flex-1 min-h-0">
+          <TabsList className="shrink-0 w-full justify-start bg-slate-800/40 border border-slate-700/40 rounded-lg p-1">
+            <TabsTrigger value="ai" className="flex items-center gap-1.5">
+              <Bot size={14} />
+              AI
+            </TabsTrigger>
+            <TabsTrigger value="terminal" className="flex items-center gap-1.5">
+              <Tag size={14} />
+              Terminal
+            </TabsTrigger>
+            <TabsTrigger value="vault" className="flex items-center gap-1.5">
+              <ShieldCheck size={14} />
+              Vault
+            </TabsTrigger>
+          </TabsList>
+
+          {/* AI Tab */}
+          <TabsContent value="ai" className="flex-1 overflow-y-auto px-1 space-y-5 mt-4">
+            <div className="grid gap-2.5">
+              <Label htmlFor="api-url" className="text-gray-300 text-sm">Base API URL</Label>
+              <Input
+                id="api-url"
+                name="Api Url"
+                defaultValue={localSettings.apiUrl}
+                onChange={(e) =>
+                  setLocalSettings({ ...localSettings, apiUrl: e.target.value })
+                }
+                className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-cyan-500/50 focus:ring-cyan-500/20"
+              />
+            </div>
+
+            <div className="grid gap-2.5">
+              <Label htmlFor="api-key" className="text-gray-300 text-sm">API Key</Label>
+              <div className="flex items-center gap-2">
                 <Input
-                  id="api-url"
-                  name="Api Url"
-                  defaultValue={localSettings.apiUrl}
+                  id="api-key"
+                  name="Api Key"
+                  type={showApiKey ? "text" : "password"}
+                  defaultValue={localSettings.apiKey}
                   onChange={(e) =>
-                    setLocalSettings({ ...localSettings, apiUrl: e.target.value })
+                    setLocalSettings({ ...localSettings, apiKey: e.target.value })
                   }
                   className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-cyan-500/50 focus:ring-cyan-500/20"
                 />
-              </div>
-
-              <div className="grid gap-2.5 pl-3">
-                <Label htmlFor="api-key" className="text-gray-300 text-sm">API Key</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="api-key"
-                    name="Api Key"
-                    type={showApiKey ? "text" : "password"}
-                    defaultValue={localSettings.apiKey}
-                    onChange={(e) =>
-                      setLocalSettings({ ...localSettings, apiKey: e.target.value })
-                    }
-                    className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-cyan-500/50 focus:ring-cyan-500/20"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="bg-slate-800/60 border-slate-700/50 hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50"
-                  >
-                    <Eye size={16} />
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid gap-2.5 pl-3">
-                <Label htmlFor="model" className="text-gray-300 text-sm">Model</Label>
-                <ModelsSelector
-                  url={localSettings.apiUrl}
-                  apiKey={localSettings.apiKey}
-                  currentValue={localSettings.selectedModel}
-                  onValueChange={(model) =>
-                    setLocalSettings({ ...localSettings, selectedModel: model })
-                  }
-                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => setShowApiKey(!showApiKey)}
+                  className="bg-slate-800/60 border-slate-700/50 hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50"
+                >
+                  {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                </Button>
               </div>
             </div>
 
-            {/* Command History Retention Section */}
-            <div className="space-y-4 pt-3 border-t border-slate-700/40">
+            {/* Connection status */}
+            {apiStatus !== "idle" && (
+              <div className={`flex items-start gap-2 rounded-md px-3 py-2 text-xs border ${
+                apiStatus === "loading"
+                  ? "bg-slate-800/40 border-slate-700/40 text-gray-400"
+                  : apiStatus === "success"
+                    ? "bg-green-500/10 border-green-500/20 text-green-400"
+                    : "bg-red-500/10 border-red-500/20 text-red-400"
+              }`}>
+                {apiStatus === "loading" && <Loader2 size={13} className="animate-spin mt-px shrink-0" />}
+                {apiStatus === "success" && <CheckCircle2 size={13} className="mt-px shrink-0" />}
+                {apiStatus === "error" && <XCircle size={13} className="mt-px shrink-0" />}
+                <span className="break-all">
+                  {apiStatus === "loading" && "Checking connection…"}
+                  {apiStatus === "success" && "Connection successful"}
+                  {apiStatus === "error" && (apiError.includes("401") || apiError.includes("403")
+                    ? "Invalid API key or unauthorized"
+                    : apiError.includes("ECONNREFUSED") || apiError.includes("ENOTFOUND") || apiError.includes("fetch")
+                      ? "Could not reach the API URL"
+                      : apiError || "Connection failed"
+                  )}
+                </span>
+              </div>
+            )}
+
+            <div className="grid gap-2.5">
+              <Label htmlFor="model" className="text-gray-300 text-sm">Model</Label>
+              <ModelsSelector
+                url={localSettings.apiUrl}
+                apiKey={localSettings.apiKey}
+                currentValue={localSettings.selectedModel}
+                onValueChange={(model) =>
+                  setLocalSettings({ ...localSettings, selectedModel: model })
+                }
+                onStatusChange={(status, error) => {
+                  setApiStatus(status);
+                  setApiError(error ?? "");
+                }}
+              />
+            </div>
+          </TabsContent>
+
+          {/* Terminal Tab */}
+          <TabsContent value="terminal" className="flex-1 overflow-y-auto px-1 space-y-5 mt-4">
+            {/* Command History */}
+            <div className="space-y-3">
               <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
                 <div className="w-1 h-4 bg-cyan-500 rounded-full"></div>
                 Command History
               </div>
-
-              <div className="grid gap-2.5 pl-3">
+              <div className="grid gap-2.5">
                 <Label htmlFor="retention-days" className="text-gray-300 text-sm">
                   History Retention Period
                 </Label>
-                <div className="text-xs text-gray-400 mb-2">
+                <p className="text-xs text-gray-400">
                   Commands older than this period will be automatically deleted (pinned commands are kept forever)
-                </div>
+                </p>
                 <div className="flex items-center gap-3">
                   <Select
                     value={localSettings.historyRetentionDays.toString()}
@@ -293,27 +330,21 @@ export default function SettingsDialog({ children }) {
               </div>
             </div>
 
-            {/* Tags Section */}
-            <div className="space-y-4 pt-3 border-t border-slate-700/40">
+            {/* Tags */}
+            <div className="space-y-3 pt-3 border-t border-slate-700/40">
               <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
                 <div className="w-1 h-4 bg-cyan-500 rounded-full"></div>
                 Terminal Tags
               </div>
-              <div className="text-xs text-gray-400 pl-3">
-                Create custom tags to organize your terminals
-              </div>
+              <p className="text-xs text-gray-400">Create custom tags to organize your terminals</p>
 
-              {/* Add new tag */}
-              <div className="flex gap-2 pl-3">
+              <div className="flex gap-2">
                 <Input
                   placeholder="Tag name"
                   value={newTagName}
                   onChange={(e) => setNewTagName(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      addTag();
-                    }
+                    if (e.key === 'Enter') { e.preventDefault(); addTag(); }
                   }}
                   className="bg-slate-800/60 border-slate-700/50 text-gray-100 placeholder:text-gray-500 focus:border-cyan-500/50 focus:ring-cyan-500/20"
                 />
@@ -332,8 +363,7 @@ export default function SettingsDialog({ children }) {
                 </Button>
               </div>
 
-              {/* Tags list */}
-              <div className="space-y-2 max-h-[200px] overflow-y-auto pl-3 pr-1 scrollbar-thin scrollbar-thumb-cyan-600/40 scrollbar-track-transparent">
+              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-cyan-600/40 scrollbar-track-transparent">
                 {tags.map(tag => (
                   <div
                     key={tag.id}
@@ -368,7 +398,7 @@ export default function SettingsDialog({ children }) {
                     ) : (
                       <>
                         <div
-                          className="w-4 h-4 rounded-full border border-slate-600/60"
+                          className="w-4 h-4 rounded-full border border-slate-600/60 shrink-0"
                           style={{ backgroundColor: tag.color }}
                         />
                         <span className="flex-1 text-sm text-gray-200">{tag.name}</span>
@@ -394,35 +424,40 @@ export default function SettingsDialog({ children }) {
                 ))}
               </div>
             </div>
-            {/* Credential Vault Section */}
-            <div className="space-y-4 pt-3 border-t border-slate-700/40">
+          </TabsContent>
+
+          {/* Vault Tab */}
+          <TabsContent value="vault" className="flex-1 overflow-y-auto px-1 mt-4">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
-                  <div className="w-1 h-4 bg-cyan-500 rounded-full"></div>
-                  Credential Vault
+                <div>
+                  <p className="text-gray-300 text-sm font-semibold">Credential Vault</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Save username/password pairs to reuse across SSH connections</p>
                 </div>
                 <Button
                   onClick={openAddVault}
-                  size="icon"
-                  className="h-7 w-7 bg-slate-800/60 border border-slate-700/50 hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50 text-gray-400"
+                  size="sm"
+                  className="gap-1.5 bg-slate-800/60 border border-slate-700/50 hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50 text-gray-400"
                 >
                   <Plus size={14} />
+                  Add
                 </Button>
               </div>
-              <div className="text-xs text-gray-400 pl-3">
-                Save username/password pairs to reuse across SSH connections
-              </div>
 
-              <div className="space-y-2 max-h-[200px] overflow-y-auto pl-3 pr-1 scrollbar-thin scrollbar-thumb-cyan-600/40 scrollbar-track-transparent">
+              <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-cyan-600/40 scrollbar-track-transparent">
                 {vaultCredentials.length === 0 && (
-                  <p className="text-xs text-gray-500 italic">No credentials saved yet.</p>
+                  <div className="flex flex-col items-center justify-center py-10 text-center">
+                    <Vault size={32} className="text-slate-600 mb-3" />
+                    <p className="text-sm text-gray-500">No credentials saved yet</p>
+                    <p className="text-xs text-gray-600 mt-1">Click "Add" to store your first credential</p>
+                  </div>
                 )}
                 {vaultCredentials.map((cred) => (
                   <div
                     key={cred.id}
                     className="flex items-center gap-2.5 p-2.5 rounded-md bg-slate-800/60 border border-slate-700/50 hover:border-slate-600/60 transition-colors"
                   >
-                    <Vault size={14} className="text-cyan-500/70 flex-shrink-0" />
+                    <Vault size={14} className="text-cyan-500/70 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-gray-200 truncate">{cred.name}</div>
                       <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -456,9 +491,10 @@ export default function SettingsDialog({ children }) {
                 ))}
               </div>
             </div>
-          </div>
-        </div>
-        <DialogFooter className="border-t border-slate-700/40 pt-4 gap-2">
+          </TabsContent>
+        </Tabs>
+
+        <DialogFooter className="border-t border-slate-700/40 pt-4 gap-2 shrink-0">
           <DialogClose asChild>
             <Button variant="outline" className="bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 text-gray-300">
               Cancel
@@ -474,7 +510,7 @@ export default function SettingsDialog({ children }) {
       </DialogContent>
     </Dialog>
 
-    {/* Vault credential add/edit dialog (rendered outside main Dialog to avoid nesting issues) */}
+    {/* Vault credential add/edit dialog */}
     <Dialog open={vaultDialogOpen} onOpenChange={setVaultDialogOpen}>
       <DialogContent className="sm:max-w-[400px] bg-slate-900 border-slate-700/40 shadow-xl">
         <DialogHeader>
