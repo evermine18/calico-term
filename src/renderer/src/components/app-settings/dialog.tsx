@@ -21,7 +21,7 @@ import { Label } from "@renderer/components/ui/label";
 import { ModelsSelector } from "./model-combobox";
 import { useAppContext } from "@renderer/contexts/app-context";
 import { useState, useEffect } from "react";
-import { Eye, Plus, X, Edit2, Check } from "lucide-react";
+import { Eye, EyeOff, Plus, X, Edit2, Check, Vault, User, KeyRound } from "lucide-react";
 
 interface Tag {
   id: string;
@@ -30,6 +30,14 @@ interface Tag {
 }
 
 const TAGS_STORAGE_KEY = 'calico-term-tags';
+
+type VaultFormData = {
+  name: string;
+  username: string;
+  password: string;
+};
+
+const EMPTY_VAULT_FORM: VaultFormData = { name: "", username: "", password: "" };
 
 export default function SettingsDialog({ children }) {
   const {
@@ -41,6 +49,10 @@ export default function SettingsDialog({ children }) {
     setSelectedModel,
     historyRetentionDays,
     setHistoryRetentionDays,
+    vaultCredentials,
+    addVaultCredential,
+    updateVaultCredential,
+    deleteVaultCredential,
   } = useAppContext();
   const [localSettings, setLocalSettings] = useState({
     apiUrl: apiUrl || "",
@@ -54,6 +66,12 @@ export default function SettingsDialog({ children }) {
   const [newTagName, setNewTagName] = useState("");
   const [newTagColor, setNewTagColor] = useState("#06b6d4");
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
+
+  // Vault credential state
+  const [vaultDialogOpen, setVaultDialogOpen] = useState(false);
+  const [editingCredentialId, setEditingCredentialId] = useState<string | null>(null);
+  const [vaultForm, setVaultForm] = useState<VaultFormData>(EMPTY_VAULT_FORM);
+  const [showVaultPassword, setShowVaultPassword] = useState(false);
 
   // Load tags from localStorage
   useEffect(() => {
@@ -92,6 +110,53 @@ export default function SettingsDialog({ children }) {
     saveTags(tags.filter(tag => tag.id !== id));
   };
 
+  const openAddVault = () => {
+    setEditingCredentialId(null);
+    setVaultForm(EMPTY_VAULT_FORM);
+    setShowVaultPassword(false);
+    setVaultDialogOpen(true);
+  };
+
+  const openEditVault = (cred: VaultCredential) => {
+    setEditingCredentialId(cred.id);
+    setVaultForm({ name: cred.name, username: cred.username, password: "" });
+    setShowVaultPassword(false);
+    setVaultDialogOpen(true);
+  };
+
+  const handleVaultSave = async () => {
+    if (!vaultForm.name.trim() || !vaultForm.username.trim()) return;
+    const isEdit = !!editingCredentialId;
+    const credId = isEdit ? editingCredentialId! : crypto.randomUUID();
+
+    const existing = isEdit ? vaultCredentials.find((c) => c.id === credId) : null;
+    const hasPassword = vaultForm.password ? true : (existing?.hasPassword ?? false);
+
+    const cred: VaultCredential = {
+      id: credId,
+      name: vaultForm.name.trim(),
+      username: vaultForm.username.trim(),
+      hasPassword,
+    };
+
+    if (isEdit) {
+      updateVaultCredential(cred);
+    } else {
+      addVaultCredential(cred);
+    }
+
+    if (vaultForm.password) {
+      await window.electron.ipcRenderer.invoke("vault-password-set", credId, vaultForm.password);
+    }
+
+    setVaultDialogOpen(false);
+  };
+
+  const handleVaultDelete = (credId: string) => {
+    deleteVaultCredential(credId);
+    window.electron.ipcRenderer.send("vault-password-delete", credId);
+  };
+
   const handleSave = () => {
     setApiUrl(localSettings.apiUrl);
     setApiKey(localSettings.apiKey);
@@ -101,6 +166,7 @@ export default function SettingsDialog({ children }) {
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-hidden bg-slate-900 border-slate-700/40 shadow-xl">
@@ -328,6 +394,68 @@ export default function SettingsDialog({ children }) {
                 ))}
               </div>
             </div>
+            {/* Credential Vault Section */}
+            <div className="space-y-4 pt-3 border-t border-slate-700/40">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
+                  <div className="w-1 h-4 bg-cyan-500 rounded-full"></div>
+                  Credential Vault
+                </div>
+                <Button
+                  onClick={openAddVault}
+                  size="icon"
+                  className="h-7 w-7 bg-slate-800/60 border border-slate-700/50 hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50 text-gray-400"
+                >
+                  <Plus size={14} />
+                </Button>
+              </div>
+              <div className="text-xs text-gray-400 pl-3">
+                Save username/password pairs to reuse across SSH connections
+              </div>
+
+              <div className="space-y-2 max-h-[200px] overflow-y-auto pl-3 pr-1 scrollbar-thin scrollbar-thumb-cyan-600/40 scrollbar-track-transparent">
+                {vaultCredentials.length === 0 && (
+                  <p className="text-xs text-gray-500 italic">No credentials saved yet.</p>
+                )}
+                {vaultCredentials.map((cred) => (
+                  <div
+                    key={cred.id}
+                    className="flex items-center gap-2.5 p-2.5 rounded-md bg-slate-800/60 border border-slate-700/50 hover:border-slate-600/60 transition-colors"
+                  >
+                    <Vault size={14} className="text-cyan-500/70 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm text-gray-200 truncate">{cred.name}</div>
+                      <div className="flex items-center gap-1 text-xs text-gray-500">
+                        <User size={10} />
+                        {cred.username}
+                        {cred.hasPassword && (
+                          <>
+                            <KeyRound size={10} className="ml-1" />
+                            <span>password saved</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                    <Button
+                      onClick={() => openEditVault(cred)}
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/20"
+                    >
+                      <Edit2 size={14} />
+                    </Button>
+                    <Button
+                      onClick={() => handleVaultDelete(cred.id)}
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-red-500/20"
+                    >
+                      <X size={14} />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
         <DialogFooter className="border-t border-slate-700/40 pt-4 gap-2">
@@ -345,5 +473,80 @@ export default function SettingsDialog({ children }) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Vault credential add/edit dialog (rendered outside main Dialog to avoid nesting issues) */}
+    <Dialog open={vaultDialogOpen} onOpenChange={setVaultDialogOpen}>
+      <DialogContent className="sm:max-w-[400px] bg-slate-900 border-slate-700/40 shadow-xl">
+        <DialogHeader>
+          <DialogTitle className="text-gray-100 flex items-center gap-2">
+            <Vault size={16} className="text-cyan-400" />
+            {editingCredentialId ? "Edit Credential" : "New Credential"}
+          </DialogTitle>
+        </DialogHeader>
+        <div className="grid gap-4 py-2">
+          <div className="grid gap-1.5">
+            <Label className="text-gray-300 text-sm">Name <span className="text-red-400">*</span></Label>
+            <Input
+              placeholder="e.g. Work Admin"
+              value={vaultForm.name}
+              onChange={(e) => setVaultForm((p) => ({ ...p, name: e.target.value }))}
+              className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label className="text-gray-300 text-sm">Username <span className="text-red-400">*</span></Label>
+            <Input
+              placeholder="root"
+              value={vaultForm.username}
+              onChange={(e) => setVaultForm((p) => ({ ...p, username: e.target.value }))}
+              className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+            />
+          </div>
+          <div className="grid gap-1.5">
+            <Label className="text-gray-300 text-sm">
+              Password{" "}
+              {editingCredentialId && (
+                <span className="text-gray-500 font-normal">(leave blank to keep current)</span>
+              )}
+            </Label>
+            <div className="flex items-center gap-2">
+              <Input
+                type={showVaultPassword ? "text" : "password"}
+                autoComplete="new-password"
+                placeholder={editingCredentialId ? "Saved password" : "Enter password"}
+                value={vaultForm.password}
+                onChange={(e) => setVaultForm((p) => ({ ...p, password: e.target.value }))}
+                className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+              />
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setShowVaultPassword((v) => !v)}
+                className="bg-slate-800/60 border-slate-700/50 hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50"
+              >
+                {showVaultPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </Button>
+            </div>
+          </div>
+        </div>
+        <DialogFooter className="gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setVaultDialogOpen(false)}
+            className="border-slate-700 text-gray-300 hover:bg-slate-800"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleVaultSave}
+            disabled={!vaultForm.name.trim() || !vaultForm.username.trim()}
+            className="bg-cyan-600 hover:bg-cyan-500 text-white disabled:opacity-50"
+          >
+            {editingCredentialId ? "Save Changes" : "Add Credential"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

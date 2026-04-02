@@ -6,12 +6,19 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@renderer/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@renderer/components/ui/select";
 import { Input } from "@renderer/components/ui/input";
 import { Label } from "@renderer/components/ui/label";
 import { Button } from "@renderer/components/ui/button";
 import { useAppContext } from "@renderer/contexts/app-context";
 import { useTags } from "@renderer/hooks/useTags";
-import { KeyRound, ShieldAlert, Tag, Check } from "lucide-react";
+import { KeyRound, ShieldAlert, Tag, Check, Vault } from "lucide-react";
 
 type SSHFormData = {
   name: string;
@@ -21,6 +28,7 @@ type SSHFormData = {
   identityFile: string;
   password: string;
   confirmPassword: string;
+  credentialId: string;
   tags: string[];
 };
 
@@ -32,6 +40,7 @@ const EMPTY_FORM: SSHFormData = {
   identityFile: "",
   password: "",
   confirmPassword: "",
+  credentialId: "",
   tags: [],
 };
 
@@ -42,7 +51,7 @@ type Props = {
 };
 
 export default function SSHDialog({ open, onOpenChange, editConnection }: Props) {
-  const { addSSHConnection, updateSSHConnection } = useAppContext();
+  const { addSSHConnection, updateSSHConnection, vaultCredentials } = useAppContext();
   const customTags = useTags();
   const [form, setForm] = useState<SSHFormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<SSHFormData>>({});
@@ -58,6 +67,7 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
           identityFile: editConnection.identityFile ?? "",
           password: "",
           confirmPassword: "",
+          credentialId: editConnection.credentialId ?? "",
           tags: editConnection.tags ?? [],
         });
       } else {
@@ -86,9 +96,12 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
 
     const isEdit = !!editConnection;
     const connId = isEdit ? editConnection!.id : crypto.randomUUID();
+    const usingVault = !!form.credentialId;
 
     let hasPassword: boolean;
-    if (isEdit) {
+    if (usingVault) {
+      hasPassword = false; // vault handles the password
+    } else if (isEdit) {
       hasPassword = form.password ? true : (editConnection!.hasPassword ?? false);
     } else {
       hasPassword = !!form.password;
@@ -102,6 +115,7 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
       username: form.username.trim(),
       identityFile: form.identityFile.trim() || undefined,
       hasPassword,
+      credentialId: form.credentialId || undefined,
       tags: form.tags,
     };
 
@@ -111,7 +125,7 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
       addSSHConnection(conn);
     }
 
-    if (form.password) {
+    if (!usingVault && form.password) {
       await window.electron.ipcRenderer.invoke("ssh-password-set", connId, form.password);
     }
 
@@ -220,6 +234,43 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
             />
           </div>
 
+          {/* Vault Credential Selector */}
+          {vaultCredentials.length > 0 && (
+            <div className="grid gap-1.5">
+              <Label className="text-gray-300 text-sm flex items-center gap-1.5">
+                <Vault size={12} className="text-gray-500" />
+                Vault Credential{" "}
+                <span className="text-gray-500 font-normal">(optional)</span>
+              </Label>
+              <Select
+                value={form.credentialId || "none"}
+                onValueChange={(val) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    credentialId: val === "none" ? "" : val,
+                    username: val !== "none"
+                      ? (vaultCredentials.find((c) => c.id === val)?.username ?? prev.username)
+                      : prev.username,
+                  }))
+                }
+              >
+                <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                  <SelectValue placeholder="None (use own password)" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700/50">
+                  <SelectItem value="none" className="text-gray-400 focus:bg-cyan-500/20 focus:text-cyan-100">
+                    None (use own password)
+                  </SelectItem>
+                  {vaultCredentials.map((cred) => (
+                    <SelectItem key={cred.id} value={cred.id} className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">
+                      {cred.name} ({cred.username})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Tags */}
           {customTags.length > 0 && (
             <div className="grid gap-1.5">
@@ -262,57 +313,69 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
             <div className="flex-1 h-px bg-slate-700/60" />
           </div>
 
-          {/* Security recommendation */}
-          <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg bg-amber-500/8 border border-amber-500/20 text-xs text-amber-400/80">
-            <ShieldAlert size={13} className="mt-0.5 flex-shrink-0 text-amber-400/70" />
-            <span>
-              Prefer <span className="font-semibold">SSH keys</span> over passwords.
-              Use the Identity File field above for a more secure connection.
-              Password auth is supported as a last resort.
-            </span>
-          </div>
-
-          {editConnection?.hasPassword && !form.password && (
-            <p className="text-xs text-cyan-400/80 bg-cyan-500/10 border border-cyan-500/20 rounded-md px-3 py-2">
-              A password is saved. Leave blank to keep it, or enter a new one to replace it.
-            </p>
-          )}
-
-          {/* Password */}
-          <div className="grid gap-1.5">
-            <Label htmlFor="ssh-password" className="text-gray-300 text-sm">
-              Password{" "}
-              <span className="text-gray-500 font-normal">(optional)</span>
-            </Label>
-            <Input
-              id="ssh-password"
-              type="password"
-              autoComplete="new-password"
-              placeholder={editConnection?.hasPassword ? "Saved password" : "Leave blank to skip"}
-              value={form.password}
-              onChange={set("password")}
-              className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
-            />
-          </div>
-
-          {form.password && (
-            <div className="grid gap-1.5">
-              <Label htmlFor="ssh-confirm-password" className="text-gray-300 text-sm">
-                Confirm Password <span className="text-red-400">*</span>
-              </Label>
-              <Input
-                id="ssh-confirm-password"
-                type="password"
-                autoComplete="new-password"
-                placeholder="Repeat password"
-                value={form.confirmPassword}
-                onChange={set("confirmPassword")}
-                className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
-              />
-              {errors.confirmPassword && (
-                <p className="text-red-400 text-xs">{errors.confirmPassword}</p>
-              )}
+          {form.credentialId ? (
+            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-cyan-500/8 border border-cyan-500/20 text-xs text-cyan-400/80">
+              <Vault size={13} className="mt-0.5 flex-shrink-0 text-cyan-400/70" />
+              <span>
+                Using vault credential <span className="font-semibold">{vaultCredentials.find((c) => c.id === form.credentialId)?.name}</span>.
+                Manage the password from Settings → Credential Vault.
+              </span>
             </div>
+          ) : (
+            <>
+              {/* Security recommendation */}
+              <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg bg-amber-500/8 border border-amber-500/20 text-xs text-amber-400/80">
+                <ShieldAlert size={13} className="mt-0.5 flex-shrink-0 text-amber-400/70" />
+                <span>
+                  Prefer <span className="font-semibold">SSH keys</span> over passwords.
+                  Use the Identity File field above for a more secure connection.
+                  Password auth is supported as a last resort.
+                </span>
+              </div>
+
+              {editConnection?.hasPassword && !form.password && !editConnection.credentialId && (
+                <p className="text-xs text-cyan-400/80 bg-cyan-500/10 border border-cyan-500/20 rounded-md px-3 py-2">
+                  A password is saved. Leave blank to keep it, or enter a new one to replace it.
+                </p>
+              )}
+
+              {/* Password */}
+              <div className="grid gap-1.5">
+                <Label htmlFor="ssh-password" className="text-gray-300 text-sm">
+                  Password{" "}
+                  <span className="text-gray-500 font-normal">(optional)</span>
+                </Label>
+                <Input
+                  id="ssh-password"
+                  type="password"
+                  autoComplete="new-password"
+                  placeholder={editConnection?.hasPassword ? "Saved password" : "Leave blank to skip"}
+                  value={form.password}
+                  onChange={set("password")}
+                  className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+                />
+              </div>
+
+              {form.password && (
+                <div className="grid gap-1.5">
+                  <Label htmlFor="ssh-confirm-password" className="text-gray-300 text-sm">
+                    Confirm Password <span className="text-red-400">*</span>
+                  </Label>
+                  <Input
+                    id="ssh-confirm-password"
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="Repeat password"
+                    value={form.confirmPassword}
+                    onChange={set("confirmPassword")}
+                    className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+                  />
+                  {errors.confirmPassword && (
+                    <p className="text-red-400 text-xs">{errors.confirmPassword}</p>
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
 

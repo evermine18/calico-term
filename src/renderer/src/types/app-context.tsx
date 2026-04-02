@@ -15,7 +15,15 @@ type SSHConnectionEntry = {
   username: string;
   identityFile?: string;
   hasPassword?: boolean;
+  credentialId?: string;
   tags?: string[];
+};
+
+type VaultCredential = {
+  id: string;
+  name: string;
+  username: string;
+  hasPassword: boolean;
 };
 
 type AppContextType = {
@@ -40,4 +48,8 @@ type AppContextType = {
   addSSHConnection: (conn: SSHConnectionEntry) => void;
   updateSSHConnection: (conn: SSHConnectionEntry) => void;
   deleteSSHConnection: (id: string) => void;
+  vaultCredentials: VaultCredential[];
+  addVaultCredential: (cred: VaultCredential) => void;
+  updateVaultCredential: (cred: VaultCredential) => void;
+  deleteVaultCredential: (id: string) => void;
 };

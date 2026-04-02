@@ -141,8 +141,11 @@ function AppContent(): React.JSX.Element {
                   terminal: new Terminal(),
                   initialCommand: command,
                 };
-                // Register password-injection session BEFORE the terminal mounts
-                if (conn.hasPassword) {
+                // Register password-injection session BEFORE the terminal mounts.
+                // If the connection uses a vault credential, inject via vault key.
+                if (conn.credentialId) {
+                  window.electron.ipcRenderer.send("ssh-session-init", id, "vault-" + conn.credentialId);
+                } else if (conn.hasPassword) {
                   window.electron.ipcRenderer.send("ssh-session-init", id, conn.id);
                 }
                 setTabs((prev) => [...prev, newTab]);

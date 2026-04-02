@@ -296,6 +296,18 @@ export function setupTerminal() {
     return !!store[connId];
   });
 
+  // Vault credential password management (stored with "vault-" prefix in the same encrypted store)
+  ipcMain.handle(
+    "vault-password-set",
+    (_event, credentialId: string, plaintext: string) => {
+      storePassword("vault-" + credentialId, plaintext);
+    },
+  );
+
+  ipcMain.on("vault-password-delete", (_event, credentialId: string) => {
+    removePassword("vault-" + credentialId);
+  });
+
   // Execute command in the active terminal
   ipcMain.on("execute-command", (_event, command: string) => {
     // Find the active terminal (the last used one)

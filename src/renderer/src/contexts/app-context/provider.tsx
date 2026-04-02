@@ -42,6 +42,30 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const deleteSSHConnection = (id: string) => {
     setSSHConnections((prev) => prev.filter((c) => c.id !== id));
   };
+
+  const [vaultCredentials, setVaultCredentials] = useState<VaultCredential[]>(() => {
+    const stored = localStorage.getItem("vaultCredentials");
+    if (stored) {
+      try { return JSON.parse(stored); } catch { return []; }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("vaultCredentials", JSON.stringify(vaultCredentials));
+  }, [vaultCredentials]);
+
+  const addVaultCredential = (cred: VaultCredential) => {
+    setVaultCredentials((prev) => [...prev, cred]);
+  };
+
+  const updateVaultCredential = (cred: VaultCredential) => {
+    setVaultCredentials((prev) => prev.map((c) => (c.id === cred.id ? cred : c)));
+  };
+
+  const deleteVaultCredential = (id: string) => {
+    setVaultCredentials((prev) => prev.filter((c) => c.id !== id));
+  };
   const [commandHistory, setCommandHistory] = useState<CommandHistoryEntry[]>(() => {
     const stored = localStorage.getItem("commandHistory");
     const retentionDays = parseFloat(localStorage.getItem("historyRetentionDays") || "1");
@@ -187,8 +211,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       addSSHConnection,
       updateSSHConnection,
       deleteSSHConnection,
+      vaultCredentials,
+      addVaultCredential,
+      updateVaultCredential,
+      deleteVaultCredential,
     }),
-    [aiSidebarOpen, apiUrl, selectedModel, apiKey, commandHistory, historyDialogOpen, historyRetentionDays, sshConnections]
+    [aiSidebarOpen, apiUrl, selectedModel, apiKey, commandHistory, historyDialogOpen, historyRetentionDays, sshConnections, vaultCredentials]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
