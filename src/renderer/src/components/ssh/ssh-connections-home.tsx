@@ -40,18 +40,29 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
         editConnection={editConn}
       />
 
-      <div className="h-full flex flex-col items-center justify-center px-8 py-12 overflow-y-auto">
+      <div className="h-full flex flex-col items-center justify-center px-8 py-12 overflow-y-auto relative">
+        {/* Radial glow behind hero */}
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse at top, rgba(6,182,212,0.06) 0%, transparent 70%)' }}
+        />
+
         {/* Hero icon */}
-        <div className="mb-6 flex flex-col items-center gap-3">
-          <div className="w-16 h-16 rounded-2xl bg-slate-800/80 border border-slate-700/50 flex items-center justify-center shadow-lg">
-            <Terminal className="w-8 h-8 text-cyan-400 opacity-80" />
+        <div className="mb-8 flex flex-col items-center gap-4 relative">
+          <div
+            className="w-16 h-16 rounded-2xl bg-slate-900/80 border border-cyan-500/20 flex items-center justify-center"
+            style={{ boxShadow: '0 0 30px rgba(6,182,212,0.12), inset 0 1px 0 rgba(6,182,212,0.1)' }}
+          >
+            <Terminal className="w-8 h-8 text-cyan-400" style={{ filter: 'drop-shadow(0 0 8px rgba(6,182,212,0.6))' }} />
           </div>
           <div className="text-center">
-            <h2 className="text-lg font-semibold text-gray-300 tracking-wide">
-              Calico Term
+            <h2 className="text-base font-semibold tracking-widest text-gray-300">
+              <span className="text-cyan-400">calico</span>
+              <span className="text-slate-600 mx-1">/</span>
+              <span>term</span>
             </h2>
-            <p className="text-sm text-gray-500 mt-0.5">
-              Open a terminal or connect to a saved SSH server
+            <p className="text-xs text-gray-600 mt-1 tracking-wide">
+              open a terminal or connect to a saved ssh server
             </p>
           </div>
         </div>
@@ -119,9 +130,9 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
         </div>
 
         {/* Hint */}
-        <p className="mt-8 text-xs text-gray-600">
-          Press{" "}
-          <kbd className="px-1.5 py-0.5 bg-slate-800/60 border border-slate-700/50 rounded font-mono text-cyan-400/70">
+        <p className="mt-8 text-[11px] text-gray-700 tracking-wide">
+          press{" "}
+          <kbd className="px-1.5 py-0.5 bg-slate-800/50 border border-slate-700/40 rounded text-cyan-400/60 text-[10px]">
             +
           </kbd>{" "}
           in the tab bar to open a local terminal

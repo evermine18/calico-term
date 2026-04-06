@@ -63,64 +63,64 @@ export default function TerminalHeader({
         activeTab={activeTab}
         setActiveTab={setActiveTab}
       />
-      {/* Add new terminal button */}
-      <button
-        onClick={addTab}
-        className="
-            flex items-center justify-center w-9 h-9 rounded-md
-            bg-slate-800/60 text-gray-400 border border-slate-700/50
-            hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50
-            transition-all duration-150 flex-shrink-0
-            shadow-sm
-          "
-        title="New terminal (Ctrl+Shift+T)"
-      >
-        <Plus size={18} />
-      </button>
-
-      <button
-        onClick={() => setHistoryDialogOpen(true)}
-        className="
-            flex items-center justify-center w-9 h-9 rounded-md
-            bg-slate-800/60 text-gray-400 border border-slate-700/50
-            hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50
-            transition-all duration-150 flex-shrink-0
-            shadow-sm
-          "
-        title="Command History"
-      >
-        <Clock size={18} />
-      </button>
-
-      <button
-        onClick={() => setAiSidebarOpen(true)}
-        className="
-            flex items-center justify-center w-9 h-9 rounded-md
-            bg-slate-800/60 text-gray-400 border border-slate-700/50
-            hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50
-            transition-all duration-150 flex-shrink-0
-            shadow-sm
-          "
-        title="AI Assistant"
-      >
-        <Bot size={18} />
-      </button>
-
-      {/* Settings button */}
-      <SettingsDialog>
+      {/* Action buttons group */}
+      <div className="flex items-center gap-0.5 bg-slate-800/40 border border-slate-700/40 rounded-lg p-0.5 flex-shrink-0">
         <button
+          onClick={addTab}
           className="
-            flex items-center justify-center w-9 h-9 rounded-md
-            bg-slate-800/60 text-gray-400 border border-slate-700/50
-            hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50
-            transition-all duration-150 flex-shrink-0
-            shadow-sm
-          "
-          title="Settings"
+              flex items-center justify-center w-8 h-8 rounded-md
+              text-gray-500
+              hover:bg-slate-700/60 hover:text-cyan-300
+              transition-all duration-150
+            "
+          title="New terminal (Ctrl+Shift+T)"
         >
-          <Cog size={18} />
+          <Plus size={16} />
         </button>
-      </SettingsDialog>
+
+        <button
+          onClick={() => setHistoryDialogOpen(true)}
+          className="
+              flex items-center justify-center w-8 h-8 rounded-md
+              text-gray-500
+              hover:bg-slate-700/60 hover:text-cyan-300
+              transition-all duration-150
+            "
+          title="Command History"
+        >
+          <Clock size={16} />
+        </button>
+
+        <button
+          onClick={() => setAiSidebarOpen(true)}
+          className="
+              flex items-center justify-center w-8 h-8 rounded-md
+              text-gray-500
+              hover:bg-slate-700/60 hover:text-cyan-300
+              transition-all duration-150
+            "
+          title="AI Assistant"
+        >
+          <Bot size={16} />
+        </button>
+
+        <div className="w-px h-5 bg-slate-700/50 mx-0.5" />
+
+        {/* Settings button */}
+        <SettingsDialog>
+          <button
+            className="
+              flex items-center justify-center w-8 h-8 rounded-md
+              text-gray-500
+              hover:bg-slate-700/60 hover:text-gray-300
+              transition-all duration-150
+            "
+            title="Settings"
+          >
+            <Cog size={16} />
+          </button>
+        </SettingsDialog>
+      </div>
     </div>
   );
 }

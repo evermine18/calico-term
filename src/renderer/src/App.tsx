@@ -10,6 +10,7 @@ import CommandHistoryDialog from "./components/command-history/dialog";
 import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
+import { TerminalSquare } from "lucide-react";
 
 function AppContent(): React.JSX.Element {
   const [tabs, setTabs] = useState<TerminalTab[]>([]);
@@ -70,25 +71,21 @@ function AppContent(): React.JSX.Element {
           )}
 
           <div className="drag-region flex w-full items-center gap-2 left-0 right-0">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-gray-400 text-sm">
-                <svg
-                  className="w-4 h-4 text-cyan-400"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M3 4a1 1 0 011-1h12a1 1 0 011 1v1a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 8a1 1 0 011-1h12a1 1 0 011 1v5a1 1 0 01-1 1H4a1 1 0 01-1-1V8z"
-                    clipRule="evenodd"
-                  ></path>
-                </svg>
-                <span className="font-semibold tracking-wide text-gray-300">Calico Term</span>
-              </div>
+            <div className="flex items-center gap-2">
+              <TerminalSquare
+                size={15}
+                className="text-cyan-400 flex-shrink-0"
+                style={{ filter: 'drop-shadow(0 0 5px rgba(6,182,212,0.7))' }}
+              />
+              <span className="text-sm font-semibold tracking-widest text-gray-300 select-none">
+                <span className="text-cyan-400">calico</span>
+                <span className="text-slate-500 mx-0.5">/</span>
+                <span className="text-gray-400">term</span>
+              </span>
             </div>
 
             <div className="flex items-center gap-2 text-gray-400 text-xs">
-              <span className="px-2.5 py-1 bg-slate-800/60 rounded border border-slate-700/50 font-mono text-cyan-400/80">
+              <span className="px-2 py-0.5 bg-slate-800/50 rounded border border-slate-700/40 text-cyan-400/70 text-[10px] tracking-wider">
                 {tabs.length} tab{tabs.length !== 1 ? "s" : ""}
               </span>
             </div>
@@ -157,35 +154,24 @@ function AppContent(): React.JSX.Element {
       </div>
 
       {/* Status Bar */}
-      <div className="bg-slate-900/95 backdrop-blur-md border-t border-slate-700/40 px-4 py-2 flex items-center justify-between text-xs text-gray-400">
-        <div className="flex items-center gap-4">
+      <div className="bg-slate-900/90 backdrop-blur-md border-t border-slate-700/30 px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-500 tracking-wide">
+        <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-sm shadow-cyan-400/50"></div>
-            <span className="text-cyan-400/90 font-medium">Connected</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" style={{ boxShadow: '0 0 4px rgba(6,182,212,0.8)' }}></div>
+            <span className="text-cyan-400/80 font-medium uppercase tracking-widest text-[10px]">ready</span>
           </span>
           {activeTab && (
-            <span className="font-mono text-gray-500">
+            <span className="text-gray-600 truncate max-w-[200px]">
               {tabs.find((t) => t.id === activeTab)?.title}
             </span>
           )}
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-gray-500">UTF-8</span>
-          <span className="text-gray-500">LF</span>
-          <span className="flex items-center gap-1.5">
-            <svg
-              className="w-3 h-3 text-cyan-400/70"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-            >
-              <path
-                fillRule="evenodd"
-                d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z"
-                clipRule="evenodd"
-              ></path>
-            </svg>
-            <span className="text-gray-500">Shell</span>
-          </span>
+        <div className="flex items-center gap-3 text-gray-600">
+          <span>UTF-8</span>
+          <span className="text-slate-700">·</span>
+          <span>LF</span>
+          <span className="text-slate-700">·</span>
+          <span>zsh</span>
         </div>
       </div>
     </div>
