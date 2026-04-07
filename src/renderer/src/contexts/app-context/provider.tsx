@@ -1,6 +1,13 @@
 import { useMemo, useState, useEffect } from "react";
 import { AppContext } from "./context";
 
+const FONT_CSS_MAP: Record<string, string> = {
+  'JetBrains Mono': "'JetBrains Mono', 'Cascadia Code', monospace",
+  'Fira Code': "'Fira Code', monospace",
+  'Inter': "'Inter', system-ui, sans-serif",
+  'System Default': "system-ui, -apple-system, sans-serif",
+};
+
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [aiSidebarOpen, setAiSidebarOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
@@ -13,6 +20,20 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     const stored = localStorage.getItem("historyRetentionDays");
     return stored ? parseFloat(stored) : 1;
   });
+
+  const [appFont, setAppFontState] = useState<string>(
+    () => localStorage.getItem("appFont") || "JetBrains Mono"
+  );
+
+  const setAppFont = (font: string) => {
+    localStorage.setItem("appFont", font);
+    setAppFontState(font);
+  };
+
+  useEffect(() => {
+    const cssFamily = FONT_CSS_MAP[appFont] ?? FONT_CSS_MAP['JetBrains Mono'];
+    document.documentElement.style.setProperty('--app-font', cssFamily);
+  }, [appFont]);
 
   const setHistoryRetentionDays = (days: number) => {
     localStorage.setItem("historyRetentionDays", days.toString());
@@ -215,8 +236,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       addVaultCredential,
       updateVaultCredential,
       deleteVaultCredential,
+      appFont,
+      setAppFont,
     }),
-    [aiSidebarOpen, apiUrl, selectedModel, apiKey, commandHistory, historyDialogOpen, historyRetentionDays, sshConnections, vaultCredentials]
+    [aiSidebarOpen, apiUrl, selectedModel, apiKey, commandHistory, historyDialogOpen, historyRetentionDays, sshConnections, vaultCredentials, appFont]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

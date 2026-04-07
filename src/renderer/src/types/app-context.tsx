@@ -52,4 +52,6 @@ type AppContextType = {
   addVaultCredential: (cred: VaultCredential) => void;
   updateVaultCredential: (cred: VaultCredential) => void;
   deleteVaultCredential: (id: string) => void;
+  appFont: string;
+  setAppFont: (font: string) => void;
 };
