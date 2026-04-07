@@ -111,8 +111,8 @@ function AppContent(): React.JSX.Element {
           <div
             key={tab.id}
             className={`absolute inset-0 transition-all duration-300 ${!showHome && activeTab === tab.id
-                ? "opacity-100 scale-100"
-                : "opacity-0 scale-95 pointer-events-none"
+              ? "opacity-100 scale-100"
+              : "opacity-0 scale-95 pointer-events-none"
               }`}
           >
             <TerminalPanel
@@ -171,7 +171,7 @@ function AppContent(): React.JSX.Element {
           <span className="text-slate-700">·</span>
           <span>LF</span>
           <span className="text-slate-700">·</span>
-          <span>zsh</span>
+          <span>{window.platform.os === "win32" ? "PowerShell" : (process.env.SHELL?.split("/").pop() ?? "zsh")}</span>
         </div>
       </div>
     </div>
