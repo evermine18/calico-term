@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { isEditableTarget, isMacPlatform, isPrimaryModifier } from "@renderer/lib/keyboard";
 
 interface UseTabNavigationProps {
   tabs: any[];
@@ -19,6 +20,8 @@ export function useTabNavigation({
 }: UseTabNavigationProps) {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      if (isEditableTarget(e.target)) return;
+
       const currentIndex = tabs.findIndex((t) => t.id === activeTab);
 
       // Ctrl + Tab / Ctrl + Shift + Tab
@@ -30,23 +33,36 @@ export function useTabNavigation({
         setActiveTab(tabs[nextIndex]?.id);
       }
 
-      // Ctrl + W - Close tab
-      if (e.ctrlKey && e.key === "w") {
+      // Use the platform primary modifier so Ctrl remains available to the shell on macOS.
+      if (isPrimaryModifier(e) && e.key.toLowerCase() === "w") {
         e.preventDefault();
         if (activeTab) closeTab(activeTab);
       }
 
-      // Ctrl + Shift + D - Duplicate tab
-      if (e.ctrlKey && e.shiftKey && e.key === "D") {
+      if (isPrimaryModifier(e) && e.shiftKey && e.key.toLowerCase() === "d") {
         e.preventDefault();
         if (activeTab) duplicateTab(activeTab);
       }
 
-      // Ctrl + 1-9 - Go to specific tab
-      if (e.ctrlKey && e.key >= "1" && e.key <= "9") {
+      if (isPrimaryModifier(e) && e.key >= "1" && e.key <= "9") {
         e.preventDefault();
         const index = parseInt(e.key) - 1;
         if (tabs[index]) setActiveTab(tabs[index].id);
+      }
+
+      // macOS doesn't expose Cmd+Tab to apps, so keep Ctrl+Tab there and use Cmd+Shift+[ / ].
+      if (
+        isMacPlatform() &&
+        isPrimaryModifier(e) &&
+        e.shiftKey &&
+        (e.key === "[" || e.key === "]")
+      ) {
+        e.preventDefault();
+        const nextIndex =
+          e.key === "["
+            ? (currentIndex - 1 + tabs.length) % tabs.length
+            : (currentIndex + 1) % tabs.length;
+        setActiveTab(tabs[nextIndex]?.id);
       }
 
       // F2 - Rename active tab

@@ -11,6 +11,7 @@ import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
 import { TerminalSquare } from "lucide-react";
+import { isEditableTarget, isPrimaryModifier } from "./lib/keyboard";
 
 function AppContent(): React.JSX.Element {
   const [tabs, setTabs] = useState<TerminalTab[]>([]);
@@ -19,23 +20,34 @@ function AppContent(): React.JSX.Element {
   const [showHome, setShowHome] = useState(false);
   const { setHistoryDialogOpen } = useAppContext();
 
-  // Wrap setActiveTab so any tab click also dismisses the home overlay
+  // Wrap setActiveTab so any tab click also dismisses the home overlay and clears activity
   const handleSetActiveTab = (id: string) => {
     setActiveTab(id);
     setShowHome(false);
+    setTabs((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, hasActivity: false } : t))
+    );
   };
 
-  // Keyboard shortcut: Ctrl+H to open history
+  const handleTabActivity = (id: string) => {
+    setTabs((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, hasActivity: true } : t))
+    );
+  };
+
+  // Keyboard shortcut: Primary+Shift+H to open history without stealing Ctrl+H from the shell
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'h') {
+      if (isEditableTarget(e.target)) return;
+
+      if (isPrimaryModifier(e) && e.shiftKey && e.key.toLowerCase() === "h") {
         e.preventDefault();
         setHistoryDialogOpen(true);
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [setHistoryDialogOpen]);
 
   const toggleFullscreen = () => {
@@ -120,6 +132,7 @@ function AppContent(): React.JSX.Element {
               active={!showHome && activeTab === tab.id}
               tabTitle={tab.title}
               initialCommand={tab.initialCommand}
+              onActivity={() => handleTabActivity(tab.id)}
             />
           </div>
         ))}
@@ -137,6 +150,7 @@ function AppContent(): React.JSX.Element {
                   mode: "normal",
                   terminal: new Terminal(),
                   initialCommand: command,
+                  isSSH: true,
                 };
                 // Register password-injection session BEFORE the terminal mounts.
                 // If the connection uses a vault credential, inject via vault key.

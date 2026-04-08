@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
@@ -8,12 +8,15 @@ import { useTerminalContext } from "@renderer/contexts/terminal-context";
 import useCopyNotification from "@renderer/hooks/useCopyNotification";
 import CopyNotification from "./terminal/copy-notification";
 import { useAppContext } from "@renderer/contexts/app-context";
+import { ArrowDown } from "lucide-react";
+import { isMacPlatform } from "@renderer/lib/keyboard";
 
 interface TerminalPanelProps {
   tabId: string;
   active: boolean;
   tabTitle?: string;
   initialCommand?: string;
+  onActivity?: () => void;
 }
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({
@@ -21,6 +24,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   active,
   tabTitle = "Terminal",
   initialCommand,
+  onActivity,
 }) => {
   const { setActive } = useTerminalContext();
   const { addCommandToHistory } = useAppContext();
@@ -30,7 +34,16 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const isInitializedRef = useRef(false);
+  const activeRef = useRef(active);
+
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
+
   const { notificationState, copyText, handleComplete } = useCopyNotification();
+
+  // Keep activeRef in sync so IPC handlers always see the latest value
+  useEffect(() => {
+    activeRef.current = active;
+  }, [active]);
 
   // Exposing API
   const api: TerminalAPI = {
@@ -43,7 +56,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       for (let y = start; y <= end; y++) {
         out += (b.getLine(y)?.translateToString(true) ?? "") + "\n";
       }
-      // Remove empty lines
       out = out.replace(/^\n/gm, "");
       return out;
     },
@@ -71,7 +83,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
     const width = container.clientWidth;
     const height = container.clientHeight;
-    if (width === 0 || height === 0) return; // Avoid fitting when hidden
+    if (width === 0 || height === 0) return;
 
     fitAddon.fit();
     terminal.refresh(0, terminal.buffer.active.length - 1);
@@ -94,6 +106,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     const terminal = new Terminal({
       cursorBlink: true,
       allowProposedApi: true,
+      scrollback: 50000,
+      macOptionIsMeta: true,
       theme: {
         background: "#020617",
         foreground: "#e2e8f0",
@@ -121,14 +135,22 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       fontFamily: "Cascadia Code, Consolas, 'Courier New', monospace",
       fontSize: 14,
       lineHeight: 1.2,
-      // scrollback: 50000, // Optional: increase scrollback for large output
     });
+
     terminal.onSelectionChange((_) => {
       const text = terminal.getSelection();
       if (text) {
         copyText(text, null);
       }
     });
+
+    // Track scroll position for the scroll-to-bottom button
+    terminal.onScroll(() => {
+      const b = terminal.buffer.active;
+      const atBottom = b.viewportY >= b.length - terminal.rows;
+      setIsScrolledUp(!atBottom);
+    });
+
     const fitAddon = new FitAddon();
     const unicode11Addon = new Unicode11Addon();
     terminal.loadAddon(fitAddon);
@@ -136,24 +158,37 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     terminal.loadAddon(unicode11Addon);
     terminal.unicode.activeVersion = "11";
 
+    if (isMacPlatform()) {
+      terminal.attachCustomKeyEventHandler((event) => {
+        if (event.type !== "keydown") return true;
+        if (!event.ctrlKey || event.altKey || event.metaKey) return true;
+        const code = event.code;
+        if (!/^Key[A-Z]$/.test(code)) return true;
+
+        const key = code.slice(3);
+
+        event.preventDefault();
+        window.electron.ipcRenderer.send("terminal-input", {
+          tabId,
+          data: String.fromCharCode(key.charCodeAt(0) - 64),
+        });
+        return false;
+      });
+    }
+
     terminal.onData((data) => {
       // Capturar comandos cuando se presiona Enter
       if (data === '\r') {
-        // Read the current line from the terminal buffer
         const buffer = terminal.buffer.active;
         const cursorY = buffer.cursorY;
         const line = buffer.getLine(cursorY);
 
         if (line) {
-          // Get the complete line text
           let lineText = line.translateToString(true);
-
-          // Clean the prompt and special characters
-          // Detect common prompt patterns and remove them
-          lineText = lineText.replace(/^\[?[\w\-\.]+@[\w\-\.]+.*?\]?\s*[\$#>]\s*/, ''); // bash/zsh style
-          lineText = lineText.replace(/^PS\s+[\w\:\\\>]+>\s*/, ''); // PowerShell style
-          lineText = lineText.replace(/^C:\\.*?>\s*/, ''); // Windows cmd style
-          lineText = lineText.replace(/^.*?[$#>]\s*/, ''); // Generic prompt
+          lineText = lineText.replace(/^\[?[\w\-\.]+@[\w\-\.]+.*?\]?\s*[\$#>]\s*/, '');
+          lineText = lineText.replace(/^PS\s+[\w\:\\\>]+>\s*/, '');
+          lineText = lineText.replace(/^C:\\.*?>\s*/, '');
+          lineText = lineText.replace(/^.*?[$#>]\s*/, '');
 
           const cmd = lineText.trim();
           if (cmd && cmd.length > 0) {
@@ -168,6 +203,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     const handleOutput = (_: unknown, incomingId: string, data: string) => {
       if (incomingId === tabId) {
         terminal.write(data);
+        if (!activeRef.current) {
+          onActivity?.();
+        }
       }
     };
 
@@ -177,10 +215,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     document.fonts.ready.then(safeFit);
     terminal.focus();
 
-    // Create PTY instance
     window.electron.ipcRenderer.send("terminal-create", tabId);
 
-    // If an initial command is provided, send it once the shell is ready
     if (initialCommand) {
       const cmd = initialCommand;
       setTimeout(() => {
@@ -194,10 +230,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     return () => {
       setActive(null);
       resizeObserverRef.current?.disconnect();
-      window.electron.ipcRenderer.removeListener(
-        "terminal-output",
-        handleOutput
-      );
+      window.electron.ipcRenderer.removeListener("terminal-output", handleOutput);
       terminal.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
@@ -212,20 +245,17 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     const container = containerRef.current;
     if (!container) return;
 
-    // Disconnect any existing observer
     resizeObserverRef.current?.disconnect();
     resizeObserverRef.current = null;
     if (active) setActive(api);
     if (!active) return;
 
-    // Ensure layout is ready
     requestAnimationFrame(() => {
-      safeFit(); // Initial fit on activation
+      safeFit();
 
       const observer = new ResizeObserver((entries) => {
         const { width, height } = entries[0].contentRect;
         if (width && height) {
-          // Minimal debounce via microtask
           Promise.resolve().then(safeFit);
         }
       });
@@ -244,6 +274,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     }
   }, [active]);
 
+  const handleScrollToBottom = () => {
+    terminalRef.current?.scrollToBottom();
+    setIsScrolledUp(false);
+  };
+
   return (
     <>
       <div
@@ -251,6 +286,18 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         className="terminal-container flex-1 overflow-hidden h-full w-full"
         style={{ display: active ? "block" : "none" }}
       />
+
+      {active && isScrolledUp && (
+        <button
+          onClick={handleScrollToBottom}
+          title="Ir al final"
+          className="absolute bottom-3 right-3 z-20 w-7 h-7 flex items-center justify-center rounded-full bg-slate-800/90 border border-slate-600/60 text-cyan-400 hover:bg-slate-700/90 hover:border-cyan-500/50 shadow-lg transition-all duration-150"
+          style={{ boxShadow: '0 0 8px rgba(6,182,212,0.2)' }}
+        >
+          <ArrowDown size={13} />
+        </button>
+      )}
+
       <CopyNotification
         isVisible={notificationState.isVisible}
         position={notificationState.position}

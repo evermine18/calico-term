@@ -6,4 +6,6 @@ export type TerminalTab = {
   mode: "normal" | "edit";
   terminal: Terminal;
   initialCommand?: string;
+  hasActivity?: boolean;
+  isSSH?: boolean;
 };
