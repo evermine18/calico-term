@@ -154,7 +154,7 @@ export default function AISidebarChat() {
     >
       <div
         onMouseDown={startResizing}
-        className="absolute left-0 top-0 h-full w-1 cursor-ew-resize bg-transparent hover:bg-cyan-500/30 active:bg-cyan-500/50 z-1 transition-colors"
+        className="absolute left-0 top-0 h-full w-1 cursor-ew-resize bg-transparent hover:bg-accent-500/30 active:bg-accent-500/50 z-1 transition-colors"
         title="Resize sidebar"
       />
       <ChatHeader

@@ -107,7 +107,7 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
 
   return (
     <>
-      <div className="flex items-center gap-1.5 flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-cyan-600/40 scrollbar-track-transparent pt-2.5">
+      <div className="flex items-center gap-1.5 flex-1 overflow-x-auto scrollbar-thin scrollbar-thumb-accent-600/40 scrollbar-track-transparent pt-2.5">
         {tabs.map((tab) => (
           <TabItem
             key={tab.id}

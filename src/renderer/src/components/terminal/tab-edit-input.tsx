@@ -41,7 +41,7 @@ export function TabEditInput({
         value={title}
         onChange={(e) => onTitleChange(tabId, e.target.value)}
         onKeyDown={handleKeyDown}
-        className="bg-slate-900/60 border border-cyan-500/50 rounded px-2 py-0.5 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-cyan-500/30 focus:border-cyan-500"
+        className="bg-slate-900/60 border border-accent-500/50 rounded px-2 py-0.5 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500/30 focus:border-accent-500"
         style={{
           width: `calc(${document.getElementById(`tab-title-measure-${tabId}`)?.offsetWidth || 50
             }px + 1ch)`,

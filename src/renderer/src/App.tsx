@@ -74,18 +74,18 @@ function AppContent(): React.JSX.Element {
             <div className="flex items-center gap-2">
               <TerminalSquare
                 size={15}
-                className="text-cyan-400 flex-shrink-0"
-                style={{ filter: 'drop-shadow(0 0 5px rgba(6,182,212,0.7))' }}
+                className="text-accent-400 flex-shrink-0"
+                style={{ filter: 'drop-shadow(0 0 5px rgba(var(--accent-rgb),0.7))' }}
               />
               <span className="text-sm font-semibold tracking-widest text-gray-300 select-none">
-                <span className="text-cyan-400">calico</span>
+                <span className="text-accent-400">calico</span>
                 <span className="text-slate-500 mx-0.5">/</span>
                 <span className="text-gray-400">term</span>
               </span>
             </div>
 
             <div className="flex items-center gap-2 text-gray-400 text-xs">
-              <span className="px-2 py-0.5 bg-slate-800/50 rounded border border-slate-700/40 text-cyan-400/70 text-[10px] tracking-wider">
+              <span className="px-2 py-0.5 bg-slate-800/50 rounded border border-slate-700/40 text-accent-400/70 text-[10px] tracking-wider">
                 {tabs.length} tab{tabs.length !== 1 ? "s" : ""}
               </span>
             </div>
@@ -157,8 +157,8 @@ function AppContent(): React.JSX.Element {
       <div className="bg-slate-900/90 backdrop-blur-md border-t border-slate-700/30 px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-500 tracking-wide">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" style={{ boxShadow: '0 0 4px rgba(6,182,212,0.8)' }}></div>
-            <span className="text-cyan-400/80 font-medium uppercase tracking-widest text-[10px]">ready</span>
+            <div className="w-1.5 h-1.5 rounded-full bg-accent-400" style={{ boxShadow: '0 0 4px rgba(var(--accent-rgb),0.8)' }}></div>
+            <span className="text-accent-400/80 font-medium uppercase tracking-widest text-[10px]">ready</span>
           </span>
           {activeTab && (
             <span className="text-gray-600 truncate max-w-[200px]">

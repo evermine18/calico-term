@@ -9,7 +9,7 @@ export default function UserMessage({ message, timestamp }: UserMessageProps) {
   return (
     <div className="flex justify-end animate-fade-in selectable-section">
       <div className="flex items-start space-x-2 max-w-[85%]">
-        <div className="bg-cyan-500/15 backdrop-blur-sm border border-cyan-500/30 text-gray-100 rounded-2xl rounded-br-sm px-4 py-3">
+        <div className="bg-accent-500/15 backdrop-blur-sm border border-accent-500/30 text-gray-100 rounded-2xl rounded-br-sm px-4 py-3">
           <p className="text-sm leading-relaxed">{message}</p>
           <span className="text-xs text-gray-500 mt-1 block">
             {timestamp}

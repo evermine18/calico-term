@@ -1,7 +1,33 @@
 import { useMemo, useState, useEffect } from "react";
 import { AppContext } from "./context";
+import { DEFAULT_THEME_ID, getTheme } from "../../themes";
+import type { ThemeId } from "../../themes";
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
+  const [theme, setThemeState] = useState<ThemeId>(() => {
+    const stored = localStorage.getItem("calico-theme");
+    return (stored as ThemeId) ?? DEFAULT_THEME_ID;
+  });
+
+  const setTheme = (id: ThemeId) => {
+    localStorage.setItem("calico-theme", id);
+    setThemeState(id);
+  };
+
+  // Apply data-theme attribute and CSS variables to the document root
+  useEffect(() => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", theme);
+    const colors = getTheme(theme).colors;
+    root.style.setProperty("--accent-100", colors[100]);
+    root.style.setProperty("--accent-300", colors[300]);
+    root.style.setProperty("--accent-400", colors[400]);
+    root.style.setProperty("--accent-500", colors[500]);
+    root.style.setProperty("--accent-600", colors[600]);
+    root.style.setProperty("--accent-rgb", colors.rgb);
+    root.style.setProperty("--accent-oklch", colors.oklch);
+  }, [theme]);
+
   const [aiSidebarOpen, setAiSidebarOpen] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [apiUrl, setApiUrl] = useState(localStorage.getItem("apiUrl") || "");
@@ -181,6 +207,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   const value: AppContextType = useMemo(
     () => ({
+      theme,
+      setTheme,
       aiSidebarOpen,
       setAiSidebarOpen,
       apiUrl,
@@ -216,7 +244,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       updateVaultCredential,
       deleteVaultCredential,
     }),
-    [aiSidebarOpen, apiUrl, selectedModel, apiKey, commandHistory, historyDialogOpen, historyRetentionDays, sshConnections, vaultCredentials]
+    [theme, aiSidebarOpen, apiUrl, selectedModel, apiKey, commandHistory, historyDialogOpen, historyRetentionDays, sshConnections, vaultCredentials]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

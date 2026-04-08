@@ -56,8 +56,8 @@ export function TabItem({
           backdrop-blur-md transition-all duration-100
           ${isDragged ? 'opacity-50' : ''}
           ${isActive
-            ? 'bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-gray-100 border-l-cyan-400 border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-xl shadow-cyan-500/20 z-10'
-            : 'bg-slate-900/60 text-gray-400 border-l-slate-700/50 border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-cyan-100 hover:border-l-cyan-400/50 hover:shadow-lg hover:shadow-cyan-500/10'
+            ? 'bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-gray-100 border-l-cyan-400 border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-xl shadow-accent-500/20 z-10'
+            : 'bg-slate-900/60 text-gray-400 border-l-slate-700/50 border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-accent-100 hover:border-l-cyan-400/50 hover:shadow-lg hover:shadow-accent-500/10'
           }
         `}
         onClick={onSelect}
@@ -77,7 +77,7 @@ export function TabItem({
 
         {/* Terminal Icon */}
         <div
-          className={`flex-shrink-0 transition-colors duration-100 ${isActive ? 'text-cyan-400' : 'text-slate-500 group-hover:text-cyan-400/70'
+          className={`flex-shrink-0 transition-colors duration-100 ${isActive ? 'text-accent-400' : 'text-slate-500 group-hover:text-accent-400/70'
             }`}
         >
           <TerminalSquare size={14} strokeWidth={2} />

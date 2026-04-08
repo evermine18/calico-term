@@ -27,6 +27,8 @@ type VaultCredential = {
 };
 
 type AppContextType = {
+  theme: import('../themes').ThemeId;
+  setTheme: (id: import('../themes').ThemeId) => void;
   aiSidebarOpen: boolean;
   setAiSidebarOpen: (open: boolean) => void;
   apiUrl: string;

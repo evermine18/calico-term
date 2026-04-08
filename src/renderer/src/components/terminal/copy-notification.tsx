@@ -73,7 +73,7 @@ const CopyNotification = ({
     >
       <div
         className={`
-        bg-slate-900/95 border border-cyan-500/25 rounded-lg shadow-xl shadow-black/50 px-3 py-2
+        bg-slate-900/95 border border-accent-500/25 rounded-lg shadow-xl shadow-black/50 px-3 py-2
         flex items-center gap-2 text-sm text-gray-200
         backdrop-blur-md
         transition-all duration-200 ease-out
@@ -86,13 +86,13 @@ const CopyNotification = ({
           ${getIconClasses()}
         `}
         >
-          <Check className="w-4 h-4 text-cyan-400" />
+          <Check className="w-4 h-4 text-accent-400" />
         </div>
         <span className="font-medium tracking-wide">Copied</span>
 
         <div
           className={`
-          w-1 h-1 bg-cyan-400 rounded-full transition-all duration-300
+          w-1 h-1 bg-accent-400 rounded-full transition-all duration-300
           ${phase === "success" ? "opacity-100 scale-100" : "opacity-0 scale-0"}
         `}
         />
@@ -100,7 +100,7 @@ const CopyNotification = ({
 
       {phase === "success" && (
         <div
-          className="absolute inset-0 bg-cyan-500/5 rounded-lg animate-pulse"
+          className="absolute inset-0 bg-accent-500/5 rounded-lg animate-pulse"
           style={{ animationDuration: "800ms", animationIterationCount: 1 }}
         />
       )}

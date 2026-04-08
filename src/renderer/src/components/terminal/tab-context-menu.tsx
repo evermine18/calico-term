@@ -41,7 +41,7 @@ export function TabContextMenu({
       onClick={(e) => e.stopPropagation()}
     >
       <button
-        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-cyan-300 flex items-center gap-2 transition-colors"
+        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-accent-300 flex items-center gap-2 transition-colors"
         onClick={(e) => {
           e.stopPropagation();
           onRename();
@@ -52,7 +52,7 @@ export function TabContextMenu({
         <span className="ml-auto text-xs text-gray-500">F2</span>
       </button>
       <button
-        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-cyan-300 flex items-center gap-2 transition-colors"
+        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-accent-300 flex items-center gap-2 transition-colors"
         onClick={(e) => {
           e.stopPropagation();
           onDuplicate();
@@ -67,7 +67,7 @@ export function TabContextMenu({
 
       {/* Tags submenu trigger */}
       <button
-        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-cyan-300 flex items-center gap-2 transition-colors relative"
+        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-accent-300 flex items-center gap-2 transition-colors relative"
         onMouseEnter={onTagsHover}
         onMouseLeave={onTagsLeave}
       >

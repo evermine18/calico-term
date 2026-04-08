@@ -4,6 +4,67 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ── Accent palette: defaults to Cyber Teal ──────────────────────────── */
+:root {
+  --accent-100: #cffafe;
+  --accent-300: #67e8f9;
+  --accent-400: #22d3ee;
+  --accent-500: #06b6d4;
+  --accent-600: #0891b2;
+  --accent-rgb: 6, 182, 212;
+  --accent-oklch: oklch(0.70 0.15 200);
+}
+
+[data-theme="neon-purple"] {
+  --accent-100: #ede9fe;
+  --accent-300: #c4b5fd;
+  --accent-400: #a78bfa;
+  --accent-500: #8b5cf6;
+  --accent-600: #7c3aed;
+  --accent-rgb: 139, 92, 246;
+  --accent-oklch: oklch(0.65 0.25 280);
+}
+
+[data-theme="amber-glow"] {
+  --accent-100: #fef3c7;
+  --accent-300: #fcd34d;
+  --accent-400: #fbbf24;
+  --accent-500: #f59e0b;
+  --accent-600: #d97706;
+  --accent-rgb: 245, 158, 11;
+  --accent-oklch: oklch(0.78 0.18 80);
+}
+
+[data-theme="emerald"] {
+  --accent-100: #d1fae5;
+  --accent-300: #6ee7b7;
+  --accent-400: #34d399;
+  --accent-500: #10b981;
+  --accent-600: #059669;
+  --accent-rgb: 16, 185, 129;
+  --accent-oklch: oklch(0.70 0.17 162);
+}
+
+[data-theme="rose"] {
+  --accent-100: #ffe4e6;
+  --accent-300: #fda4af;
+  --accent-400: #fb7185;
+  --accent-500: #f43f5e;
+  --accent-600: #e11d48;
+  --accent-rgb: 244, 63, 94;
+  --accent-oklch: oklch(0.65 0.25 15);
+}
+
+[data-theme="frost-blue"] {
+  --accent-100: #dbeafe;
+  --accent-300: #93c5fd;
+  --accent-400: #60a5fa;
+  --accent-500: #3b82f6;
+  --accent-600: #2563eb;
+  --accent-rgb: 59, 130, 246;
+  --accent-oklch: oklch(0.68 0.18 240);
+}
+
 :root {
   --ev-c-white: #ffffff;
   --ev-c-white-soft: #f8f8f8;
@@ -72,7 +133,7 @@
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
 }
- 
+
 .dark {
   --background: oklch(0.09 0 0);
   --foreground: oklch(0.98 0 0);
@@ -80,7 +141,7 @@
   --card-foreground: oklch(0.98 0 0);
   --popover: oklch(0.12 0 0);
   --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.70 0.15 200);
+  --primary: var(--accent-oklch);
   --primary-foreground: oklch(0.98 0 0);
   --secondary: oklch(0.25 0 0);
   --secondary-foreground: oklch(0.98 0 0);
@@ -92,23 +153,30 @@
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.25 0 0);
   --input: oklch(0.25 0 0);
-  --ring: oklch(0.70 0.15 200);
-  --chart-1: oklch(0.70 0.15 200);
+  --ring: var(--accent-oklch);
+  --chart-1: var(--accent-oklch);
   --chart-2: oklch(0.65 0.12 180);
   --chart-3: oklch(0.75 0.18 150);
   --chart-4: oklch(0.60 0.20 280);
   --chart-5: oklch(0.68 0.18 50);
   --sidebar: oklch(0.12 0 0);
   --sidebar-foreground: oklch(0.98 0 0);
-  --sidebar-primary: oklch(0.70 0.15 200);
+  --sidebar-primary: var(--accent-oklch);
   --sidebar-primary-foreground: oklch(0.98 0 0);
   --sidebar-accent: oklch(0.25 0 0);
   --sidebar-accent-foreground: oklch(0.98 0 0);
   --sidebar-border: oklch(0.25 0 0);
-  --sidebar-ring: oklch(0.70 0.15 200);
+  --sidebar-ring: var(--accent-oklch);
 }
- 
+
 @theme inline {
+  /* Dynamic accent palette — changes with selected theme */
+  --color-accent-100: var(--accent-100);
+  --color-accent-300: var(--accent-300);
+  --color-accent-400: var(--accent-400);
+  --color-accent-500: var(--accent-500);
+  --color-accent-600: var(--accent-600);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -146,7 +214,7 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 }
- 
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

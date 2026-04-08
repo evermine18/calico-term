@@ -91,31 +91,37 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
     isInitializedRef.current = true;
 
+    const cssVar = (v: string) =>
+      getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    const accent400 = cssVar("--accent-400") || "#22d3ee";
+    const accent500 = cssVar("--accent-500") || "#06b6d4";
+    const accent300 = cssVar("--accent-300") || "#67e8f9";
+
     const terminal = new Terminal({
       cursorBlink: true,
       allowProposedApi: true,
       theme: {
         background: "#020617",
         foreground: "#e2e8f0",
-        cursor: "#06b6d4",
+        cursor: accent500,
         cursorAccent: "#020617",
-        selectionBackground: "#06b6d4",
+        selectionBackground: accent500,
         selectionForeground: "#020617",
         black: "#1e293b",
         red: "#ef4444",
         green: "#10b981",
         yellow: "#f59e0b",
-        blue: "#06b6d4",
+        blue: accent500,
         magenta: "#a855f7",
-        cyan: "#22d3ee",
+        cyan: accent400,
         white: "#cbd5e1",
         brightBlack: "#475569",
         brightRed: "#f87171",
         brightGreen: "#34d399",
         brightYellow: "#fbbf24",
-        brightBlue: "#22d3ee",
+        brightBlue: accent400,
         brightMagenta: "#c084fc",
-        brightCyan: "#67e8f9",
+        brightCyan: accent300,
         brightWhite: "#f1f5f9",
       },
       fontFamily: "Cascadia Code, Consolas, 'Courier New', monospace",

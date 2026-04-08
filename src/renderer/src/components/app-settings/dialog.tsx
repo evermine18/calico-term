@@ -21,9 +21,11 @@ import { Label } from "@renderer/components/ui/label";
 import { ModelsSelector } from "./model-combobox";
 import { useAppContext } from "@renderer/contexts/app-context";
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, Plus, X, Edit2, Check, Vault, User, KeyRound, Bot, Tag, ShieldCheck, CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Plus, X, Edit2, Check, Vault, User, KeyRound, Bot, Tag, ShieldCheck, CheckCircle2, XCircle, Loader2, Palette } from "lucide-react";
+import { ThemePicker } from "./theme-picker";
+import type { ThemeId } from "@renderer/themes";
 
-interface Tag {
+interface TagItem {
   id: string;
   name: string;
   color: string;
@@ -41,6 +43,8 @@ const EMPTY_VAULT_FORM: VaultFormData = { name: "", username: "", password: "" }
 
 export default function SettingsDialog({ children }) {
   const {
+    theme,
+    setTheme,
     apiUrl,
     setApiUrl,
     apiKey,
@@ -60,13 +64,16 @@ export default function SettingsDialog({ children }) {
     selectedModel: selectedModel || "",
     historyRetentionDays: historyRetentionDays || 1,
   });
+  const [localTheme, setLocalTheme] = useState<ThemeId>(theme);
   const [open, setOpen] = useState(false);
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiStatus, setApiStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [apiError, setApiError] = useState<string>("");
-  const [tags, setTags] = useState<Tag[]>([]);
+  const [tags, setTags] = useState<TagItem[]>([]);
   const [newTagName, setNewTagName] = useState("");
-  const [newTagColor, setNewTagColor] = useState("#06b6d4");
+  const [newTagColor, setNewTagColor] = useState(() =>
+    getComputedStyle(document.documentElement).getPropertyValue("--accent-500").trim() || "#06b6d4"
+  );
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
 
   // Vault credential state
@@ -83,7 +90,12 @@ export default function SettingsDialog({ children }) {
     }
   }, [open]);
 
-  const saveTags = (updatedTags: Tag[]) => {
+  // Sync localTheme when dialog opens
+  useEffect(() => {
+    if (open) setLocalTheme(theme);
+  }, [open]);
+
+  const saveTags = (updatedTags: TagItem[]) => {
     localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(updatedTags));
     setTags(updatedTags);
     window.dispatchEvent(new Event('tags-updated'));
@@ -91,14 +103,14 @@ export default function SettingsDialog({ children }) {
 
   const addTag = () => {
     if (!newTagName.trim()) return;
-    const newTag: Tag = {
+    const newTag: TagItem = {
       id: crypto.randomUUID(),
       name: newTagName.trim(),
       color: newTagColor,
     };
     saveTags([...tags, newTag]);
     setNewTagName("");
-    setNewTagColor("#06b6d4");
+    setNewTagColor(getComputedStyle(document.documentElement).getPropertyValue("--accent-500").trim() || "#06b6d4");
   };
 
   const updateTag = (id: string, name: string, color: string) => {
@@ -157,6 +169,11 @@ export default function SettingsDialog({ children }) {
     window.electron.ipcRenderer.send("vault-password-delete", credId);
   };
 
+  const handleThemeChange = (id: ThemeId) => {
+    setLocalTheme(id);
+    setTheme(id); // live preview — applies instantly
+  };
+
   const handleSave = () => {
     setApiUrl(localSettings.apiUrl);
     setApiKey(localSettings.apiKey);
@@ -172,8 +189,8 @@ export default function SettingsDialog({ children }) {
       <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-hidden bg-slate-900 border-slate-700/40 shadow-xl flex flex-col">
         <DialogHeader className="border-b border-slate-700/40 pb-4 shrink-0">
           <DialogTitle className="text-gray-100 flex items-center gap-2">
-            <div className="w-8 h-8 bg-cyan-500/20 border border-cyan-500/30 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
+            <div className="w-8 h-8 bg-accent-500/20 border border-accent-500/30 rounded-lg flex items-center justify-center">
+              <svg className="w-4 h-4 text-accent-400" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
               </svg>
             </div>
@@ -181,8 +198,12 @@ export default function SettingsDialog({ children }) {
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="ai" className="flex flex-col flex-1 min-h-0">
+        <Tabs defaultValue="appearance" className="flex flex-col flex-1 min-h-0">
           <TabsList className="shrink-0 w-full justify-start bg-slate-800/40 border border-slate-700/40 rounded-lg p-1">
+            <TabsTrigger value="appearance" className="flex items-center gap-1.5">
+              <Palette size={14} />
+              Appearance
+            </TabsTrigger>
             <TabsTrigger value="ai" className="flex items-center gap-1.5">
               <Bot size={14} />
               AI
@@ -197,6 +218,17 @@ export default function SettingsDialog({ children }) {
             </TabsTrigger>
           </TabsList>
 
+          {/* Appearance Tab */}
+          <TabsContent value="appearance" className="flex-1 overflow-y-auto px-1 mt-4">
+            <div className="space-y-4">
+              <div>
+                <p className="text-gray-300 text-sm font-semibold">Color Theme</p>
+                <p className="text-xs text-gray-400 mt-1">Changes apply instantly — no need to save.</p>
+              </div>
+              <ThemePicker value={localTheme} onChange={handleThemeChange} />
+            </div>
+          </TabsContent>
+
           {/* AI Tab */}
           <TabsContent value="ai" className="flex-1 overflow-y-auto px-1 space-y-5 mt-4">
             <div className="grid gap-2.5">
@@ -208,7 +240,7 @@ export default function SettingsDialog({ children }) {
                 onChange={(e) =>
                   setLocalSettings({ ...localSettings, apiUrl: e.target.value })
                 }
-                className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-cyan-500/50 focus:ring-cyan-500/20"
+                className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20"
               />
             </div>
 
@@ -223,13 +255,13 @@ export default function SettingsDialog({ children }) {
                   onChange={(e) =>
                     setLocalSettings({ ...localSettings, apiKey: e.target.value })
                   }
-                  className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-cyan-500/50 focus:ring-cyan-500/20"
+                  className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20"
                 />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => setShowApiKey(!showApiKey)}
-                  className="bg-slate-800/60 border-slate-700/50 hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50"
+                  className="bg-slate-800/60 border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50"
                 >
                   {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                 </Button>
@@ -283,7 +315,7 @@ export default function SettingsDialog({ children }) {
             {/* Command History */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
-                <div className="w-1 h-4 bg-cyan-500 rounded-full"></div>
+                <div className="w-1 h-4 bg-accent-500 rounded-full"></div>
                 Command History
               </div>
               <div className="grid gap-2.5">
@@ -303,22 +335,22 @@ export default function SettingsDialog({ children }) {
                       })
                     }
                   >
-                    <SelectTrigger className="flex-1 bg-slate-800/60 border-slate-700/50 text-gray-100 hover:bg-slate-800 focus:border-cyan-500/50 focus:ring-cyan-500/20">
+                    <SelectTrigger className="flex-1 bg-slate-800/60 border-slate-700/50 text-gray-100 hover:bg-slate-800 focus:border-accent-500/50 focus:ring-accent-500/20">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className="bg-slate-900 border-slate-700/50">
-                      <SelectItem value="0.04167" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">1 hour</SelectItem>
-                      <SelectItem value="0.125" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">3 hours</SelectItem>
-                      <SelectItem value="0.25" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">6 hours</SelectItem>
-                      <SelectItem value="0.5" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">12 hours</SelectItem>
-                      <SelectItem value="1" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">1 day</SelectItem>
-                      <SelectItem value="2" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">2 days</SelectItem>
-                      <SelectItem value="3" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">3 days</SelectItem>
-                      <SelectItem value="7" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">1 week</SelectItem>
-                      <SelectItem value="14" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">2 weeks</SelectItem>
-                      <SelectItem value="30" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">1 month</SelectItem>
-                      <SelectItem value="90" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">3 months</SelectItem>
-                      <SelectItem value="365" className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">1 year</SelectItem>
+                      <SelectItem value="0.04167" className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">1 hour</SelectItem>
+                      <SelectItem value="0.125" className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">3 hours</SelectItem>
+                      <SelectItem value="0.25" className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">6 hours</SelectItem>
+                      <SelectItem value="0.5" className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">12 hours</SelectItem>
+                      <SelectItem value="1" className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">1 day</SelectItem>
+                      <SelectItem value="2" className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">2 days</SelectItem>
+                      <SelectItem value="3" className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">3 days</SelectItem>
+                      <SelectItem value="7" className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">1 week</SelectItem>
+                      <SelectItem value="14" className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">2 weeks</SelectItem>
+                      <SelectItem value="30" className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">1 month</SelectItem>
+                      <SelectItem value="90" className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">3 months</SelectItem>
+                      <SelectItem value="365" className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">1 year</SelectItem>
                     </SelectContent>
                   </Select>
                   <span className="text-xs text-gray-400 min-w-fit">
@@ -333,7 +365,7 @@ export default function SettingsDialog({ children }) {
             {/* Tags */}
             <div className="space-y-3 pt-3 border-t border-slate-700/40">
               <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
-                <div className="w-1 h-4 bg-cyan-500 rounded-full"></div>
+                <div className="w-1 h-4 bg-accent-500 rounded-full"></div>
                 Terminal Tags
               </div>
               <p className="text-xs text-gray-400">Create custom tags to organize your terminals</p>
@@ -346,7 +378,7 @@ export default function SettingsDialog({ children }) {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') { e.preventDefault(); addTag(); }
                   }}
-                  className="bg-slate-800/60 border-slate-700/50 text-gray-100 placeholder:text-gray-500 focus:border-cyan-500/50 focus:ring-cyan-500/20"
+                  className="bg-slate-800/60 border-slate-700/50 text-gray-100 placeholder:text-gray-500 focus:border-accent-500/50 focus:ring-accent-500/20"
                 />
                 <input
                   type="color"
@@ -357,13 +389,13 @@ export default function SettingsDialog({ children }) {
                 <Button
                   onClick={addTag}
                   size="icon"
-                  className="bg-slate-800/60 border border-slate-700/50 hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50 text-gray-400"
+                  className="bg-slate-800/60 border border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 text-gray-400"
                 >
                   <Plus size={16} />
                 </Button>
               </div>
 
-              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-cyan-600/40 scrollbar-track-transparent">
+              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-accent-600/40 scrollbar-track-transparent">
                 {tags.map(tag => (
                   <div
                     key={tag.id}
@@ -390,7 +422,7 @@ export default function SettingsDialog({ children }) {
                           onClick={() => updateTag(tag.id, tag.name, tag.color)}
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/20"
+                          className="h-8 w-8 text-accent-400 hover:text-accent-300 hover:bg-accent-500/20"
                         >
                           <Check size={14} />
                         </Button>
@@ -406,7 +438,7 @@ export default function SettingsDialog({ children }) {
                           onClick={() => setEditingTagId(tag.id)}
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/20"
+                          className="h-8 w-8 text-gray-400 hover:text-accent-300 hover:bg-accent-500/20"
                         >
                           <Edit2 size={14} />
                         </Button>
@@ -437,14 +469,14 @@ export default function SettingsDialog({ children }) {
                 <Button
                   onClick={openAddVault}
                   size="sm"
-                  className="gap-1.5 bg-slate-800/60 border border-slate-700/50 hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50 text-gray-400"
+                  className="gap-1.5 bg-slate-800/60 border border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 text-gray-400"
                 >
                   <Plus size={14} />
                   Add
                 </Button>
               </div>
 
-              <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-cyan-600/40 scrollbar-track-transparent">
+              <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-accent-600/40 scrollbar-track-transparent">
                 {vaultCredentials.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-10 text-center">
                     <Vault size={32} className="text-slate-600 mb-3" />
@@ -457,7 +489,7 @@ export default function SettingsDialog({ children }) {
                     key={cred.id}
                     className="flex items-center gap-2.5 p-2.5 rounded-md bg-slate-800/60 border border-slate-700/50 hover:border-slate-600/60 transition-colors"
                   >
-                    <Vault size={14} className="text-cyan-500/70 shrink-0" />
+                    <Vault size={14} className="text-accent-500/70 shrink-0" />
                     <div className="flex-1 min-w-0">
                       <div className="text-sm text-gray-200 truncate">{cred.name}</div>
                       <div className="flex items-center gap-1 text-xs text-gray-500">
@@ -475,7 +507,7 @@ export default function SettingsDialog({ children }) {
                       onClick={() => openEditVault(cred)}
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-gray-400 hover:text-cyan-300 hover:bg-cyan-500/20"
+                      className="h-8 w-8 text-gray-400 hover:text-accent-300 hover:bg-accent-500/20"
                     >
                       <Edit2 size={14} />
                     </Button>
@@ -502,7 +534,7 @@ export default function SettingsDialog({ children }) {
           </DialogClose>
           <Button
             onClick={handleSave}
-            className="bg-cyan-500/90 hover:bg-cyan-500 text-white shadow-sm"
+            className="bg-accent-500/90 hover:bg-accent-500 text-white shadow-sm"
           >
             Save changes
           </Button>
@@ -515,7 +547,7 @@ export default function SettingsDialog({ children }) {
       <DialogContent className="sm:max-w-[400px] bg-slate-900 border-slate-700/40 shadow-xl">
         <DialogHeader>
           <DialogTitle className="text-gray-100 flex items-center gap-2">
-            <Vault size={16} className="text-cyan-400" />
+            <Vault size={16} className="text-accent-400" />
             {editingCredentialId ? "Edit Credential" : "New Credential"}
           </DialogTitle>
         </DialogHeader>
@@ -558,7 +590,7 @@ export default function SettingsDialog({ children }) {
                 variant="outline"
                 size="icon"
                 onClick={() => setShowVaultPassword((v) => !v)}
-                className="bg-slate-800/60 border-slate-700/50 hover:bg-cyan-500/20 hover:text-cyan-300 hover:border-cyan-500/50"
+                className="bg-slate-800/60 border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50"
               >
                 {showVaultPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </Button>
@@ -576,7 +608,7 @@ export default function SettingsDialog({ children }) {
           <Button
             onClick={handleVaultSave}
             disabled={!vaultForm.name.trim() || !vaultForm.username.trim()}
-            className="bg-cyan-600 hover:bg-cyan-500 text-white disabled:opacity-50"
+            className="bg-accent-600 hover:bg-accent-500 text-white disabled:opacity-50"
           >
             {editingCredentialId ? "Save Changes" : "Add Credential"}
           </Button>

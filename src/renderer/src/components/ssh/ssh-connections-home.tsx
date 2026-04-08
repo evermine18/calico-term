@@ -44,20 +44,20 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
         {/* Radial glow behind hero */}
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse at top, rgba(6,182,212,0.06) 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(ellipse at top, rgba(var(--accent-rgb),0.06) 0%, transparent 70%)' }}
         />
 
         {/* Hero icon */}
         <div className="mb-8 flex flex-col items-center gap-4 relative">
           <div
-            className="w-16 h-16 rounded-2xl bg-slate-900/80 border border-cyan-500/20 flex items-center justify-center"
-            style={{ boxShadow: '0 0 30px rgba(6,182,212,0.12), inset 0 1px 0 rgba(6,182,212,0.1)' }}
+            className="w-16 h-16 rounded-2xl bg-slate-900/80 border border-accent-500/20 flex items-center justify-center"
+            style={{ boxShadow: '0 0 30px rgba(var(--accent-rgb),0.12), inset 0 1px 0 rgba(var(--accent-rgb),0.1)' }}
           >
-            <Terminal className="w-8 h-8 text-cyan-400" style={{ filter: 'drop-shadow(0 0 8px rgba(6,182,212,0.6))' }} />
+            <Terminal className="w-8 h-8 text-accent-400" style={{ filter: 'drop-shadow(0 0 8px rgba(var(--accent-rgb),0.6))' }} />
           </div>
           <div className="text-center">
             <h2 className="text-base font-semibold tracking-widest text-gray-300">
-              <span className="text-cyan-400">calico</span>
+              <span className="text-accent-400">calico</span>
               <span className="text-slate-600 mx-1">/</span>
               <span>term</span>
             </h2>
@@ -76,8 +76,8 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
             <button
               onClick={openAdd}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
-                bg-cyan-600/20 text-cyan-400 border border-cyan-600/30
-                hover:bg-cyan-600/30 hover:border-cyan-500/50 transition-all duration-150"
+                bg-accent-600/20 text-accent-400 border border-accent-600/30
+                hover:bg-accent-600/30 hover:border-accent-500/50 transition-all duration-150"
             >
               <Plus size={13} />
               New Connection
@@ -95,7 +95,7 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
                 onClick={openAdd}
                 className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium
                   bg-slate-800/60 border border-slate-700/50 text-gray-400
-                  hover:bg-cyan-500/10 hover:text-cyan-300 hover:border-cyan-500/40
+                  hover:bg-accent-500/10 hover:text-accent-300 hover:border-accent-500/40
                   transition-all duration-150"
               >
                 <Plus size={15} />
@@ -119,7 +119,7 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
                 onClick={openAdd}
                 className="flex items-center justify-center gap-2 h-[72px] rounded-xl
                   border border-dashed border-slate-700/60 text-gray-600
-                  hover:border-cyan-600/40 hover:text-cyan-500/70
+                  hover:border-accent-600/40 hover:text-accent-500/70
                   transition-all duration-150 text-sm"
               >
                 <Plus size={16} />
@@ -132,7 +132,7 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
         {/* Hint */}
         <p className="mt-8 text-[11px] text-gray-700 tracking-wide">
           press{" "}
-          <kbd className="px-1.5 py-0.5 bg-slate-800/50 border border-slate-700/40 rounded text-cyan-400/60 text-[10px]">
+          <kbd className="px-1.5 py-0.5 bg-slate-800/50 border border-slate-700/40 rounded text-accent-400/60 text-[10px]">
             +
           </kbd>{" "}
           in the tab bar to open a local terminal
@@ -161,8 +161,8 @@ function SSHConnectionCard({ conn, onConnect, onEdit, onDelete }: CardProps) {
       onClick={() => onConnect(conn)}
     >
       {/* Icon */}
-      <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-        <Server size={16} className="text-cyan-400/80" />
+      <div className="flex-shrink-0 w-9 h-9 rounded-lg bg-accent-500/10 border border-accent-500/20 flex items-center justify-center">
+        <Server size={16} className="text-accent-400/80" />
       </div>
 
       {/* Info */}
@@ -170,7 +170,7 @@ function SSHConnectionCard({ conn, onConnect, onEdit, onDelete }: CardProps) {
         <div className="flex items-center gap-1.5">
           <p className="text-sm font-medium text-gray-200 truncate">{conn.name}</p>
           {conn.hasPassword && (
-            <KeyRound size={10} className="text-cyan-400/60 flex-shrink-0" aria-label="Password saved" />
+            <KeyRound size={10} className="text-accent-400/60 flex-shrink-0" aria-label="Password saved" />
           )}
         </div>
         <p className="text-xs text-gray-500 font-mono truncate mt-0.5">
@@ -204,7 +204,7 @@ function SSHConnectionCard({ conn, onConnect, onEdit, onDelete }: CardProps) {
         <button
           title="Edit"
           onClick={() => onEdit(conn)}
-          className="p-1.5 rounded-md text-gray-500 hover:text-cyan-400 hover:bg-slate-700/60 transition-colors"
+          className="p-1.5 rounded-md text-gray-500 hover:text-accent-400 hover:bg-slate-700/60 transition-colors"
         >
           <Pencil size={13} />
         </button>
@@ -219,7 +219,7 @@ function SSHConnectionCard({ conn, onConnect, onEdit, onDelete }: CardProps) {
 
       {/* Connect indicator on hover */}
       <div className="absolute inset-0 rounded-xl pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-        <div className="absolute inset-0 rounded-xl ring-1 ring-cyan-500/20" />
+        <div className="absolute inset-0 rounded-xl ring-1 ring-accent-500/20" />
       </div>
     </div>
   );

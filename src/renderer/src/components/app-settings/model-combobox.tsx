@@ -83,7 +83,7 @@ export function ModelsSelector({
           role="combobox"
           aria-expanded={open}
           disabled={status === "loading"}
-          className="w-full justify-between bg-slate-800/60 border-slate-700/50 text-gray-100 hover:bg-slate-800 focus:border-cyan-500/50 disabled:opacity-60"
+          className="w-full justify-between bg-slate-800/60 border-slate-700/50 text-gray-100 hover:bg-slate-800 focus:border-accent-500/50 disabled:opacity-60"
         >
           <span className="truncate">
             {status === "loading"
@@ -93,7 +93,7 @@ export function ModelsSelector({
                 : "Select model…"}
           </span>
           {status === "loading" ? (
-            <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin text-cyan-400" />
+            <Loader2 className="ml-2 h-4 w-4 shrink-0 animate-spin text-accent-400" />
           ) : (
             <ChevronsUpDownIcon className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           )}

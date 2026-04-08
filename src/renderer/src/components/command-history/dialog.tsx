@@ -77,8 +77,8 @@ export default function CommandHistoryDialog() {
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700/50">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-cyan-500/10 rounded-lg">
-              <Clock className="w-5 h-5 text-cyan-400" />
+            <div className="p-2 bg-accent-500/10 rounded-lg">
+              <Clock className="w-5 h-5 text-accent-400" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-gray-100">
@@ -108,7 +108,7 @@ export default function CommandHistoryDialog() {
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search command history..."
               className="w-full pl-10 pr-4 py-2 bg-slate-800/60 border border-slate-700/50 rounded-lg
-                       text-gray-100 placeholder-gray-500 focus:outline-none focus:border-cyan-500/50
+                       text-gray-100 placeholder-gray-500 focus:outline-none focus:border-accent-500/50
                        focus:bg-slate-800 transition-colors text-sm"
               autoFocus
             />
@@ -146,8 +146,8 @@ export default function CommandHistoryDialog() {
               <div
                 key={entry.id}
                 className={`group bg-slate-800/40 hover:bg-slate-800/70 border rounded-lg p-3 transition-all duration-150 ${entry.pinned
-                    ? 'border-cyan-500/50 bg-slate-800/60'
-                    : 'border-slate-700/30 hover:border-cyan-500/30'
+                    ? 'border-accent-500/50 bg-slate-800/60'
+                    : 'border-slate-700/30 hover:border-accent-500/30'
                   }`}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -167,7 +167,7 @@ export default function CommandHistoryDialog() {
                         })}
                       </span>
                       {entry.pinned && (
-                        <span className="flex items-center gap-1 text-cyan-400">
+                        <span className="flex items-center gap-1 text-accent-400">
                           <Pin className="w-3 h-3 fill-cyan-400" />
                           Pinned
                         </span>
@@ -178,20 +178,20 @@ export default function CommandHistoryDialog() {
                     <button
                       onClick={(e) => handleTogglePin(entry.id, e)}
                       className={`p-2 rounded-md transition-colors ${entry.pinned
-                          ? 'bg-cyan-500/20 hover:bg-cyan-500/30'
+                          ? 'bg-accent-500/20 hover:bg-accent-500/30'
                           : 'hover:bg-slate-700/50'
                         }`}
                       title={entry.pinned ? "Unpin command" : "Pin command (keep forever)"}
                     >
                       {entry.pinned ? (
-                        <Pin className="w-4 h-4 text-cyan-400 fill-cyan-400" />
+                        <Pin className="w-4 h-4 text-accent-400 fill-cyan-400" />
                       ) : (
                         <PinOff className="w-4 h-4 text-gray-400" />
                       )}
                     </button>
                     <button
                       onClick={() => handleCopyCommand(entry.command, entry.id)}
-                      className="p-2 hover:bg-cyan-500/20 rounded-md transition-colors"
+                      className="p-2 hover:bg-accent-500/20 rounded-md transition-colors"
                       title="Copy command"
                     >
                       <Copy
@@ -201,10 +201,10 @@ export default function CommandHistoryDialog() {
                     </button>
                     <button
                       onClick={() => handleExecuteCommand(entry.command)}
-                      className="p-2 hover:bg-cyan-500/20 rounded-md transition-colors"
+                      className="p-2 hover:bg-accent-500/20 rounded-md transition-colors"
                       title="Execute command"
                     >
-                      <Play className="w-4 h-4 text-cyan-400" />
+                      <Play className="w-4 h-4 text-accent-400" />
                     </button>
                     <button
                       onClick={(e) => handleDeleteCommand(entry.id, e)}

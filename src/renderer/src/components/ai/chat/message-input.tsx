@@ -41,7 +41,7 @@ export default function MessageInput({
           aria-label="Toggle terminal context"
           pressed={enableTerminalContext}
           onPressedChange={(pressed) => setEnableTerminalContext(pressed)}
-          className="data-[state=on]:bg-cyan-500/20 data-[state=on]:text-cyan-400 data-[state=on]:border-cyan-500/40"
+          className="data-[state=on]:bg-accent-500/20 data-[state=on]:text-accent-400 data-[state=on]:border-accent-500/40"
         >
           <Terminal className="h-3.5 w-3.5" />
           <Label className="ml-2 cursor-pointer">Terminal Context</Label>
@@ -57,14 +57,14 @@ export default function MessageInput({
             placeholder="Type your message..."
             disabled={disabled}
             rows={1}
-            className="w-full resize-none rounded-lg bg-slate-950 border border-slate-700/50 px-4 py-3 pr-12 text-sm text-gray-100 placeholder-gray-500 focus:border-cyan-500/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="w-full resize-none rounded-lg bg-slate-950 border border-slate-700/50 px-4 py-3 pr-12 text-sm text-gray-100 placeholder-gray-500 focus:border-accent-500/50 focus:outline-none focus:ring-2 focus:ring-accent-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             style={{ minHeight: "44px", maxHeight: "120px" }}
           />
         </div>
         <button
           onClick={handleSubmit}
           disabled={!inputText.trim() || disabled}
-          className="flex-shrink-0 w-11 h-11 bg-cyan-500/20 hover:bg-cyan-500/30 disabled:bg-slate-800/50 disabled:cursor-not-allowed text-cyan-400 disabled:text-gray-600 border border-cyan-500/30 disabled:border-slate-700/50 rounded-lg flex items-center justify-center transition-all"
+          className="flex-shrink-0 w-11 h-11 bg-accent-500/20 hover:bg-accent-500/30 disabled:bg-slate-800/50 disabled:cursor-not-allowed text-accent-400 disabled:text-gray-600 border border-accent-500/30 disabled:border-slate-700/50 rounded-lg flex items-center justify-center transition-all"
         >
           <Send size={18} />
         </button>
