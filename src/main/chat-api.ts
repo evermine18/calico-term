@@ -1,5 +1,7 @@
 import { net } from "electron";
 
+type AIProvider = "openai" | "anthropic" | "ollama" | "openai-compatible";
+
 type ChatMessage = {
   id: number;
   type: string;
@@ -34,6 +36,23 @@ type TokenUsage = {
   total_tokens: number;
 };
 
+// --- Auth headers per provider ---
+function buildAuthHeaders(
+  provider: AIProvider,
+  apiKey: string,
+): Record<string, string> {
+  if (provider === "anthropic") {
+    return {
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    };
+  }
+  if (provider === "ollama" && !apiKey) {
+    return {};
+  }
+  return { Authorization: `Bearer ${apiKey}` };
+}
+
 export async function sendChat(
   basepath: string,
   apiKey: string,
@@ -45,14 +64,32 @@ export async function sendChat(
   systemPrompt = "",
   temperature = 0.7,
   maxTokens = 0,
+  provider: AIProvider = "openai",
 ): Promise<TokenUsage | undefined> {
-  const context: { role: string; content: string }[] = [];
   const parsedMessages = parseMessages(messages);
+  const systemContent = systemPrompt.trim()
+    ? systemPrompt.trim()
+    : defaultSystemContent;
 
-  const dev_prompt = {
-    role: "system" as const,
-    content: systemPrompt.trim() ? systemPrompt.trim() : defaultSystemContent,
-  };
+  const authHeaders = buildAuthHeaders(provider, apiKey);
+
+  if (provider === "anthropic") {
+    return sendChatAnthropic(
+      basepath,
+      selectedModel,
+      parsedMessages,
+      systemContent,
+      terminalContent,
+      temperature,
+      maxTokens,
+      authHeaders,
+      onChunk,
+      signal,
+    );
+  }
+
+  // OpenAI / Ollama / OpenAI-compatible — all use /v1/chat/completions + SSE choices[0].delta.content
+  const context: { role: string; content: string }[] = [];
 
   if (terminalContent) {
     context.push({
@@ -61,23 +98,29 @@ export async function sendChat(
     });
     console.log("[AI Chat] Terminal context detected!");
   }
-  context.push(dev_prompt);
+  context.push({ role: "system" as const, content: systemContent });
   context.push(...parsedMessages);
+
+  const body: Record<string, unknown> = {
+    model: selectedModel,
+    messages: context,
+    temperature,
+    stream: true,
+    ...(maxTokens > 0 ? { max_tokens: maxTokens } : {}),
+  };
+
+  // include_usage is an OpenAI-only extension — skip for other providers
+  if (provider === "openai") {
+    body.stream_options = { include_usage: true };
+  }
 
   const res = await net.fetch(`${basepath}/v1/chat/completions`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      ...authHeaders,
     },
-    body: JSON.stringify({
-      model: selectedModel,
-      messages: context,
-      temperature,
-      stream: true,
-      stream_options: { include_usage: true },
-      ...(maxTokens > 0 ? { max_tokens: maxTokens } : {}),
-    }),
+    body: JSON.stringify(body),
     signal,
   });
 
@@ -121,6 +164,118 @@ export async function sendChat(
   return usage;
 }
 
+// --- Anthropic Messages API (native SSE) ---
+async function sendChatAnthropic(
+  basepath: string,
+  selectedModel: string,
+  parsedMessages: { role: string; content: string }[],
+  systemContent: string,
+  terminalContent: string | undefined,
+  temperature: number,
+  maxTokens: number,
+  authHeaders: Record<string, string>,
+  onChunk: (delta: string) => void,
+  signal?: AbortSignal,
+): Promise<TokenUsage | undefined> {
+  // Anthropic system prompt — merge terminal context into it if present
+  let system = systemContent;
+  if (terminalContent) {
+    system += `\n\nThe user's current terminal context is:\n\n${terminalContent}`;
+    console.log("[AI Chat] Terminal context detected!");
+  }
+
+  // Anthropic only accepts user/assistant roles in messages
+  const anthropicMessages = parsedMessages.filter(
+    (m) => m.role === "user" || m.role === "assistant",
+  );
+
+  const body: Record<string, unknown> = {
+    model: selectedModel,
+    system,
+    messages: anthropicMessages,
+    temperature,
+    max_tokens: maxTokens > 0 ? maxTokens : 8192,
+    stream: true,
+  };
+
+  const res = await net.fetch(`${basepath}/v1/messages`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders,
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`API error ${res.status}: ${errorText}`);
+  }
+
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let inputTokens = 0;
+  let outputTokens = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      let currentEvent = "";
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (trimmed.startsWith("event: ")) {
+          currentEvent = trimmed.slice(7);
+          continue;
+        }
+        if (!trimmed.startsWith("data: ")) continue;
+        const data = trimmed.slice(6);
+        if (data === "[DONE]") break;
+        try {
+          const json = JSON.parse(data);
+          if (
+            currentEvent === "content_block_delta" ||
+            json.type === "content_block_delta"
+          ) {
+            const text = json.delta?.text;
+            if (text) onChunk(text);
+          } else if (
+            currentEvent === "message_start" ||
+            json.type === "message_start"
+          ) {
+            inputTokens = json.message?.usage?.input_tokens ?? 0;
+          } else if (
+            currentEvent === "message_delta" ||
+            json.type === "message_delta"
+          ) {
+            outputTokens = json.usage?.output_tokens ?? 0;
+          }
+        } catch {
+          // skip malformed SSE line
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  if (inputTokens > 0 || outputTokens > 0) {
+    return {
+      prompt_tokens: inputTokens,
+      completion_tokens: outputTokens,
+      total_tokens: inputTokens + outputTokens,
+    };
+  }
+  return undefined;
+}
+
 function parseMessages(
   messages: ChatMessage[],
 ): { role: string; content: string }[] {
@@ -133,13 +288,16 @@ function parseMessages(
 export async function getModels(
   basepath: string,
   apiKey: string,
+  provider: AIProvider = "openai",
 ): Promise<string[]> {
   try {
+    const authHeaders = buildAuthHeaders(provider, apiKey);
+
     const res = await net.fetch(`${basepath}/v1/models`, {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
+        ...authHeaders,
       },
     });
 

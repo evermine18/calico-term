@@ -27,12 +27,14 @@ type FetchStatus = "idle" | "loading" | "success" | "error";
 export function ModelsSelector({
   url,
   apiKey,
+  provider = "openai",
   currentValue,
   onValueChange,
   onStatusChange,
 }: {
   url: string;
   apiKey: string;
+  provider?: "openai" | "anthropic" | "ollama" | "openai-compatible";
   currentValue?: string;
   onValueChange?: (model: string) => void;
   onStatusChange?: (status: FetchStatus, error?: string) => void;
@@ -49,7 +51,8 @@ export function ModelsSelector({
   };
 
   const fetchModels = async () => {
-    if (!url || !apiKey) {
+    const needsKey = provider !== "ollama";
+    if (!url || (needsKey && !apiKey)) {
       updateStatus("idle");
       setModels([]);
       return;
@@ -60,6 +63,7 @@ export function ModelsSelector({
         "get-ai-models",
         url,
         apiKey,
+        provider,
       );
       setModels(result);
       updateStatus("success");
@@ -86,7 +90,7 @@ export function ModelsSelector({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [url, apiKey]);
+  }, [url, apiKey, provider]);
 
   return (
     <div className="flex items-center gap-2">

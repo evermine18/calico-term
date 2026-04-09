@@ -120,6 +120,8 @@ export default function SettingsDialog({ children }) {
     setAiTemperature,
     aiMaxTokens,
     setAiMaxTokens,
+    aiProvider,
+    setAiProvider,
     // Shortcuts
     shortcuts,
     setShortcuts,
@@ -141,6 +143,7 @@ export default function SettingsDialog({ children }) {
     aiSystemPrompt,
     aiTemperature,
     aiMaxTokens,
+    aiProvider,
   });
   // Separate local API key input — not included in localSettings to avoid re-renders
   const [localApiKey, setLocalApiKey] = useState("");
@@ -201,6 +204,7 @@ export default function SettingsDialog({ children }) {
         aiSystemPrompt,
         aiTemperature,
         aiMaxTokens,
+        aiProvider,
       });
       setLocalApiKey("");
       setLocalShortcuts(shortcuts);
@@ -335,6 +339,13 @@ export default function SettingsDialog({ children }) {
     setAiSystemPrompt(localSettings.aiSystemPrompt);
     setAiTemperature(localSettings.aiTemperature);
     setAiMaxTokens(localSettings.aiMaxTokens);
+    setAiProvider(
+      localSettings.aiProvider as
+        | "openai"
+        | "anthropic"
+        | "ollama"
+        | "openai-compatible",
+    );
     // Shortcuts
     setShortcuts(localShortcuts);
     setOpen(false);
@@ -421,6 +432,40 @@ export default function SettingsDialog({ children }) {
               className="flex-1 overflow-y-auto px-1 space-y-5 mt-4"
             >
               <div className="grid gap-2.5">
+                <Label htmlFor="ai-provider" className="text-gray-300 text-sm">
+                  Provider
+                </Label>
+                <Select
+                  value={localSettings.aiProvider}
+                  onValueChange={(v) =>
+                    setLocalSettings({
+                      ...localSettings,
+                      aiProvider: v as
+                        | "openai"
+                        | "anthropic"
+                        | "ollama"
+                        | "openai-compatible",
+                    })
+                  }
+                >
+                  <SelectTrigger
+                    id="ai-provider"
+                    className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20"
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="bg-slate-800 border-slate-700/50">
+                    <SelectItem value="openai">OpenAI</SelectItem>
+                    <SelectItem value="anthropic">Anthropic</SelectItem>
+                    <SelectItem value="ollama">Ollama (local)</SelectItem>
+                    <SelectItem value="openai-compatible">
+                      OpenAI-compatible
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="grid gap-2.5">
                 <Label htmlFor="api-url" className="text-gray-300 text-sm">
                   Base API URL
                 </Label>
@@ -434,38 +479,51 @@ export default function SettingsDialog({ children }) {
                       apiUrl: e.target.value,
                     })
                   }
-                  className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20"
+                  placeholder={
+                    localSettings.aiProvider === "anthropic"
+                      ? "https://api.anthropic.com"
+                      : localSettings.aiProvider === "ollama"
+                        ? "http://localhost:11434"
+                        : "https://api.openai.com"
+                  }
+                  className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20 placeholder:text-gray-500"
                 />
               </div>
 
-              <div className="grid gap-2.5">
-                <Label htmlFor="api-key" className="text-gray-300 text-sm">
-                  API Key
-                </Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="api-key"
-                    name="Api Key"
-                    type={showApiKey ? "text" : "password"}
-                    value={localApiKey}
-                    onChange={(e) => setLocalApiKey(e.target.value)}
-                    placeholder={
-                      hasApiKey
-                        ? "••••••••  (key saved — leave blank to keep)"
-                        : "sk-…"
-                    }
-                    className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20 placeholder:text-gray-500"
-                  />
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => setShowApiKey(!showApiKey)}
-                    className="bg-slate-800/60 border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50"
-                  >
-                    {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
-                  </Button>
+              {localSettings.aiProvider !== "ollama" && (
+                <div className="grid gap-2.5">
+                  <Label htmlFor="api-key" className="text-gray-300 text-sm">
+                    API Key
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      id="api-key"
+                      name="Api Key"
+                      type={showApiKey ? "text" : "password"}
+                      value={localApiKey}
+                      onChange={(e) => setLocalApiKey(e.target.value)}
+                      placeholder={
+                        hasApiKey
+                          ? "••••••••  (key saved — leave blank to keep)"
+                          : localSettings.aiProvider === "anthropic"
+                            ? "sk-ant-…"
+                            : localSettings.aiProvider === "openai-compatible"
+                              ? "API key"
+                              : "sk-…"
+                      }
+                      className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20 placeholder:text-gray-500"
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                      className="bg-slate-800/60 border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50"
+                    >
+                      {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </Button>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Connection status */}
               {apiStatus !== "idle" && (
@@ -512,6 +570,13 @@ export default function SettingsDialog({ children }) {
                 <ModelsSelector
                   url={localSettings.apiUrl}
                   apiKey={localApiKey}
+                  provider={
+                    localSettings.aiProvider as
+                      | "openai"
+                      | "anthropic"
+                      | "ollama"
+                      | "openai-compatible"
+                  }
                   currentValue={localSettings.selectedModel}
                   onValueChange={(model) =>
                     setLocalSettings({ ...localSettings, selectedModel: model })

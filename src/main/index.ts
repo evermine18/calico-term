@@ -132,6 +132,11 @@ app.whenReady().then(() => {
       systemPrompt: string,
       temperature: number,
       maxTokens: number,
+      provider:
+        | "openai"
+        | "anthropic"
+        | "ollama"
+        | "openai-compatible" = "openai",
     ) => {
       const controller = new AbortController();
       streamControllers.set(streamId, controller);
@@ -150,6 +155,7 @@ app.whenReady().then(() => {
           systemPrompt,
           temperature,
           maxTokens,
+          provider,
         );
         event.sender.send("ai-stream-done", streamId, usage ?? null);
       } catch (error: any) {
@@ -170,10 +176,18 @@ app.whenReady().then(() => {
     streamControllers.delete(streamId);
   });
 
-  ipcMain.handle("get-ai-models", async (_event, basepath, apiKey?: string) => {
-    const key = apiKey?.trim() || retrievePassword("ai-apikey") || "";
-    return await getModels(basepath, key);
-  });
+  ipcMain.handle(
+    "get-ai-models",
+    async (
+      _event,
+      basepath,
+      apiKey?: string,
+      provider?: "openai" | "anthropic" | "ollama" | "openai-compatible",
+    ) => {
+      const key = apiKey?.trim() || retrievePassword("ai-apikey") || "";
+      return await getModels(basepath, key, provider ?? "openai");
+    },
+  );
 
   // IPC test
   ipcMain.on("ping", () => console.log("pong"));

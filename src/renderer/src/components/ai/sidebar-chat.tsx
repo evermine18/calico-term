@@ -37,6 +37,12 @@ function loadHistory(): ChatMessage[] {
   return [INITIAL_MESSAGE];
 }
 
+function defaultBaseUrl(provider: string): string {
+  if (provider === "anthropic") return "https://api.anthropic.com";
+  if (provider === "ollama") return "http://localhost:11434";
+  return "https://api.openai.com";
+}
+
 function loadWidth(): number {
   const stored = localStorage.getItem("aiSidebarWidth");
   if (stored) {
@@ -56,6 +62,7 @@ export default function AISidebarChat() {
     aiSystemPrompt,
     aiTemperature,
     aiMaxTokens,
+    aiProvider,
   } = useAppContext();
   const [enableTerminalContext, setEnableTerminalContext] = useState(false);
   const { getActive } = useTerminalContext();
@@ -199,13 +206,14 @@ export default function AISidebarChat() {
     window.electron.ipcRenderer.send(
       "send-ai-message",
       streamId,
-      apiUrl || "https://api.openai.com",
+      apiUrl || defaultBaseUrl(aiProvider),
       selectedModel,
       allMessages,
       enableTerminalContext ? screen : undefined,
       aiSystemPrompt,
       aiTemperature,
       aiMaxTokens,
+      aiProvider,
     );
   };
 
@@ -263,7 +271,9 @@ export default function AISidebarChat() {
   };
 
   const connectionStatus: "unconfigured" | "ready" =
-    !apiUrl || !hasApiKey ? "unconfigured" : "ready";
+    !apiUrl || (aiProvider !== "ollama" && !hasApiKey)
+      ? "unconfigured"
+      : "ready";
 
   if (!aiSidebarOpen) return null;
 

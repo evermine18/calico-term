@@ -1,3 +1,5 @@
+type AIProvider = "openai" | "anthropic" | "ollama" | "openai-compatible";
+
 type ShortcutDef = {
   key: string;
   ctrl: boolean;
@@ -53,6 +55,8 @@ type AppContextType = {
   setSelectedModel: (model: string) => void;
   hasApiKey: boolean;
   setHasApiKey: (has: boolean) => void;
+  aiProvider: AIProvider;
+  setAiProvider: (provider: AIProvider) => void;
   // Terminal appearance
   terminalFontFamily: string;
   setTerminalFontFamily: (v: string) => void;

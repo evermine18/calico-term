@@ -45,6 +45,24 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   );
   const [hasApiKey, setHasApiKeyState] = useState(false);
 
+  const [aiProvider, setAiProviderState] = useState<AIProvider>(() => {
+    const stored = localStorage.getItem("aiProvider");
+    const valid: AIProvider[] = [
+      "openai",
+      "anthropic",
+      "ollama",
+      "openai-compatible",
+    ];
+    return valid.includes(stored as AIProvider)
+      ? (stored as AIProvider)
+      : "openai";
+  });
+
+  const setAiProvider = (provider: AIProvider) => {
+    localStorage.setItem("aiProvider", provider);
+    setAiProviderState(provider);
+  };
+
   // Check on mount whether an encrypted AI API key exists
   useEffect(() => {
     window.electron.ipcRenderer
@@ -388,6 +406,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       },
       hasApiKey,
       setHasApiKey,
+      aiProvider,
+      setAiProvider,
       // Terminal appearance
       terminalFontFamily,
       setTerminalFontFamily,
@@ -440,6 +460,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       apiUrl,
       selectedModel,
       hasApiKey,
+      aiProvider,
       commandHistory,
       historyDialogOpen,
       historyRetentionDays,
