@@ -1,17 +1,51 @@
 import { useState } from "react";
-import { Plus, Server, Pencil, Trash2, Terminal, KeyRound } from "lucide-react";
+import { Plus, Server, Pencil, Trash2, Terminal, KeyRound, ChevronDown, ChevronRight } from "lucide-react";
 import { useAppContext } from "@renderer/contexts/app-context";
 import SSHDialog from "./ssh-dialog";
 import { useTags } from "@renderer/hooks/useTags";
+import { CustomTag } from "@renderer/types/tabs";
 
 type Props = {
   onConnect: (conn: SSHConnectionEntry) => void;
 };
 
+const UNTAGGED_ID = "__untagged__";
+
+type Group = {
+  id: string;
+  tag: CustomTag | null;
+  connections: SSHConnectionEntry[];
+};
+
+function buildGroups(
+  connections: SSHConnectionEntry[],
+  allTags: CustomTag[]
+): Group[] {
+  const groups: Group[] = [];
+
+  for (const tag of allTags) {
+    const matched = connections.filter((c) => c.tags?.includes(tag.id));
+    if (matched.length > 0) {
+      groups.push({ id: tag.id, tag, connections: matched });
+    }
+  }
+
+  const untagged = connections.filter(
+    (c) => !c.tags || c.tags.length === 0
+  );
+  if (untagged.length > 0) {
+    groups.push({ id: UNTAGGED_ID, tag: null, connections: untagged });
+  }
+
+  return groups;
+}
+
 export default function SSHConnectionsHome({ onConnect }: Props) {
   const { sshConnections, deleteSSHConnection } = useAppContext();
+  const allTags = useTags();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editConn, setEditConn] = useState<SSHConnectionEntry | null>(null);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
 
   const openAdd = () => {
     setEditConn(null);
@@ -31,6 +65,14 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
       }
     }
   };
+
+  const toggleGroup = (groupId: string) => {
+    setOpenGroups((prev) => ({ ...prev, [groupId]: !(prev[groupId] ?? true) }));
+  };
+
+  const isGroupOpen = (groupId: string) => openGroups[groupId] ?? true;
+
+  const groups = buildGroups(sshConnections, allTags);
 
   return (
     <>
@@ -103,26 +145,28 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-              {sshConnections.map((conn) => (
-                <SSHConnectionCard
-                  key={conn.id}
-                  conn={conn}
+            <div className="flex flex-col gap-3">
+              {groups.map((group) => (
+                <TagGroup
+                  key={group.id}
+                  group={group}
+                  isOpen={isGroupOpen(group.id)}
+                  onToggle={() => toggleGroup(group.id)}
                   onConnect={onConnect}
                   onEdit={openEdit}
-                  onDelete={(id) => handleDelete(id, conn.hasPassword)}
+                  onDelete={(id, hasPassword) => handleDelete(id, hasPassword)}
                 />
               ))}
 
-              {/* Add more card */}
+              {/* Add more */}
               <button
                 onClick={openAdd}
-                className="flex items-center justify-center gap-2 h-[72px] rounded-xl
+                className="flex items-center justify-center gap-2 h-10 rounded-xl
                   border border-dashed border-slate-700/60 text-gray-600
                   hover:border-accent-600/40 hover:text-accent-500/70
                   transition-all duration-150 text-sm"
               >
-                <Plus size={16} />
+                <Plus size={15} />
                 Add connection
               </button>
             </div>
@@ -142,14 +186,103 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// TagGroup accordion
+// ---------------------------------------------------------------------------
+
+type TagGroupProps = {
+  group: Group;
+  isOpen: boolean;
+  onToggle: () => void;
+  onConnect: (conn: SSHConnectionEntry) => void;
+  onEdit: (conn: SSHConnectionEntry) => void;
+  onDelete: (id: string, hasPassword?: boolean) => void;
+};
+
+function TagGroup({ group, isOpen, onToggle, onConnect, onEdit, onDelete }: TagGroupProps) {
+  const { tag, connections } = group;
+  const color = tag?.color ?? "#64748b"; // slate-500 for untagged
+  const label = tag?.name ?? "Untagged";
+  const preview = connections
+    .slice(0, 3)
+    .map((c) => c.name)
+    .join(" · ");
+  const hasMore = connections.length > 3;
+
+  return (
+    <div className="rounded-xl border border-slate-700/50 overflow-hidden">
+      {/* Accordion header */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center gap-3 px-4 py-2.5
+          bg-slate-800/60 hover:bg-slate-800/90 transition-colors duration-150 text-left"
+      >
+        {/* Color dot */}
+        <span
+          className="flex-shrink-0 w-2 h-2 rounded-full"
+          style={{ backgroundColor: color }}
+        />
+
+        {/* Tag name */}
+        <span className="text-xs font-semibold uppercase tracking-widest" style={{ color }}>
+          {label}
+        </span>
+
+        {/* Count badge */}
+        <span
+          className="flex-shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-medium border"
+          style={{
+            backgroundColor: `${color}18`,
+            color,
+            borderColor: `${color}40`,
+          }}
+        >
+          {connections.length}
+        </span>
+
+        {/* Mini preview — only when collapsed */}
+        {!isOpen && (
+          <span className="flex-1 min-w-0 text-xs text-gray-600 truncate">
+            {preview}{hasMore ? " …" : ""}
+          </span>
+        )}
+
+        <span className="ml-auto flex-shrink-0 text-gray-500">
+          {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+        </span>
+      </button>
+
+      {/* Accordion body */}
+      <div
+        className="transition-all duration-200 ease-in-out"
+        style={{ display: isOpen ? undefined : "none" }}
+      >
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 p-3">
+          {connections.map((conn) => (
+            <SSHConnectionCard
+              key={conn.id}
+              conn={conn}
+              showTags={!tag} // show tag chips only in Untagged group
+              onConnect={onConnect}
+              onEdit={onEdit}
+              onDelete={(id) => onDelete(id, conn.hasPassword)}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type CardProps = {
   conn: SSHConnectionEntry;
+  showTags: boolean;
   onConnect: (conn: SSHConnectionEntry) => void;
   onEdit: (conn: SSHConnectionEntry) => void;
   onDelete: (id: string) => void;
 };
 
-function SSHConnectionCard({ conn, onConnect, onEdit, onDelete }: CardProps) {
+function SSHConnectionCard({ conn, showTags, onConnect, onEdit, onDelete }: CardProps) {
   const customTags = useTags();
   const assignedTags = customTags.filter((t) => conn.tags?.includes(t.id));
   return (
@@ -177,7 +310,7 @@ function SSHConnectionCard({ conn, onConnect, onEdit, onDelete }: CardProps) {
           {conn.username}@{conn.host}
           {conn.port !== 22 ? `:${conn.port}` : ""}
         </p>
-        {assignedTags.length > 0 && (
+        {showTags && assignedTags.length > 0 && (
           <div className="flex flex-wrap gap-1 mt-1.5">
             {assignedTags.map((tag) => (
               <span
