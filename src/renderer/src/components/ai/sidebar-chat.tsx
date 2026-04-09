@@ -8,27 +8,81 @@ import {
 } from "./chat";
 import { useTerminalContext } from "@renderer/contexts/terminal-context";
 
+type ChatMessage = {
+  id: number;
+  type: "user" | "assistant";
+  error: boolean;
+  content: string;
+  timestamp: string;
+};
+
+const INITIAL_MESSAGE: ChatMessage = {
+  id: 1,
+  type: "assistant",
+  error: false,
+  content: "Hi, how can I assist you today?",
+  timestamp: new Date().toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+  }),
+};
+
+function loadHistory(): ChatMessage[] {
+  try {
+    const stored = localStorage.getItem("aiChatHistory");
+    if (stored) return JSON.parse(stored) as ChatMessage[];
+  } catch {
+    // corrupt storage — ignore
+  }
+  return [INITIAL_MESSAGE];
+}
+
+function loadWidth(): number {
+  const stored = localStorage.getItem("aiSidebarWidth");
+  if (stored) {
+    const n = parseInt(stored, 10);
+    if (!isNaN(n)) return Math.min(700, Math.max(260, n));
+  }
+  return 384;
+}
+
 export default function AISidebarChat() {
-  const { aiSidebarOpen, setAiSidebarOpen, selectedModel, apiKey, apiUrl, aiSystemPrompt, aiTemperature, aiMaxTokens } =
-    useAppContext();
+  const {
+    aiSidebarOpen,
+    setAiSidebarOpen,
+    selectedModel,
+    apiUrl,
+    hasApiKey,
+    aiSystemPrompt,
+    aiTemperature,
+    aiMaxTokens,
+  } = useAppContext();
   const [enableTerminalContext, setEnableTerminalContext] = useState(false);
   const { getActive } = useTerminalContext();
-  const [width, setWidth] = useState(384);
+  const [width, setWidth] = useState(loadWidth);
   const resizingRef = useRef(false);
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      type: "assistant",
-      error: false,
-      content: "Hi, how can I assist you today?",
-      timestamp: new Date().toLocaleTimeString("en-EN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(loadHistory);
   const [isTyping, setIsTyping] = useState(false);
+  const [lastUsage, setLastUsage] = useState<{
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const activeStreamId = useRef<string | null>(null);
+  const cleanupStreamRef = useRef<(() => void) | null>(null);
+
+  // Persist chat history
+  useEffect(() => {
+    localStorage.setItem("aiChatHistory", JSON.stringify(messages));
+  }, [messages]);
+
+  // Persist sidebar width
+  useEffect(() => {
+    localStorage.setItem("aiSidebarWidth", String(width));
+  }, [width]);
+
+  // Resize drag
   const startResizing = (e: React.MouseEvent) => {
     e.preventDefault();
     resizingRef.current = true;
@@ -37,7 +91,6 @@ export default function AISidebarChat() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!resizingRef.current) return;
-      // Sidebar is anchored to the right: calculate from right edge
       const newWidth = Math.min(
         700,
         Math.max(260, window.innerWidth - e.clientX),
@@ -57,96 +110,160 @@ export default function AISidebarChat() {
       window.removeEventListener("mouseup", stopResizing);
     };
   }, []);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
-
   useEffect(() => {
     scrollToBottom();
   }, [messages, isTyping]);
 
-  const sendMessageToAI = async (messages) => {
+  const sendMessageToAI = (allMessages: ChatMessage[]) => {
     setIsTyping(true);
-    const api = getActive();
-    const screen = api?.getVisibleText() ?? "";
+    const termApi = getActive();
+    const screen = termApi?.getVisibleText() ?? "";
+    const streamId = Date.now().toString();
+    activeStreamId.current = streamId;
 
-    try {
-      const response = await window.electron.ipcRenderer.invoke(
-        "send-ai-message",
-        apiUrl || "https://api.openai.com",
-        apiKey,
-        selectedModel,
-        messages,
-        enableTerminalContext ? screen : undefined,
-        aiSystemPrompt,
-        aiTemperature,
-        aiMaxTokens,
-      );
-      console.log("AI response:", response);
-      if (!response) {
-        setIsTyping(false);
-        return;
-      }
-
-      const newMessage = {
-        id: Date.now(),
-        type: "assistant",
-        error: false,
-        content: response,
-        timestamp: new Date().toLocaleTimeString("en-EN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setMessages((prev) => [...prev, newMessage]);
-    } catch (error) {
-      const errorMSG = {
-        id: Date.now(),
-        type: "assistant",
-        error: true,
-        content: `\n\n\`\`\`\n${error}\n\`\`\``,
-        timestamp: new Date().toLocaleTimeString("en-EN", {
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
-      };
-      setMessages((prev) => [...prev, errorMSG]);
-      console.error("Error sending message to AI: ", error);
-    } finally {
-      setIsTyping(false);
-    }
-  };
-
-  const handleSendMessage = async (messageText) => {
-    const userMessage = {
-      id: Date.now(),
-      type: "user",
-      error: false,
-      content: messageText,
-      timestamp: new Date().toLocaleTimeString("en-EN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    await sendMessageToAI([...messages, userMessage]);
-  };
-
-  const handleNewChat = () => {
-    setMessages([
+    const assistantMsgId = Date.now() + 1;
+    setMessages((prev) => [
+      ...prev,
       {
-        id: 1,
+        id: assistantMsgId,
         type: "assistant",
         error: false,
-        content: "Hi, how can I assist you today?",
-        timestamp: new Date().toLocaleTimeString("en-EN", {
+        content: "",
+        timestamp: new Date().toLocaleTimeString("en-US", {
           hour: "2-digit",
           minute: "2-digit",
         }),
       },
     ]);
+
+    const handleChunk = (_event: any, id: string, delta: string) => {
+      if (id !== streamId) return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId ? { ...m, content: m.content + delta } : m,
+        ),
+      );
+    };
+
+    const handleDone = (
+      _event: any,
+      id: string,
+      usage: {
+        prompt_tokens: number;
+        completion_tokens: number;
+        total_tokens: number;
+      } | null,
+    ) => {
+      if (id !== streamId) return;
+      if (usage) setLastUsage(usage);
+      cleanup();
+      setIsTyping(false);
+    };
+
+    const handleError = (_event: any, id: string, errorMsg: string) => {
+      if (id !== streamId) return;
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantMsgId
+            ? { ...m, error: true, content: errorMsg }
+            : m,
+        ),
+      );
+      cleanup();
+      setIsTyping(false);
+    };
+
+    const cleanup = () => {
+      window.electron.ipcRenderer.removeListener(
+        "ai-stream-chunk",
+        handleChunk,
+      );
+      window.electron.ipcRenderer.removeListener("ai-stream-done", handleDone);
+      window.electron.ipcRenderer.removeListener(
+        "ai-stream-error",
+        handleError,
+      );
+      cleanupStreamRef.current = null;
+      activeStreamId.current = null;
+    };
+    cleanupStreamRef.current = cleanup;
+
+    window.electron.ipcRenderer.on("ai-stream-chunk", handleChunk);
+    window.electron.ipcRenderer.on("ai-stream-done", handleDone);
+    window.electron.ipcRenderer.on("ai-stream-error", handleError);
+
+    window.electron.ipcRenderer.send(
+      "send-ai-message",
+      streamId,
+      apiUrl || "https://api.openai.com",
+      selectedModel,
+      allMessages,
+      enableTerminalContext ? screen : undefined,
+      aiSystemPrompt,
+      aiTemperature,
+      aiMaxTokens,
+    );
   };
+
+  const handleSendMessage = (messageText: string) => {
+    const userMessage: ChatMessage = {
+      id: Date.now(),
+      type: "user",
+      error: false,
+      content: messageText,
+      timestamp: new Date().toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    };
+    const updated = [...messages, userMessage];
+    setMessages(updated);
+    sendMessageToAI(updated);
+  };
+
+  const handleCancel = () => {
+    if (activeStreamId.current) {
+      window.electron.ipcRenderer.send(
+        "ai-stream-cancel",
+        activeStreamId.current,
+      );
+    }
+    cleanupStreamRef.current?.();
+    setIsTyping(false);
+  };
+
+  const handleNewChat = () => {
+    handleCancel();
+    setLastUsage(null);
+    const fresh = [
+      {
+        ...INITIAL_MESSAGE,
+        timestamp: new Date().toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+      },
+    ];
+    setMessages(fresh);
+    localStorage.setItem("aiChatHistory", JSON.stringify(fresh));
+  };
+
+  const handleRetry = (failedMsgId: number) => {
+    // Find the user message before the failed assistant message
+    const idx = messages.findIndex((m) => m.id === failedMsgId);
+    if (idx <= 0) return;
+    // Remove the failed message and resend from the previous history
+    const history = messages.slice(0, idx);
+    setMessages(history);
+    sendMessageToAI(history);
+  };
+
+  const connectionStatus: "unconfigured" | "ready" =
+    !apiUrl || !hasApiKey ? "unconfigured" : "ready";
 
   if (!aiSidebarOpen) return null;
 
@@ -163,6 +280,8 @@ export default function AISidebarChat() {
       <ChatHeader
         onClose={() => setAiSidebarOpen(false)}
         onNewChat={handleNewChat}
+        status={connectionStatus}
+        lastUsage={lastUsage}
       />
 
       <>
@@ -181,20 +300,22 @@ export default function AISidebarChat() {
                   message={message.content}
                   timestamp={message.timestamp}
                   error={message.error}
+                  isTyping={
+                    isTyping && message.content === "" && !message.error
+                  }
+                  onExecute={(cmd) => getActive()?.sendInput(cmd)}
+                  onRetry={
+                    message.error ? () => handleRetry(message.id) : undefined
+                  }
                 />
               ),
             )}
-
-            {isTyping && (
-              <AssistantMessage isTyping={true} message={""} timestamp={""} />
-            )}
-
             <div ref={messagesEndRef} />
           </div>
         </div>
-
         <MessageInput
           onSendMessage={handleSendMessage}
+          onCancel={handleCancel}
           enableTerminalContext={enableTerminalContext}
           setEnableTerminalContext={setEnableTerminalContext}
           disabled={isTyping}

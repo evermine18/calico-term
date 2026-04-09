@@ -7,21 +7,7 @@ type ChatMessage = {
   timestamp: string;
 };
 
-export async function sendChat(
-  basepath: string,
-  apiKey: string,
-  selectedModel: string,
-  messages: ChatMessage[],
-  terminalContent = undefined,
-  systemPrompt = "",
-  temperature = 0.7,
-  maxTokens = 0,
-): Promise<string> {
-  let context = [];
-
-  const parsedMessages = parseMessages(messages);
-  // Append a developer message to the chat history at the start
-  const defaultSystemContent = `You are an expert DevOps/SRE/systems engineer assistant embedded in a terminal emulator.
+const defaultSystemContent = `You are an expert DevOps/SRE/systems engineer assistant embedded in a terminal emulator.
 
 ## CONTEXT
 - The user is working directly in a terminal. Prefer commands and practical solutions over theory.
@@ -41,48 +27,98 @@ export async function sendChat(
 - If the request is ambiguous, state your assumption in one sentence, then answer.
 - You may add ONE focused tip at the end only when it directly prevents a likely follow-up problem — format it as a Markdown blockquote (\`>\`).
 `;
+
+type TokenUsage = {
+  prompt_tokens: number;
+  completion_tokens: number;
+  total_tokens: number;
+};
+
+export async function sendChat(
+  basepath: string,
+  apiKey: string,
+  selectedModel: string,
+  messages: ChatMessage[],
+  onChunk: (delta: string) => void,
+  signal?: AbortSignal,
+  terminalContent: string | undefined = undefined,
+  systemPrompt = "",
+  temperature = 0.7,
+  maxTokens = 0,
+): Promise<TokenUsage | undefined> {
+  const context: { role: string; content: string }[] = [];
+  const parsedMessages = parseMessages(messages);
+
   const dev_prompt = {
     role: "system" as const,
     content: systemPrompt.trim() ? systemPrompt.trim() : defaultSystemContent,
   };
+
   if (terminalContent) {
     context.push({
-      role: "developer",
-      content: `The users current Terminal context is:\n\n${terminalContent}`,
+      role: "system" as const,
+      content: `The user's current terminal context is:\n\n${terminalContent}`,
     });
     console.log("[AI Chat] Terminal context detected!");
   }
   context.push(dev_prompt);
   context.push(...parsedMessages);
-  //https://api.openai.com/v1/chat/completions
-  try {
-    const res = await net.fetch(`${basepath}/v1/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: selectedModel,
-        messages: context,
-        temperature,
-        ...(maxTokens > 0 ? { max_tokens: maxTokens } : {}),
-      }),
-    });
 
-    if (!res.ok) {
-      const errorText = await res.text();
-      throw new Error(`OpenAI API error: ${res.status} - ${errorText}`);
-    }
+  const res = await net.fetch(`${basepath}/v1/chat/completions`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: selectedModel,
+      messages: context,
+      temperature,
+      stream: true,
+      stream_options: { include_usage: true },
+      ...(maxTokens > 0 ? { max_tokens: maxTokens } : {}),
+    }),
+    signal,
+  });
 
-    const data = await res.json();
-    console.log("AI response data:", data.choices[0].message);
-
-    return data.choices[0].message.content;
-  } catch (error) {
-    console.error("Error sending chat to OpenAI:", error);
-    throw error;
+  if (!res.ok) {
+    const errorText = await res.text();
+    throw new Error(`API error ${res.status}: ${errorText}`);
   }
+
+  const reader = res.body!.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let usage: TokenUsage | undefined;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data: ")) continue;
+        const data = trimmed.slice(6);
+        if (data === "[DONE]") return usage;
+        try {
+          const json = JSON.parse(data);
+          const delta = json.choices?.[0]?.delta?.content;
+          if (delta) onChunk(delta);
+          if (json.usage) usage = json.usage as TokenUsage;
+        } catch {
+          // skip malformed SSE line
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  return usage;
 }
 
 function parseMessages(
@@ -109,7 +145,7 @@ export async function getModels(
 
     if (!res.ok) {
       const errorText = await res.text();
-      throw new Error(`OpenAI API error: ${res.status} - ${errorText}`);
+      throw new Error(`API error ${res.status}: ${errorText}`);
     }
 
     const data = await res.json();
@@ -117,9 +153,9 @@ export async function getModels(
       const ids: string[] = data.data.map((item) => item.id);
       return ids;
     }
-    throw new Error("Unexpected response format from OpenAI API");
+    throw new Error("Unexpected response format from API");
   } catch (error) {
-    console.error("Error sending chat to OpenAI:", error);
+    console.error("Error fetching models:", error);
     throw error;
   }
 }

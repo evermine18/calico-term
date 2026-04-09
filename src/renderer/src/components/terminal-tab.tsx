@@ -23,7 +23,17 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   initialCommand,
 }) => {
   const { setActive } = useTerminalContext();
-  const { addCommandToHistory, terminalFontFamily, terminalFontSize, terminalLineHeight, cursorStyle, cursorBlink, scrollback, defaultShell, defaultCwd } = useAppContext();
+  const {
+    addCommandToHistory,
+    terminalFontFamily,
+    terminalFontSize,
+    terminalLineHeight,
+    cursorStyle,
+    cursorBlink,
+    scrollback,
+    defaultShell,
+    defaultCwd,
+  } = useAppContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -34,6 +44,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
   // Exposing API
   const api: TerminalAPI = {
+    sendInput(cmd: string) {
+      window.electron.ipcRenderer.send("terminal-input", {
+        tabId,
+        data: cmd + "\r",
+      });
+    },
     getVisibleText() {
       const t = terminalRef.current!;
       const b = t.buffer.active;
@@ -146,7 +162,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
     terminal.onData((data) => {
       // Capturar comandos cuando se presiona Enter
-      if (data === '\r') {
+      if (data === "\r") {
         // Read the current line from the terminal buffer
         const buffer = terminal.buffer.active;
         const cursorY = buffer.cursorY;
@@ -158,10 +174,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
           // Clean the prompt and special characters
           // Detect common prompt patterns and remove them
-          lineText = lineText.replace(/^\[?[\w\-\.]+@[\w\-\.]+.*?\]?\s*[\$#>]\s*/, ''); // bash/zsh style
-          lineText = lineText.replace(/^PS\s+[\w\:\\\>]+>\s*/, ''); // PowerShell style
-          lineText = lineText.replace(/^C:\\.*?>\s*/, ''); // Windows cmd style
-          lineText = lineText.replace(/^.*?[$#>]\s*/, ''); // Generic prompt
+          lineText = lineText.replace(
+            /^\[?[\w\-\.]+@[\w\-\.]+.*?\]?\s*[\$#>]\s*/,
+            "",
+          ); // bash/zsh style
+          lineText = lineText.replace(/^PS\s+[\w\:\\\>]+>\s*/, ""); // PowerShell style
+          lineText = lineText.replace(/^C:\\.*?>\s*/, ""); // Windows cmd style
+          lineText = lineText.replace(/^.*?[$#>]\s*/, ""); // Generic prompt
 
           const cmd = lineText.trim();
           if (cmd && cmd.length > 0) {
@@ -195,7 +214,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     if (initialCommand) {
       const cmd = initialCommand;
       setTimeout(() => {
-        window.electron.ipcRenderer.send("terminal-input", { tabId, data: cmd + "\r" });
+        window.electron.ipcRenderer.send("terminal-input", {
+          tabId,
+          data: cmd + "\r",
+        });
       }, 900);
     }
 
@@ -207,7 +229,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       resizeObserverRef.current?.disconnect();
       window.electron.ipcRenderer.removeListener(
         "terminal-output",
-        handleOutput
+        handleOutput,
       );
       terminal.dispose();
       terminalRef.current = null;
@@ -259,7 +281,14 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     terminal.options.cursorBlink = cursorBlink;
     terminal.options.scrollback = scrollback;
     fitAddonRef.current?.fit();
-  }, [terminalFontFamily, terminalFontSize, terminalLineHeight, cursorStyle, cursorBlink, scrollback]);
+  }, [
+    terminalFontFamily,
+    terminalFontSize,
+    terminalLineHeight,
+    cursorStyle,
+    cursorBlink,
+    scrollback,
+  ]);
 
   /**
    * Focus the terminal when tab becomes active.

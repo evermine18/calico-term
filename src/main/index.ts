@@ -2,8 +2,17 @@ import { app, shell, BrowserWindow, ipcMain, Menu } from "electron";
 import { join } from "path";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
-import { setupTerminal, closeTerminal } from "./terminal";
+import {
+  setupTerminal,
+  closeTerminal,
+  storePassword,
+  retrievePassword,
+  removePassword,
+} from "./terminal";
 import { getModels, sendChat } from "./chat-api";
+
+// --- AI streaming controllers ---
+const streamControllers = new Map<string, AbortController>();
 
 function createContextMenu(): Menu {
   const contextMenu = Menu.buildFromTemplate([
@@ -97,34 +106,73 @@ app.whenReady().then(() => {
     }
   });
 
-  ipcMain.handle(
+  // --- AI API key (encrypted via safeStorage) ---
+  ipcMain.handle("ai-apikey-set", (_event, plaintext: string) => {
+    storePassword("ai-apikey", plaintext);
+  });
+
+  ipcMain.on("ai-apikey-delete", () => {
+    removePassword("ai-apikey");
+  });
+
+  ipcMain.handle("ai-apikey-has", () => {
+    return retrievePassword("ai-apikey") !== null;
+  });
+
+  // --- AI streaming chat ---
+  ipcMain.on(
     "send-ai-message",
     async (
-      _event,
-      basepath,
-      apiKey,
-      selectedModel,
+      event,
+      streamId: string,
+      basepath: string,
+      selectedModel: string,
       messages,
-      terminalContent = undefined,
-      systemPrompt = "",
-      temperature = 0.7,
-      maxTokens = 0,
+      terminalContent: string | undefined,
+      systemPrompt: string,
+      temperature: number,
+      maxTokens: number,
     ) => {
-      return await sendChat(
-        basepath,
-        apiKey,
-        selectedModel,
-        messages,
-        terminalContent,
-        systemPrompt,
-        temperature,
-        maxTokens,
-      );
+      const controller = new AbortController();
+      streamControllers.set(streamId, controller);
+
+      const apiKey = retrievePassword("ai-apikey") ?? "";
+
+      try {
+        const usage = await sendChat(
+          basepath,
+          apiKey,
+          selectedModel,
+          messages,
+          (delta) => event.sender.send("ai-stream-chunk", streamId, delta),
+          controller.signal,
+          terminalContent,
+          systemPrompt,
+          temperature,
+          maxTokens,
+        );
+        event.sender.send("ai-stream-done", streamId, usage ?? null);
+      } catch (error: any) {
+        if (error?.name !== "AbortError") {
+          const msg = error?.message ?? String(error);
+          event.sender.send("ai-stream-error", streamId, msg);
+        } else {
+          event.sender.send("ai-stream-done", streamId);
+        }
+      } finally {
+        streamControllers.delete(streamId);
+      }
     },
   );
 
-  ipcMain.handle("get-ai-models", async (_event, basepath, apiKey) => {
-    return await getModels(basepath, apiKey);
+  ipcMain.on("ai-stream-cancel", (_event, streamId: string) => {
+    streamControllers.get(streamId)?.abort();
+    streamControllers.delete(streamId);
+  });
+
+  ipcMain.handle("get-ai-models", async (_event, basepath, apiKey?: string) => {
+    const key = apiKey?.trim() || retrievePassword("ai-apikey") || "";
+    return await getModels(basepath, key);
   });
 
   // IPC test
