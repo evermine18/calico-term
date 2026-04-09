@@ -12,15 +12,16 @@ export async function sendChat(
   apiKey: string,
   selectedModel: string,
   messages: ChatMessage[],
-  terminalContent = undefined
+  terminalContent = undefined,
+  systemPrompt = "",
+  temperature = 0.7,
+  maxTokens = 0,
 ): Promise<string> {
   let context = [];
 
   const parsedMessages = parseMessages(messages);
   // Append a developer message to the chat history at the start
-  const dev_prompt = {
-    role: "system" as const,
-    content: `You are a DevOps/SRE assistant.
+  const defaultSystemContent = `You are a DevOps/SRE assistant.
 STYLE (MANDATORY):
 - Answer in Markdown.
 - Put ANY command or multi-line snippet inside fenced code blocks with a language tag.
@@ -28,7 +29,10 @@ STYLE (MANDATORY):
 - Commands must be copy-paste ready (no leading $).
 - Answer ONLY what the user explicitly asks.
 - If highly relevant, you may add ONE short extra tip or recommendation at the end, formatted as a blockquote (>).
-`,
+`;
+  const dev_prompt = {
+    role: "system" as const,
+    content: systemPrompt.trim() ? systemPrompt.trim() : defaultSystemContent,
   };
   if (terminalContent) {
     context.push({
@@ -50,6 +54,8 @@ STYLE (MANDATORY):
       body: JSON.stringify({
         model: selectedModel,
         messages: context,
+        temperature,
+        ...(maxTokens > 0 ? { max_tokens: maxTokens } : {}),
       }),
     });
 
@@ -69,7 +75,7 @@ STYLE (MANDATORY):
 }
 
 function parseMessages(
-  messages: ChatMessage[]
+  messages: ChatMessage[],
 ): { role: string; content: string }[] {
   return messages.map((msg) => ({
     role: msg.type === "user" ? "user" : "assistant",
@@ -79,7 +85,7 @@ function parseMessages(
 
 export async function getModels(
   basepath: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<string[]> {
   try {
     const res = await net.fetch(`${basepath}/v1/models`, {

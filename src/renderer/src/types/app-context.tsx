@@ -1,3 +1,19 @@
+type ShortcutDef = {
+  key: string;
+  ctrl: boolean;
+  shift: boolean;
+  alt: boolean;
+};
+
+type AppShortcuts = {
+  newTab: ShortcutDef;
+  closeTab: ShortcutDef;
+  nextTab: ShortcutDef;
+  prevTab: ShortcutDef;
+  toggleSidebar: ShortcutDef;
+  openHistory: ShortcutDef;
+};
+
 type CommandHistoryEntry = {
   id: string;
   command: string;
@@ -37,6 +53,34 @@ type AppContextType = {
   setSelectedModel: (model: string) => void;
   apiKey: string;
   setApiKey: (key: string) => void;
+  // Terminal appearance
+  terminalFontFamily: string;
+  setTerminalFontFamily: (v: string) => void;
+  terminalFontSize: number;
+  setTerminalFontSize: (v: number) => void;
+  terminalLineHeight: number;
+  setTerminalLineHeight: (v: number) => void;
+  cursorStyle: 'block' | 'bar' | 'underline';
+  setCursorStyle: (v: 'block' | 'bar' | 'underline') => void;
+  cursorBlink: boolean;
+  setCursorBlink: (v: boolean) => void;
+  scrollback: number;
+  setScrollback: (v: number) => void;
+  // Default terminal startup
+  defaultShell: string;
+  setDefaultShell: (v: string) => void;
+  defaultCwd: string;
+  setDefaultCwd: (v: string) => void;
+  // AI advanced settings
+  aiSystemPrompt: string;
+  setAiSystemPrompt: (v: string) => void;
+  aiTemperature: number;
+  setAiTemperature: (v: number) => void;
+  aiMaxTokens: number;
+  setAiMaxTokens: (v: number) => void;
+  // Keyboard shortcuts
+  shortcuts: AppShortcuts;
+  setShortcuts: (v: AppShortcuts) => void;
   commandHistory: CommandHistoryEntry[];
   addCommandToHistory: (command: string, tabId: string, tabTitle: string) => void;
   togglePinCommand: (id: string) => void;

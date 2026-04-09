@@ -105,16 +105,22 @@ app.whenReady().then(() => {
       apiKey,
       selectedModel,
       messages,
-      terminalContent = undefined
+      terminalContent = undefined,
+      systemPrompt = "",
+      temperature = 0.7,
+      maxTokens = 0,
     ) => {
       return await sendChat(
         basepath,
         apiKey,
         selectedModel,
         messages,
-        terminalContent
+        terminalContent,
+        systemPrompt,
+        temperature,
+        maxTokens,
       );
-    }
+    },
   );
 
   ipcMain.handle("get-ai-models", async (_event, basepath, apiKey) => {

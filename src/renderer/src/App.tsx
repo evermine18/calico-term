@@ -11,13 +11,23 @@ import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
 import { TerminalSquare } from "lucide-react";
+import { closeTab } from "./lib/tab-operations";
+
+function matchShortcut(e: KeyboardEvent, s: ShortcutDef): boolean {
+  return (
+    e.key.toLowerCase() === s.key.toLowerCase() &&
+    !!e.ctrlKey === s.ctrl &&
+    !!e.shiftKey === s.shift &&
+    !!e.altKey === s.alt
+  );
+}
 
 function AppContent(): React.JSX.Element {
   const [tabs, setTabs] = useState<TerminalTab[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showHome, setShowHome] = useState(false);
-  const { setHistoryDialogOpen } = useAppContext();
+  const { setHistoryDialogOpen, shortcuts, aiSidebarOpen, setAiSidebarOpen } = useAppContext();
 
   // Wrap setActiveTab so any tab click also dismisses the home overlay
   const handleSetActiveTab = (id: string) => {
@@ -25,18 +35,38 @@ function AppContent(): React.JSX.Element {
     setShowHome(false);
   };
 
-  // Keyboard shortcut: Ctrl+H to open history
+  // Configurable keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.ctrlKey && e.key === 'h') {
+      if (matchShortcut(e, shortcuts.openHistory)) {
         e.preventDefault();
         setHistoryDialogOpen(true);
+      } else if (matchShortcut(e, shortcuts.toggleSidebar)) {
+        e.preventDefault();
+        setAiSidebarOpen(!aiSidebarOpen);
+      } else if (matchShortcut(e, shortcuts.newTab)) {
+        e.preventDefault();
+        const id = crypto.randomUUID();
+        const newTab: TerminalTab = { id, title: `Terminal ${tabs.length + 1}`, mode: "normal", terminal: new Terminal() };
+        setTabs((prev) => [...prev, newTab]);
+        handleSetActiveTab(id);
+      } else if (matchShortcut(e, shortcuts.closeTab) && activeTab) {
+        e.preventDefault();
+        closeTab(activeTab, tabs, activeTab, setTabs, handleSetActiveTab);
+      } else if (matchShortcut(e, shortcuts.nextTab) && tabs.length > 1) {
+        e.preventDefault();
+        const idx = tabs.findIndex((t) => t.id === activeTab);
+        handleSetActiveTab(tabs[(idx + 1) % tabs.length].id);
+      } else if (matchShortcut(e, shortcuts.prevTab) && tabs.length > 1) {
+        e.preventDefault();
+        const idx = tabs.findIndex((t) => t.id === activeTab);
+        handleSetActiveTab(tabs[(idx - 1 + tabs.length) % tabs.length].id);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [setHistoryDialogOpen]);
+  }, [shortcuts, aiSidebarOpen, tabs, activeTab, setHistoryDialogOpen, setAiSidebarOpen]);
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
@@ -111,8 +141,8 @@ function AppContent(): React.JSX.Element {
           <div
             key={tab.id}
             className={`absolute inset-0 transition-all duration-300 ${!showHome && activeTab === tab.id
-                ? "opacity-100 scale-100"
-                : "opacity-0 scale-95 pointer-events-none"
+              ? "opacity-100 scale-100"
+              : "opacity-0 scale-95 pointer-events-none"
               }`}
           >
             <TerminalPanel

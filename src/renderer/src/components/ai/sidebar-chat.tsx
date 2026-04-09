@@ -9,7 +9,7 @@ import {
 import { useTerminalContext } from "@renderer/contexts/terminal-context";
 
 export default function AISidebarChat() {
-  const { aiSidebarOpen, setAiSidebarOpen, selectedModel, apiKey } =
+  const { aiSidebarOpen, setAiSidebarOpen, selectedModel, apiKey, apiUrl, aiSystemPrompt, aiTemperature, aiMaxTokens } =
     useAppContext();
   const [enableTerminalContext, setEnableTerminalContext] = useState(false);
   const { getActive } = useTerminalContext();
@@ -73,11 +73,14 @@ export default function AISidebarChat() {
     try {
       const response = await window.electron.ipcRenderer.invoke(
         "send-ai-message",
-        "https://api.openai.com",
+        apiUrl || "https://api.openai.com",
         apiKey,
         selectedModel,
         messages,
         enableTerminalContext ? screen : undefined,
+        aiSystemPrompt,
+        aiTemperature,
+        aiMaxTokens,
       );
       console.log("AI response:", response);
       if (!response) {

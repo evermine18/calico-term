@@ -3,6 +3,15 @@ import { AppContext } from "./context";
 import { DEFAULT_THEME_ID, getTheme } from "../../themes";
 import type { ThemeId } from "../../themes";
 
+const DEFAULT_SHORTCUTS: AppShortcuts = {
+  newTab: { key: 't', ctrl: true, shift: true, alt: false },
+  closeTab: { key: 'w', ctrl: true, shift: false, alt: false },
+  nextTab: { key: 'Tab', ctrl: true, shift: false, alt: false },
+  prevTab: { key: 'Tab', ctrl: true, shift: true, alt: false },
+  toggleSidebar: { key: 'a', ctrl: true, shift: true, alt: false },
+  openHistory: { key: 'h', ctrl: true, shift: false, alt: false },
+};
+
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [theme, setThemeState] = useState<ThemeId>(() => {
     const stored = localStorage.getItem("calico-theme");
@@ -35,6 +44,67 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.getItem("selectedModel") || ""
   );
   const [apiKey, setApiKey] = useState(localStorage.getItem("apiKey") || "");
+
+  // --- Terminal appearance ---
+  const [terminalFontFamily, setTerminalFontFamilyState] = useState(
+    localStorage.getItem("terminalFontFamily") || "Cascadia Code, Consolas, 'Courier New', monospace"
+  );
+  const setTerminalFontFamily = (v: string) => { localStorage.setItem("terminalFontFamily", v); setTerminalFontFamilyState(v); };
+
+  const [terminalFontSize, setTerminalFontSizeState] = useState<number>(() => {
+    const s = localStorage.getItem("terminalFontSize"); return s ? parseFloat(s) : 14;
+  });
+  const setTerminalFontSize = (v: number) => { localStorage.setItem("terminalFontSize", v.toString()); setTerminalFontSizeState(v); };
+
+  const [terminalLineHeight, setTerminalLineHeightState] = useState<number>(() => {
+    const s = localStorage.getItem("terminalLineHeight"); return s ? parseFloat(s) : 1.2;
+  });
+  const setTerminalLineHeight = (v: number) => { localStorage.setItem("terminalLineHeight", v.toString()); setTerminalLineHeightState(v); };
+
+  const [cursorStyle, setCursorStyleState] = useState<'block' | 'bar' | 'underline'>(() => {
+    const s = localStorage.getItem("cursorStyle");
+    return (s as 'block' | 'bar' | 'underline') || 'block';
+  });
+  const setCursorStyle = (v: 'block' | 'bar' | 'underline') => { localStorage.setItem("cursorStyle", v); setCursorStyleState(v); };
+
+  const [cursorBlink, setCursorBlinkState] = useState<boolean>(() => {
+    const s = localStorage.getItem("cursorBlink"); return s !== null ? s === 'true' : true;
+  });
+  const setCursorBlink = (v: boolean) => { localStorage.setItem("cursorBlink", v.toString()); setCursorBlinkState(v); };
+
+  const [scrollback, setScrollbackState] = useState<number>(() => {
+    const s = localStorage.getItem("scrollback"); return s ? parseInt(s, 10) : 5000;
+  });
+  const setScrollback = (v: number) => { localStorage.setItem("scrollback", v.toString()); setScrollbackState(v); };
+
+  // --- Default terminal startup ---
+  const [defaultShell, setDefaultShellState] = useState(localStorage.getItem("defaultShell") || "");
+  const setDefaultShell = (v: string) => { localStorage.setItem("defaultShell", v); setDefaultShellState(v); };
+
+  const [defaultCwd, setDefaultCwdState] = useState(localStorage.getItem("defaultCwd") || "");
+  const setDefaultCwd = (v: string) => { localStorage.setItem("defaultCwd", v); setDefaultCwdState(v); };
+
+  // --- AI advanced settings ---
+  const [aiSystemPrompt, setAiSystemPromptState] = useState(localStorage.getItem("aiSystemPrompt") || "");
+  const setAiSystemPrompt = (v: string) => { localStorage.setItem("aiSystemPrompt", v); setAiSystemPromptState(v); };
+
+  const [aiTemperature, setAiTemperatureState] = useState<number>(() => {
+    const s = localStorage.getItem("aiTemperature"); return s ? parseFloat(s) : 0.7;
+  });
+  const setAiTemperature = (v: number) => { localStorage.setItem("aiTemperature", v.toString()); setAiTemperatureState(v); };
+
+  const [aiMaxTokens, setAiMaxTokensState] = useState<number>(() => {
+    const s = localStorage.getItem("aiMaxTokens"); return s ? parseInt(s, 10) : 0;
+  });
+  const setAiMaxTokens = (v: number) => { localStorage.setItem("aiMaxTokens", v.toString()); setAiMaxTokensState(v); };
+
+  // --- Keyboard shortcuts ---
+  const [shortcuts, setShortcutsState] = useState<AppShortcuts>(() => {
+    const s = localStorage.getItem("shortcuts");
+    if (s) { try { return JSON.parse(s); } catch { /* ignore */ } }
+    return DEFAULT_SHORTCUTS;
+  });
+  const setShortcuts = (v: AppShortcuts) => { localStorage.setItem("shortcuts", JSON.stringify(v)); setShortcutsState(v); };
   const [historyRetentionDays, setHistoryRetentionDaysState] = useState<number>(() => {
     const stored = localStorage.getItem("historyRetentionDays");
     return stored ? parseFloat(stored) : 1;
@@ -226,6 +296,22 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.setItem("apiKey", key);
         setApiKey(key);
       },
+      // Terminal appearance
+      terminalFontFamily, setTerminalFontFamily,
+      terminalFontSize, setTerminalFontSize,
+      terminalLineHeight, setTerminalLineHeight,
+      cursorStyle, setCursorStyle,
+      cursorBlink, setCursorBlink,
+      scrollback, setScrollback,
+      // Default startup
+      defaultShell, setDefaultShell,
+      defaultCwd, setDefaultCwd,
+      // AI advanced
+      aiSystemPrompt, setAiSystemPrompt,
+      aiTemperature, setAiTemperature,
+      aiMaxTokens, setAiMaxTokens,
+      // Shortcuts
+      shortcuts, setShortcuts,
       commandHistory,
       addCommandToHistory,
       togglePinCommand,
@@ -244,7 +330,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       updateVaultCredential,
       deleteVaultCredential,
     }),
-    [theme, aiSidebarOpen, apiUrl, selectedModel, apiKey, commandHistory, historyDialogOpen, historyRetentionDays, sshConnections, vaultCredentials]
+    [theme, aiSidebarOpen, apiUrl, selectedModel, apiKey, commandHistory, historyDialogOpen, historyRetentionDays, sshConnections, vaultCredentials,
+      terminalFontFamily, terminalFontSize, terminalLineHeight, cursorStyle, cursorBlink, scrollback,
+      defaultShell, defaultCwd, aiSystemPrompt, aiTemperature, aiMaxTokens, shortcuts]
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

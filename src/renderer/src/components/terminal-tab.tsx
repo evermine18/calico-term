@@ -23,7 +23,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   initialCommand,
 }) => {
   const { setActive } = useTerminalContext();
-  const { addCommandToHistory } = useAppContext();
+  const { addCommandToHistory, terminalFontFamily, terminalFontSize, terminalLineHeight, cursorStyle, cursorBlink, scrollback, defaultShell, defaultCwd } = useAppContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -98,8 +98,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     const accent300 = cssVar("--accent-300") || "#67e8f9";
 
     const terminal = new Terminal({
-      cursorBlink: true,
+      cursorBlink,
+      cursorStyle,
       allowProposedApi: true,
+      scrollback,
       theme: {
         background: "#020617",
         foreground: "#e2e8f0",
@@ -124,9 +126,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         brightCyan: accent300,
         brightWhite: "#f1f5f9",
       },
-      fontFamily: "Cascadia Code, Consolas, 'Courier New', monospace",
-      fontSize: 14,
-      lineHeight: 1.2,
+      fontFamily: terminalFontFamily,
+      fontSize: terminalFontSize,
+      lineHeight: terminalLineHeight,
       // scrollback: 50000, // Optional: increase scrollback for large output
     });
     terminal.onSelectionChange((_) => {
@@ -184,7 +186,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     terminal.focus();
 
     // Create PTY instance
-    window.electron.ipcRenderer.send("terminal-create", tabId);
+    window.electron.ipcRenderer.send("terminal-create", tabId, {
+      shell: defaultShell || undefined,
+      cwd: defaultCwd || undefined,
+    });
 
     // If an initial command is provided, send it once the shell is ready
     if (initialCommand) {
@@ -240,6 +245,21 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       resizeObserverRef.current = observer;
     });
   }, [active]);
+
+  /**
+   * Live-update xterm options when terminal settings change in context.
+   */
+  useEffect(() => {
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+    terminal.options.fontFamily = terminalFontFamily;
+    terminal.options.fontSize = terminalFontSize;
+    terminal.options.lineHeight = terminalLineHeight;
+    terminal.options.cursorStyle = cursorStyle;
+    terminal.options.cursorBlink = cursorBlink;
+    terminal.options.scrollback = scrollback;
+    fitAddonRef.current?.fit();
+  }, [terminalFontFamily, terminalFontSize, terminalLineHeight, cursorStyle, cursorBlink, scrollback]);
 
   /**
    * Focus the terminal when tab becomes active.
