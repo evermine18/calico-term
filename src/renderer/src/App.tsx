@@ -167,6 +167,7 @@ function AppContent(): React.JSX.Element {
                   mode: "normal",
                   terminal: new Terminal(),
                   initialCommand: command,
+                  badge: conn.tags?.[0] ?? null,
                 };
                 // Register password-injection session BEFORE the terminal mounts.
                 // If the connection uses a vault credential, inject via vault key.
