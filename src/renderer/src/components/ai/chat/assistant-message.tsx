@@ -1,4 +1,4 @@
-import { Bot, CircleX, Loader, Copy, RefreshCw, Play } from "lucide-react";
+import { Bot, CircleX, Copy, RefreshCw, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
@@ -28,7 +28,10 @@ function CodeBlock({
 }) {
   const [ran, setRan] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [collapsed, setCollapsed] = useState(code.split("\n").length > 20);
   const isExecutable = EXECUTABLE_LANGS.has(lang) && onExecute;
+  const lineCount = code.split("\n").length;
+  const isLong = lineCount > 20;
 
   const handleRun = () => {
     onExecute!(code.trimEnd());
@@ -45,8 +48,24 @@ function CodeBlock({
   return (
     <div className="my-3 rounded-md overflow-hidden border border-slate-700/50">
       <div className="flex items-center justify-between bg-slate-950 px-3 py-1.5">
-        <span className="text-[10px] font-mono text-slate-500">{lang}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-mono text-slate-500">{lang}</span>
+          {isLong && (
+            <span className="text-[10px] text-slate-600">
+              {lineCount} lines
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1.5">
+          {isLong && (
+            <button
+              onClick={() => setCollapsed(!collapsed)}
+              className="text-[10px] px-2 py-0.5 rounded transition-colors text-slate-500 hover:text-slate-300"
+              title={collapsed ? "Expand" : "Collapse"}
+            >
+              {collapsed ? "Show" : "Hide"}
+            </button>
+          )}
           <button
             onClick={handleCopyCode}
             className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded transition-colors ${
@@ -75,7 +94,9 @@ function CodeBlock({
           )}
         </div>
       </div>
-      <pre className="bg-slate-950 text-gray-100 px-3 py-3 overflow-x-auto text-xs font-mono leading-5 m-0">
+      <pre className={`bg-slate-950 text-gray-100 px-3 py-3 overflow-x-auto text-xs font-mono leading-5 m-0 ${
+        collapsed ? "max-h-[300px]" : ""
+      }`}>
         <code>{code}</code>
       </pre>
     </div>
@@ -179,28 +200,35 @@ export default function AssistantMessage({
 
         <div className="bg-slate-800/60 backdrop-blur-sm border border-slate-700/40 text-gray-100 rounded-2xl rounded-bl-sm px-3 py-2.5 w-full min-w-0 max-w-full overflow-hidden">
           {isTyping ? (
-            <div className="flex items-center space-x-2">
-              <Loader size={14} className="animate-spin text-accent-400" />
-              <span className="text-sm text-gray-400">Typing...</span>
+            <div className="flex items-center space-x-2 py-1">
+              <div className="flex space-x-1">
+                <div className="w-2 h-2 bg-accent-400 rounded-full" style={{ animation: 'bounce-delayed 1.4s infinite ease-in-out 0ms' }} />
+                <div className="w-2 h-2 bg-accent-400 rounded-full" style={{ animation: 'bounce-delayed 1.4s infinite ease-in-out 150ms' }} />
+                <div className="w-2 h-2 bg-accent-400 rounded-full" style={{ animation: 'bounce-delayed 1.4s infinite ease-in-out 300ms' }} />
+              </div>
+              <span className="text-sm text-gray-400">Thinking...</span>
             </div>
           ) : (
             <>
               {error ? (
-                <div className="text-red-400 mb-2 flex items-center justify-between">
-                  <span>
-                    <CircleX className="inline mr-1" size={18} />
-                    <span className="font-medium">Error</span>
-                  </span>
-                  {onRetry && (
-                    <button
-                      onClick={onRetry}
-                      className="flex items-center gap-1 text-xs text-gray-400 hover:text-accent-300 transition-colors ml-2"
-                      title="Retry"
-                    >
-                      <RefreshCw size={13} />
-                      Retry
-                    </button>
-                  )}
+                <div className="text-red-400 mb-2">
+                  <div className="flex items-center justify-between">
+                    <span>
+                      <CircleX className="inline mr-1" size={18} />
+                      <span className="font-medium">Error</span>
+                    </span>
+                    {onRetry && (
+                      <button
+                        onClick={onRetry}
+                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-accent-300 transition-colors ml-2"
+                        title="Retry"
+                      >
+                        <RefreshCw size={13} />
+                        Retry
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-xs text-red-300/80 mt-1 font-mono">{message}</p>
                 </div>
               ) : null}
 
