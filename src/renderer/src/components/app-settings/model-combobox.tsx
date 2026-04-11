@@ -27,6 +27,7 @@ type FetchStatus = "idle" | "loading" | "success" | "error";
 export function ModelsSelector({
   url,
   apiKey,
+  hasStoredApiKey = false,
   provider = "openai",
   currentValue,
   onValueChange,
@@ -34,6 +35,7 @@ export function ModelsSelector({
 }: {
   url: string;
   apiKey: string;
+  hasStoredApiKey?: boolean;
   provider?: "openai" | "anthropic" | "ollama" | "openai-compatible";
   currentValue?: string;
   onValueChange?: (model: string) => void;
@@ -50,9 +52,11 @@ export function ModelsSelector({
     onStatusChange?.(s, error);
   };
 
+  const hasKey = !!apiKey || hasStoredApiKey;
+
   const fetchModels = async () => {
     const needsKey = provider !== "ollama";
-    if (!url || (needsKey && !apiKey)) {
+    if (!url || (needsKey && !hasKey)) {
       updateStatus("idle");
       setModels([]);
       return;
@@ -90,7 +94,7 @@ export function ModelsSelector({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [url, apiKey, provider]);
+  }, [url, apiKey, hasStoredApiKey, provider]);
 
   return (
     <div className="flex items-center gap-2">
@@ -117,11 +121,19 @@ export function ModelsSelector({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[200px] p-0">
-          <Command>
-            <CommandInput placeholder="Search model..." />
-            <CommandList>
-              <CommandEmpty>No model found.</CommandEmpty>
+        <PopoverContent
+          className="w-[260px] p-0 bg-slate-900 border border-slate-700/50 shadow-xl"
+          align="start"
+        >
+          <Command className="bg-transparent text-gray-100 [&_[cmdk-input-wrapper]]:border-slate-700/50">
+            <CommandInput
+              placeholder="Search model..."
+              className="text-gray-100 placeholder:text-slate-500"
+            />
+            <CommandList className="max-h-60">
+              <CommandEmpty className="py-4 text-center text-xs text-slate-500">
+                No model found.
+              </CommandEmpty>
               <CommandGroup>
                 {models.map((model) => (
                   <CommandItem
@@ -131,14 +143,15 @@ export function ModelsSelector({
                       setValue(currentValue === value ? "" : currentValue);
                       setOpen(false);
                     }}
+                    className="text-slate-300 aria-selected:bg-accent-500/20 aria-selected:text-accent-300 data-[selected=true]:bg-accent-500/20 data-[selected=true]:text-accent-300"
                   >
                     <CheckIcon
                       className={cn(
-                        "mr-2 h-4 w-4",
+                        "mr-2 h-4 w-4 text-accent-400",
                         value === model ? "opacity-100" : "opacity-0",
                       )}
                     />
-                    {model}
+                    <span className="truncate">{model}</span>
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -150,7 +163,7 @@ export function ModelsSelector({
         variant="outline"
         size="icon"
         onClick={fetchModels}
-        disabled={status === "loading" || !url || !apiKey}
+        disabled={status === "loading" || !url || (provider !== "ollama" && !hasKey)}
         title="Refresh models"
         className="shrink-0 bg-slate-800/60 border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 disabled:opacity-40"
       >

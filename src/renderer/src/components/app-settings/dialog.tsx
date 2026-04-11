@@ -570,6 +570,7 @@ export default function SettingsDialog({ children }) {
                 <ModelsSelector
                   url={localSettings.apiUrl}
                   apiKey={localApiKey}
+                  hasStoredApiKey={hasApiKey}
                   provider={
                     localSettings.aiProvider as
                       | "openai"
