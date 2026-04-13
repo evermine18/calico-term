@@ -4,6 +4,7 @@ import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
 import { setupTerminal, closeTerminal } from "./terminal";
 import { getModels, sendChat } from "./chat-api";
+import { setupUpdater } from "./updater";
 
 function createContextMenu(): Menu {
   const contextMenu = Menu.buildFromTemplate([
@@ -129,6 +130,10 @@ app.whenReady().then(() => {
 
   // IPC test
   ipcMain.on("ping", () => console.log("pong"));
+
+  if (!is.dev) {
+    setupUpdater();
+  }
 
   createWindow();
 

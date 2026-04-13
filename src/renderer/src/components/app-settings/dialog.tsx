@@ -22,7 +22,7 @@ import { Label } from "@renderer/components/ui/label";
 import { ModelsSelector } from "./model-combobox";
 import { useAppContext } from "@renderer/contexts/app-context";
 import { useState, useEffect, useRef } from "react";
-import { Eye, EyeOff, Plus, X, Edit2, Check, Vault, User, KeyRound, Bot, ShieldCheck, CheckCircle2, XCircle, Loader2, Palette, Terminal as TerminalIcon, Settings2, Keyboard } from "lucide-react";
+import { Eye, EyeOff, Plus, X, Edit2, Check, Vault, User, KeyRound, Bot, ShieldCheck, CheckCircle2, XCircle, Loader2, Palette, Terminal as TerminalIcon, Settings2, Keyboard, Info, Download, RefreshCw, RotateCcw } from "lucide-react";
 import { ThemePicker } from "./theme-picker";
 import type { ThemeId } from "@renderer/themes";
 
@@ -117,6 +117,55 @@ export default function SettingsDialog({ children }) {
     getComputedStyle(document.documentElement).getPropertyValue("--accent-500").trim() || "#06b6d4"
   );
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
+
+  // Updater state
+  type UpdaterStatus = "idle" | "checking" | "up-to-date" | "available" | "downloading" | "downloaded" | "error";
+  const [updaterStatus, setUpdaterStatus] = useState<UpdaterStatus>("idle");
+  const [updaterVersion, setUpdaterVersion] = useState<string | null>(null);
+  const [updaterProgress, setUpdaterProgress] = useState(0);
+  const [updaterError, setUpdaterError] = useState<string | null>(null);
+
+  const currentVersion = __APP_VERSION__;
+
+  useEffect(() => {
+    if (!open) return;
+    window.api.updater.onUpdateAvailable((info) => {
+      setUpdaterVersion(info.version);
+      setUpdaterStatus("available");
+    });
+    window.api.updater.onUpToDate(() => {
+      setUpdaterStatus("up-to-date");
+    });
+    window.api.updater.onDownloadProgress((progress) => {
+      setUpdaterProgress(Math.round(progress.percent));
+      setUpdaterStatus("downloading");
+    });
+    window.api.updater.onUpdateDownloaded(() => {
+      setUpdaterStatus("downloaded");
+    });
+    window.api.updater.onError((msg) => {
+      setUpdaterError(msg);
+      setUpdaterStatus("error");
+    });
+    return () => {
+      window.api.updater.removeAllListeners();
+    };
+  }, [open]);
+
+  const handleCheckUpdates = async () => {
+    setUpdaterStatus("checking");
+    setUpdaterError(null);
+    await window.api.updater.check();
+  };
+
+  const handleDownloadUpdate = async () => {
+    setUpdaterStatus("downloading");
+    await window.api.updater.download();
+  };
+
+  const handleInstallUpdate = () => {
+    window.api.updater.install();
+  };
 
   // Vault credential state
   const [vaultDialogOpen, setVaultDialogOpen] = useState(false);
@@ -296,6 +345,10 @@ export default function SettingsDialog({ children }) {
               <TabsTrigger value="vault" className="flex items-center gap-1.5">
                 <ShieldCheck size={14} />
                 Vault
+              </TabsTrigger>
+              <TabsTrigger value="about" className="flex items-center gap-1.5">
+                <Info size={14} />
+                About
               </TabsTrigger>
             </TabsList>
 
@@ -876,6 +929,117 @@ export default function SettingsDialog({ children }) {
                       </Button>
                     </div>
                   ))}
+                </div>
+              </div>
+            </TabsContent>
+            {/* About Tab */}
+            <TabsContent value="about" className="flex-1 overflow-y-auto px-1 mt-4">
+              <div className="space-y-6">
+                <div className="space-y-1">
+                  <p className="text-gray-300 text-sm font-semibold">About calico-term</p>
+                  <p className="text-xs text-gray-400">Check for updates and manage the application version.</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-3">
+                    <p className="text-xs text-gray-400 mb-1">Current version</p>
+                    <p className="text-sm font-mono text-gray-100">{currentVersion}</p>
+                  </div>
+                  <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-3">
+                    <p className="text-xs text-gray-400 mb-1">Latest version</p>
+                    <p className="text-sm font-mono text-gray-100">
+                      {updaterStatus === "checking" && <span className="text-gray-400">Checking...</span>}
+                      {updaterStatus === "idle" && <span className="text-gray-500">—</span>}
+                      {updaterStatus === "up-to-date" && <span className="text-green-400">{currentVersion}</span>}
+                      {(updaterStatus === "available" || updaterStatus === "downloading" || updaterStatus === "downloaded") && (
+                        <span className="text-accent-400">{updaterVersion}</span>
+                      )}
+                      {updaterStatus === "error" && <span className="text-red-400">Error</span>}
+                    </p>
+                  </div>
+                </div>
+
+                {updaterStatus === "up-to-date" && (
+                  <div className="flex items-center gap-2 text-green-400 text-sm bg-green-400/10 border border-green-400/20 rounded-lg px-3 py-2">
+                    <CheckCircle2 size={14} />
+                    You are on the latest version.
+                  </div>
+                )}
+
+                {updaterStatus === "available" && (
+                  <div className="flex items-center gap-2 text-accent-400 text-sm bg-accent-500/10 border border-accent-500/20 rounded-lg px-3 py-2">
+                    <Download size={14} />
+                    Version {updaterVersion} is available.
+                  </div>
+                )}
+
+                {updaterStatus === "downloading" && (
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs text-gray-400">
+                      <span>Downloading update...</span>
+                      <span>{updaterProgress}%</span>
+                    </div>
+                    <div className="h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-accent-500 rounded-full transition-all duration-300"
+                        style={{ width: `${updaterProgress}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {updaterStatus === "downloaded" && (
+                  <div className="flex items-center gap-2 text-green-400 text-sm bg-green-400/10 border border-green-400/20 rounded-lg px-3 py-2">
+                    <CheckCircle2 size={14} />
+                    Update downloaded. Restart to install version {updaterVersion}.
+                  </div>
+                )}
+
+                {updaterStatus === "error" && (
+                  <div className="flex items-start gap-2 text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+                    <XCircle size={14} className="mt-0.5 shrink-0" />
+                    <span className="break-all">{updaterError}</span>
+                  </div>
+                )}
+
+                <div className="flex gap-2 flex-wrap">
+                  {(updaterStatus === "idle" || updaterStatus === "up-to-date" || updaterStatus === "error") && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCheckUpdates}
+                      className="bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 text-gray-300 flex items-center gap-1.5"
+                    >
+                      <RefreshCw size={13} />
+                      Check for updates
+                    </Button>
+                  )}
+                  {updaterStatus === "checking" && (
+                    <Button variant="outline" size="sm" disabled className="bg-slate-800/60 border-slate-700/50 text-gray-500 flex items-center gap-1.5">
+                      <Loader2 size={13} className="animate-spin" />
+                      Checking...
+                    </Button>
+                  )}
+                  {updaterStatus === "available" && (
+                    <Button
+                      size="sm"
+                      onClick={handleDownloadUpdate}
+                      className="bg-accent-500/90 hover:bg-accent-500 text-white flex items-center gap-1.5"
+                    >
+                      <Download size={13} />
+                      Download update
+                    </Button>
+                  )}
+                  {updaterStatus === "downloaded" && (
+                    <Button
+                      size="sm"
+                      onClick={handleInstallUpdate}
+                      className="bg-green-600/90 hover:bg-green-600 text-white flex items-center gap-1.5"
+                    >
+                      <RotateCcw size={13} />
+                      Restart and install
+                    </Button>
+                  )}
                 </div>
               </div>
             </TabsContent>
