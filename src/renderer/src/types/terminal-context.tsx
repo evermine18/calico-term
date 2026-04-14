@@ -1,6 +1,7 @@
 type TerminalAPI = {
   getVisibleText: () => string;
   getAllBufferText: () => string;
+  sendInput: (cmd: string) => void;
 };
 
 type TerminalContextType = {

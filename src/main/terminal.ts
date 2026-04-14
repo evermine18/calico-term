@@ -31,7 +31,7 @@ function saveEncryptedPasswords(store: Record<string, string>): void {
   });
 }
 
-function storePassword(connId: string, plaintext: string): void {
+export function storePassword(connId: string, plaintext: string): void {
   if (!safeStorage.isEncryptionAvailable()) return;
   const encrypted = safeStorage.encryptString(plaintext).toString("base64");
   const store = loadEncryptedPasswords();
@@ -39,7 +39,7 @@ function storePassword(connId: string, plaintext: string): void {
   saveEncryptedPasswords(store);
 }
 
-function retrievePassword(connId: string): string | null {
+export function retrievePassword(connId: string): string | null {
   if (!safeStorage.isEncryptionAvailable()) return null;
   const store = loadEncryptedPasswords();
   if (!store[connId]) return null;
@@ -50,7 +50,7 @@ function retrievePassword(connId: string): string | null {
   }
 }
 
-function removePassword(connId: string): void {
+export function removePassword(connId: string): void {
   const store = loadEncryptedPasswords();
   delete store[connId];
   saveEncryptedPasswords(store);

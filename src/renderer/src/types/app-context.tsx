@@ -1,3 +1,5 @@
+type AIProvider = "openai" | "anthropic" | "ollama" | "openai-compatible";
+
 type ShortcutDef = {
   key: string;
   ctrl: boolean;
@@ -43,16 +45,18 @@ type VaultCredential = {
 };
 
 type AppContextType = {
-  theme: import('../themes').ThemeId;
-  setTheme: (id: import('../themes').ThemeId) => void;
+  theme: import("../themes").ThemeId;
+  setTheme: (id: import("../themes").ThemeId) => void;
   aiSidebarOpen: boolean;
   setAiSidebarOpen: (open: boolean) => void;
   apiUrl: string;
   setApiUrl: (url: string) => void;
   selectedModel: string;
   setSelectedModel: (model: string) => void;
-  apiKey: string;
-  setApiKey: (key: string) => void;
+  hasApiKey: boolean;
+  setHasApiKey: (has: boolean) => void;
+  aiProvider: AIProvider;
+  setAiProvider: (provider: AIProvider) => void;
   // Terminal appearance
   terminalFontFamily: string;
   setTerminalFontFamily: (v: string) => void;
@@ -60,8 +64,8 @@ type AppContextType = {
   setTerminalFontSize: (v: number) => void;
   terminalLineHeight: number;
   setTerminalLineHeight: (v: number) => void;
-  cursorStyle: 'block' | 'bar' | 'underline';
-  setCursorStyle: (v: 'block' | 'bar' | 'underline') => void;
+  cursorStyle: "block" | "bar" | "underline";
+  setCursorStyle: (v: "block" | "bar" | "underline") => void;
   cursorBlink: boolean;
   setCursorBlink: (v: boolean) => void;
   scrollback: number;
@@ -82,7 +86,11 @@ type AppContextType = {
   shortcuts: AppShortcuts;
   setShortcuts: (v: AppShortcuts) => void;
   commandHistory: CommandHistoryEntry[];
-  addCommandToHistory: (command: string, tabId: string, tabTitle: string) => void;
+  addCommandToHistory: (
+    command: string,
+    tabId: string,
+    tabTitle: string,
+  ) => void;
   togglePinCommand: (id: string) => void;
   deleteCommand: (id: string) => void;
   runGarbageCollection: () => void;
