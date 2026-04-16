@@ -1,6 +1,6 @@
 {
   "name": "calico-term",
-  "version": "0.3.0-beta",
+  "version": "0.3.0-beta.4",
   "description": "An Electron application with React and TypeScript",
   "main": "./out/main/index.js",
   "author": "Edgar Sanou",
@@ -22,7 +22,13 @@
   },
   "build": {
     "productName": "Calico Terminal",
-    "appId": "com.edgarsanou.calico-terminal"
+    "appId": "com.edgarsanou.calico-terminal",
+    "win": {
+      "signtoolOptions": {
+        "certificateFile": "./certs/cert.pfx",
+        "publisherName": "Edgar Sanou"
+      }
+    }
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",

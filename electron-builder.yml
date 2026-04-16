@@ -12,6 +12,8 @@ files:
 asarUnpack:
   - resources/**
 win:
+  certificateFile: ./certs/cert.pfx
+  certificatePassword: ${env.WIN_CERT_PASSWORD}
   executableName: calico-term
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
