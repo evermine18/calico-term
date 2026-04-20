@@ -4,6 +4,38 @@ import { clipboard } from "electron";
 
 // Custom APIs for renderer
 const api = {
+  sftp: {
+    connect: (sessionId: string, conn: unknown) =>
+      ipcRenderer.invoke("sftp-connect", sessionId, conn),
+    disconnect: (sessionId: string) =>
+      ipcRenderer.send("sftp-disconnect", sessionId),
+    list: (sessionId: string, dirPath: string) =>
+      ipcRenderer.invoke("sftp-list", sessionId, dirPath),
+    realpath: (sessionId: string, remotePath: string) =>
+      ipcRenderer.invoke("sftp-realpath", sessionId, remotePath),
+    download: (sessionId: string, remotePath: string) =>
+      ipcRenderer.invoke("sftp-download", sessionId, remotePath),
+    upload: (sessionId: string, remotePath: string) =>
+      ipcRenderer.invoke("sftp-upload", sessionId, remotePath),
+    delete: (sessionId: string, entryPath: string, isDirectory: boolean) =>
+      ipcRenderer.invoke("sftp-delete", sessionId, entryPath, isDirectory),
+    mkdir: (sessionId: string, dirPath: string) =>
+      ipcRenderer.invoke("sftp-mkdir", sessionId, dirPath),
+    rename: (sessionId: string, oldPath: string, newPath: string) =>
+      ipcRenderer.invoke("sftp-rename", sessionId, oldPath, newPath),
+    onProgress: (
+      cb: (data: {
+        sessionId: string;
+        filename: string;
+        bytes: number;
+        total: number;
+      }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, data: unknown) => cb(data as any);
+      ipcRenderer.on("sftp-progress", wrapped);
+      return () => ipcRenderer.removeListener("sftp-progress", wrapped);
+    },
+  },
   clipboard: {
     writeText: (text: string) => clipboard.writeText(text),
     readText: () => clipboard.readText(),
