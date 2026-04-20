@@ -4,7 +4,7 @@
   "description": "Cross-platform terminal emulator with AI assistant, SSH manager, SFTP, and encrypted credential vault.",
   "main": "./out/main/index.js",
   "author": "Edgar Sanou",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "homepage": "https://github.com/evermine18/calico-term",
   "repository": {
     "type": "git",
