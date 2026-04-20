@@ -11,6 +11,7 @@ import {
 } from "./terminal";
 import { getModels, sendChat } from "./chat-api";
 import { setupUpdater } from "./updater";
+import { setupSFTPHandlers } from "./sftp";
 
 // --- AI streaming controllers ---
 const streamControllers = new Map<string, AbortController>();
@@ -205,6 +206,7 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
   setupTerminal();
+  setupSFTPHandlers();
   ipcMain.on("app-close", () => {
     console.log("App close requested");
     app.quit();
