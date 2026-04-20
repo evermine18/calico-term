@@ -9,4 +9,5 @@ export type TerminalTab = {
   badge?: string | null;
   hasActivity?: boolean;
   isSSH?: boolean;
+  connId?: string;
 };
