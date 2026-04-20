@@ -1,4 +1,4 @@
-<img src="build/icon.png" alt="Calico Term Logo" width="96" />
+<img src="resources/icon.png" alt="Calico Term Logo" width="96" />
 
 # Calico Term
 
@@ -84,6 +84,10 @@ Run the built app in preview mode:
 ```bash
 npm run start
 ```
+
+## Screenshot
+
+<img src="resources/screenshot1.png" alt="Calico Term Screenshot" width="760" />
 
 ## Configuration
 
