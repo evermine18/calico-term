@@ -1,10 +1,26 @@
 {
   "name": "calico-term",
   "version": "1.0.0",
-  "description": "An Electron application with React and TypeScript",
+  "description": "Cross-platform terminal emulator with AI assistant, SSH manager, SFTP, and encrypted credential vault.",
   "main": "./out/main/index.js",
   "author": "Edgar Sanou",
-  "homepage": "https://electron-vite.org",
+  "license": "MIT",
+  "homepage": "https://github.com/evermine18/calico-term",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/evermine18/calico-term.git"
+  },
+  "bugs": {
+    "url": "https://github.com/evermine18/calico-term/issues"
+  },
+  "keywords": [
+    "electron",
+    "terminal",
+    "xterm",
+    "ai",
+    "ssh",
+    "sftp"
+  ],
   "scripts": {
     "format": "prettier --write .",
     "lint": "eslint --cache .",
@@ -21,14 +37,8 @@
     "build:linux": "electron-vite build && electron-builder --linux"
   },
   "build": {
-    "productName": "Calico Terminal",
-    "appId": "com.edgarsanou.calico-terminal",
-    "win": {
-      "signtoolOptions": {
-        "certificateFile": "./certs/cert.pfx",
-        "publisherName": "Edgar Sanou"
-      }
-    }
+    "productName": "Calico Term",
+    "appId": "com.evermine18.calico-term"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
