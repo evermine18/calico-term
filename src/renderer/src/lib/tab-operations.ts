@@ -18,6 +18,7 @@ export function closeTab(
   setActiveTab: (id: string) => void,
 ) {
   window.electron?.ipcRenderer.send("terminal-kill", id);
+  window.api?.sftp?.disconnect(id);
 
   const currentIndex = tabs.findIndex((tab) => tab.id === id);
   const nextActiveIndex = currentIndex > 0 ? currentIndex - 1 : 1;
@@ -38,6 +39,7 @@ export function closeOtherTabs(
   tabs.forEach((tab) => {
     if (tab.id !== id) {
       window.electron?.ipcRenderer.send("terminal-kill", tab.id);
+      window.api?.sftp?.disconnect(tab.id);
     }
   });
   setTabs((prev) => prev.filter((t) => t.id === id));
@@ -52,6 +54,7 @@ export function closeTabsToRight(
   const index = tabs.findIndex((t) => t.id === id);
   tabs.slice(index + 1).forEach((tab) => {
     window.electron?.ipcRenderer.send("terminal-kill", tab.id);
+    window.api?.sftp?.disconnect(tab.id);
   });
   setTabs((prev) => prev.slice(0, index + 1));
 }

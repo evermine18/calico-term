@@ -8,11 +8,11 @@ import { ThemeProvider } from "./components/theme-provider";
 import { TerminalProvider } from "./contexts/terminal-context";
 import CommandHistoryDialog from "./components/command-history/dialog";
 import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
+import FileBrowserPanel from "./components/sftp/file-browser-panel";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
 import { TerminalSquare } from "lucide-react";
 import { closeTab } from "./lib/tab-operations";
-import { isEditableTarget, isPrimaryModifier } from "./lib/keyboard";
 
 function matchShortcut(e: KeyboardEvent, s: ShortcutDef): boolean {
   return (
@@ -28,8 +28,14 @@ function AppContent(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showHome, setShowHome] = useState(false);
-  const { setHistoryDialogOpen, shortcuts, aiSidebarOpen, setAiSidebarOpen } =
+  const [sftpOpen, setSftpOpen] = useState(false);
+  const { setHistoryDialogOpen, shortcuts, aiSidebarOpen, setAiSidebarOpen, sshConnections } =
     useAppContext();
+
+  const activeTabObj = tabs.find((t) => t.id === activeTab) ?? null;
+  const activeSSHConn = activeTabObj?.isSSH && activeTabObj.connId
+    ? sshConnections.find((c) => c.id === activeTabObj.connId) ?? null
+    : null;
 
   // Wrap setActiveTab so any tab click also dismisses the home overlay and clears activity
   const handleSetActiveTab = (id: string) => {
@@ -157,9 +163,19 @@ function AppContent(): React.JSX.Element {
         setActiveTab={handleSetActiveTab}
         showHome={showHome}
         setShowHome={setShowHome}
+        sftpOpen={sftpOpen}
+        setSftpOpen={setSftpOpen}
+        activeTabIsSSH={!!activeSSHConn}
       />
       {/* Terminal Content */}
       <div className="flex-1 bg-slate-950 relative overflow-hidden pb-8">
+        {sftpOpen && activeSSHConn && (
+          <FileBrowserPanel
+            sessionId={activeTabObj!.id}
+            connection={activeSSHConn}
+            onClose={() => setSftpOpen(false)}
+          />
+        )}
         <AISidebarChat />
         <CommandHistoryDialog />
         {/* Terminals — always mounted to preserve PTY state */}
@@ -197,6 +213,7 @@ function AppContent(): React.JSX.Element {
                   initialCommand: command,
                   badge: conn.tags?.[0] ?? null,
                   isSSH: true,
+                  connId: conn.id,
                 };
                 // Register password-injection session BEFORE the terminal mounts.
                 // If the connection uses a vault credential, inject via vault key.
