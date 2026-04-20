@@ -27,7 +27,17 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   onActivity,
 }) => {
   const { setActive } = useTerminalContext();
-  const { addCommandToHistory } = useAppContext();
+  const {
+    addCommandToHistory,
+    terminalFontFamily,
+    terminalFontSize,
+    terminalLineHeight,
+    cursorStyle,
+    cursorBlink,
+    scrollback,
+    defaultShell,
+    defaultCwd,
+  } = useAppContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -47,6 +57,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
   // Exposing API
   const api: TerminalAPI = {
+    sendInput(cmd: string) {
+      window.electron.ipcRenderer.send("terminal-input", {
+        tabId,
+        data: cmd + "\r",
+      });
+    },
     getVisibleText() {
       const t = terminalRef.current!;
       const b = t.buffer.active;
@@ -103,38 +119,46 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
     isInitializedRef.current = true;
 
+    const cssVar = (v: string) =>
+      getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+    const accent400 = cssVar("--accent-400") || "#22d3ee";
+    const accent500 = cssVar("--accent-500") || "#06b6d4";
+    const accent300 = cssVar("--accent-300") || "#67e8f9";
+
     const terminal = new Terminal({
-      cursorBlink: true,
+      cursorBlink,
+      cursorStyle,
       allowProposedApi: true,
-      scrollback: 50000,
+      scrollback,
       macOptionIsMeta: true,
       theme: {
         background: "#020617",
         foreground: "#e2e8f0",
-        cursor: "#06b6d4",
+        cursor: accent500,
         cursorAccent: "#020617",
-        selectionBackground: "#06b6d4",
+        selectionBackground: accent500,
         selectionForeground: "#020617",
         black: "#1e293b",
         red: "#ef4444",
         green: "#10b981",
         yellow: "#f59e0b",
-        blue: "#06b6d4",
+        blue: accent500,
         magenta: "#a855f7",
-        cyan: "#22d3ee",
+        cyan: accent400,
         white: "#cbd5e1",
         brightBlack: "#475569",
         brightRed: "#f87171",
         brightGreen: "#34d399",
         brightYellow: "#fbbf24",
-        brightBlue: "#22d3ee",
+        brightBlue: accent400,
         brightMagenta: "#c084fc",
-        brightCyan: "#67e8f9",
+        brightCyan: accent300,
         brightWhite: "#f1f5f9",
       },
-      fontFamily: "Cascadia Code, Consolas, 'Courier New', monospace",
-      fontSize: 14,
-      lineHeight: 1.2,
+      fontFamily: terminalFontFamily,
+      fontSize: terminalFontSize,
+      lineHeight: terminalLineHeight,
+      // scrollback: 50000, // Optional: increase scrollback for large output
     });
 
     terminal.onSelectionChange((_) => {
@@ -178,17 +202,24 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
     terminal.onData((data) => {
       // Capturar comandos cuando se presiona Enter
-      if (data === '\r') {
+      if (data === "\r") {
+        // Read the current line from the terminal buffer
         const buffer = terminal.buffer.active;
         const cursorY = buffer.cursorY;
         const line = buffer.getLine(cursorY);
 
         if (line) {
           let lineText = line.translateToString(true);
-          lineText = lineText.replace(/^\[?[\w\-\.]+@[\w\-\.]+.*?\]?\s*[\$#>]\s*/, '');
-          lineText = lineText.replace(/^PS\s+[\w\:\\\>]+>\s*/, '');
-          lineText = lineText.replace(/^C:\\.*?>\s*/, '');
-          lineText = lineText.replace(/^.*?[$#>]\s*/, '');
+
+          // Clean the prompt and special characters
+          // Detect common prompt patterns and remove them
+          lineText = lineText.replace(
+            /^\[?[\w\-\.]+@[\w\-\.]+.*?\]?\s*[\$#>]\s*/,
+            "",
+          ); // bash/zsh style
+          lineText = lineText.replace(/^PS\s+[\w\:\\\>]+>\s*/, ""); // PowerShell style
+          lineText = lineText.replace(/^C:\\.*?>\s*/, ""); // Windows cmd style
+          lineText = lineText.replace(/^.*?[$#>]\s*/, ""); // Generic prompt
 
           const cmd = lineText.trim();
           if (cmd && cmd.length > 0) {
@@ -215,12 +246,19 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     document.fonts.ready.then(safeFit);
     terminal.focus();
 
-    window.electron.ipcRenderer.send("terminal-create", tabId);
+    // Create PTY instance
+    window.electron.ipcRenderer.send("terminal-create", tabId, {
+      shell: defaultShell || undefined,
+      cwd: defaultCwd || undefined,
+    });
 
     if (initialCommand) {
       const cmd = initialCommand;
       setTimeout(() => {
-        window.electron.ipcRenderer.send("terminal-input", { tabId, data: cmd + "\r" });
+        window.electron.ipcRenderer.send("terminal-input", {
+          tabId,
+          data: cmd + "\r",
+        });
       }, 900);
     }
 
@@ -230,7 +268,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     return () => {
       setActive(null);
       resizeObserverRef.current?.disconnect();
-      window.electron.ipcRenderer.removeListener("terminal-output", handleOutput);
+      window.electron.ipcRenderer.removeListener(
+        "terminal-output",
+        handleOutput,
+      );
       terminal.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
@@ -266,6 +307,28 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   }, [active]);
 
   /**
+   * Live-update xterm options when terminal settings change in context.
+   */
+  useEffect(() => {
+    const terminal = terminalRef.current;
+    if (!terminal) return;
+    terminal.options.fontFamily = terminalFontFamily;
+    terminal.options.fontSize = terminalFontSize;
+    terminal.options.lineHeight = terminalLineHeight;
+    terminal.options.cursorStyle = cursorStyle;
+    terminal.options.cursorBlink = cursorBlink;
+    terminal.options.scrollback = scrollback;
+    fitAddonRef.current?.fit();
+  }, [
+    terminalFontFamily,
+    terminalFontSize,
+    terminalLineHeight,
+    cursorStyle,
+    cursorBlink,
+    scrollback,
+  ]);
+
+  /**
    * Focus the terminal when tab becomes active.
    */
   useEffect(() => {
@@ -292,7 +355,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
           onClick={handleScrollToBottom}
           title="Ir al final"
           className="absolute bottom-3 right-3 z-20 w-7 h-7 flex items-center justify-center rounded-full bg-slate-800/90 border border-slate-600/60 text-cyan-400 hover:bg-slate-700/90 hover:border-cyan-500/50 shadow-lg transition-all duration-150"
-          style={{ boxShadow: '0 0 8px rgba(6,182,212,0.2)' }}
+          style={{ boxShadow: "0 0 8px rgba(6,182,212,0.2)" }}
         >
           <ArrowDown size={13} />
         </button>

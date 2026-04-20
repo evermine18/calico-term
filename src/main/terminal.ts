@@ -31,7 +31,7 @@ function saveEncryptedPasswords(store: Record<string, string>): void {
   });
 }
 
-function storePassword(connId: string, plaintext: string): void {
+export function storePassword(connId: string, plaintext: string): void {
   if (!safeStorage.isEncryptionAvailable()) return;
   const encrypted = safeStorage.encryptString(plaintext).toString("base64");
   const store = loadEncryptedPasswords();
@@ -39,7 +39,7 @@ function storePassword(connId: string, plaintext: string): void {
   saveEncryptedPasswords(store);
 }
 
-function retrievePassword(connId: string): string | null {
+export function retrievePassword(connId: string): string | null {
   if (!safeStorage.isEncryptionAvailable()) return null;
   const store = loadEncryptedPasswords();
   if (!store[connId]) return null;
@@ -50,7 +50,7 @@ function retrievePassword(connId: string): string | null {
   }
 }
 
-function removePassword(connId: string): void {
+export function removePassword(connId: string): void {
   const store = loadEncryptedPasswords();
   delete store[connId];
   saveEncryptedPasswords(store);
@@ -165,94 +165,104 @@ function getShellArgs(shell: string): string[] {
 
 export function setupTerminal() {
   // Creating a PTY process for the terminal
-  ipcMain.on("terminal-create", (_event, tabId: string) => {
-    // If it already exists, ignore
-    if (terminals[tabId]) {
-      console.log(`terminal-create: ${tabId} already exists, skipping`);
-      return;
-    }
+  ipcMain.on(
+    "terminal-create",
+    (_event, tabId: string, opts?: { shell?: string; cwd?: string }) => {
+      // If it already exists, ignore
+      if (terminals[tabId]) {
+        console.log(`terminal-create: ${tabId} already exists, skipping`);
+        return;
+      }
 
-    const shell = getDefaultShell();
-    const args = getShellArgs(shell);
-    const cwd = getInitialCwd();
-    const env = prepareEnvironment();
+      const shell =
+        opts?.shell && opts.shell.trim()
+          ? opts.shell.trim()
+          : getDefaultShell();
+      const cwd =
+        opts?.cwd && opts.cwd.trim() ? opts.cwd.trim() : getInitialCwd();
+      const args = getShellArgs(shell);
+      const env = prepareEnvironment();
 
-    console.log(`Creating terminal ${tabId} with shell: ${shell} in ${cwd}`);
+      console.log(`Creating terminal ${tabId} with shell: ${shell} in ${cwd}`);
 
-    try {
-      const ptyProcess = spawn(shell, args, {
-        name: "xterm-256color",
-        cols: 80,
-        rows: 24,
-        cwd,
-        env,
-      });
+      try {
+        const ptyProcess = spawn(shell, args, {
+          name: "xterm-256color",
+          cols: 80,
+          rows: 24,
+          cwd,
+          env,
+        });
 
-      terminals[tabId] = ptyProcess;
+        terminals[tabId] = ptyProcess;
 
-      ptyProcess.onData((data: string) => {
-        for (const w of require("electron").BrowserWindow.getAllWindows()) {
-          w.webContents.send("terminal-output", tabId, data);
-        }
+        ptyProcess.onData((data: string) => {
+          for (const w of require("electron").BrowserWindow.getAllWindows()) {
+            w.webContents.send("terminal-output", tabId, data);
+          }
 
-        // Auto-inject SSH password when the remote prompts for it
-        if (sshPasswordSessions[tabId] && !sshPasswordInjected.has(tabId)) {
-          // Match common SSH/sudo password prompts
-          if (/password\s*:/i.test(data) || /passphrase for key/i.test(data)) {
-            const connId = sshPasswordSessions[tabId];
-            const pwd = retrievePassword(connId);
-            if (pwd) {
-              sshPasswordInjected.add(tabId);
-              // Small delay so the prompt is fully rendered before sending
-              setTimeout(() => terminals[tabId]?.write(pwd + "\r"), 80);
+          // Auto-inject SSH password when the remote prompts for it
+          if (sshPasswordSessions[tabId] && !sshPasswordInjected.has(tabId)) {
+            // Match common SSH/sudo password prompts
+            if (
+              /password\s*:/i.test(data) ||
+              /passphrase for key/i.test(data)
+            ) {
+              const connId = sshPasswordSessions[tabId];
+              const pwd = retrievePassword(connId);
+              if (pwd) {
+                sshPasswordInjected.add(tabId);
+                // Small delay so the prompt is fully rendered before sending
+                setTimeout(() => terminals[tabId]?.write(pwd + "\r"), 80);
+              }
             }
           }
-        }
 
-        // Check for common error patterns in the output
-        const errorPatterns = [
-          /error/i,
-          /failed/i,
-          /denied/i,
-          /not found/i,
-          /no such file/i,
-          /permission/i,
-          /command not found/i,
-          /could not/i,
-          /fatal/i,
-          /segmentation fault/i,
-          /connection refused/i,
-          /connection timed out/i,
-          /unknown host/i,
-        ];
-        if (errorPatterns.some((pat) => pat.test(data))) {
-          for (const w of require("electron").BrowserWindow.getAllWindows()) {
-            w.webContents.send("terminal-error", tabId, data);
+          // Check for common error patterns in the output
+          const errorPatterns = [
+            /error/i,
+            /failed/i,
+            /denied/i,
+            /not found/i,
+            /no such file/i,
+            /permission/i,
+            /command not found/i,
+            /could not/i,
+            /fatal/i,
+            /segmentation fault/i,
+            /connection refused/i,
+            /connection timed out/i,
+            /unknown host/i,
+          ];
+          if (errorPatterns.some((pat) => pat.test(data))) {
+            for (const w of require("electron").BrowserWindow.getAllWindows()) {
+              w.webContents.send("terminal-error", tabId, data);
+            }
+            console.error(`Error detected in terminal ${tabId}: ${data}`);
           }
-          console.error(`Error detected in terminal ${tabId}: ${data}`);
-        }
-      });
+        });
 
-      ptyProcess.onExit(({ exitCode, signal }) => {
-        console.log(
-          `Terminal ${tabId} exited with code ${exitCode}, signal ${signal}`,
-        );
-        delete terminals[tabId];
-        delete sshPasswordSessions[tabId];
-        sshPasswordInjected.delete(tabId);
-        // Notify the renderer that the terminal was closed
+        ptyProcess.onExit(({ exitCode, signal }) => {
+          console.log(
+            `Terminal ${tabId} exited with code ${exitCode}, signal ${signal}`,
+          );
+          delete terminals[tabId];
+          delete sshPasswordSessions[tabId];
+          sshPasswordInjected.delete(tabId);
+          // Notify the renderer that the terminal was closed
+          for (const w of require("electron").BrowserWindow.getAllWindows()) {
+            w.webContents.send("terminal-closed", tabId, exitCode);
+          }
+        });
+      } catch (error) {
+        console.error(`Failed to create terminal ${tabId}:`, error);
+        // Notify the renderer of the error
         for (const w of require("electron").BrowserWindow.getAllWindows()) {
-          w.webContents.send("terminal-closed", tabId, exitCode);
+          w.webContents.send("terminal-creation-failed", tabId, error.message);
         }
-      });
-    } catch (error) {
-      console.error(`Failed to create terminal ${tabId}:`, error);
-      // Notify the renderer of the error
-      for (const w of require("electron").BrowserWindow.getAllWindows()) {
-        w.webContents.send("terminal-creation-failed", tabId, error.message);
       }
-    }
-  });
+    },
+  );
 
   ipcMain.on("terminal-input", (_event, { tabId, data }) => {
     terminals[tabId]?.write(data);

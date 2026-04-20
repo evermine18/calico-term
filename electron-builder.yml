@@ -12,6 +12,8 @@ files:
 asarUnpack:
   - resources/**
 win:
+  certificateFile: ./certs/cert.pfx
+  certificatePassword: ${env.WIN_CERT_PASSWORD}
   executableName: calico-term
 nsis:
   artifactName: ${name}-${version}-setup.${ext}
@@ -39,5 +41,6 @@ appImage:
   artifactName: ${name}-${version}.${ext}
 npmRebuild: false
 publish:
-  provider: generic
-  url: https://example.com/auto-updates
+  provider: github
+  owner: evermine18
+  repo: calico-term

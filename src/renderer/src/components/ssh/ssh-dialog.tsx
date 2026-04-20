@@ -258,11 +258,11 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
                   <SelectValue placeholder="None (use own password)" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-700/50">
-                  <SelectItem value="none" className="text-gray-400 focus:bg-cyan-500/20 focus:text-cyan-100">
+                  <SelectItem value="none" className="text-gray-400 focus:bg-accent-500/20 focus:text-accent-100">
                     None (use own password)
                   </SelectItem>
                   {vaultCredentials.map((cred) => (
-                    <SelectItem key={cred.id} value={cred.id} className="text-gray-100 focus:bg-cyan-500/20 focus:text-cyan-100">
+                    <SelectItem key={cred.id} value={cred.id} className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">
                       {cred.name} ({cred.username})
                     </SelectItem>
                   ))}
@@ -314,8 +314,8 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
           </div>
 
           {form.credentialId ? (
-            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-cyan-500/8 border border-cyan-500/20 text-xs text-cyan-400/80">
-              <Vault size={13} className="mt-0.5 flex-shrink-0 text-cyan-400/70" />
+            <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-accent-500/8 border border-accent-500/20 text-xs text-accent-400/80">
+              <Vault size={13} className="mt-0.5 flex-shrink-0 text-accent-400/70" />
               <span>
                 Using vault credential <span className="font-semibold">{vaultCredentials.find((c) => c.id === form.credentialId)?.name}</span>.
                 Manage the password from Settings → Credential Vault.
@@ -334,7 +334,7 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
               </div>
 
               {editConnection?.hasPassword && !form.password && !editConnection.credentialId && (
-                <p className="text-xs text-cyan-400/80 bg-cyan-500/10 border border-cyan-500/20 rounded-md px-3 py-2">
+                <p className="text-xs text-accent-400/80 bg-accent-500/10 border border-accent-500/20 rounded-md px-3 py-2">
                   A password is saved. Leave blank to keep it, or enter a new one to replace it.
                 </p>
               )}
@@ -389,7 +389,7 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-cyan-600 hover:bg-cyan-500 text-white"
+            className="bg-accent-600 hover:bg-accent-500 text-white"
           >
             {editConnection ? "Save Changes" : "Add Connection"}
           </Button>

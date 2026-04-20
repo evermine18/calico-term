@@ -11,44 +11,85 @@ import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
 import { TerminalSquare } from "lucide-react";
+import { closeTab } from "./lib/tab-operations";
 import { isEditableTarget, isPrimaryModifier } from "./lib/keyboard";
+
+function matchShortcut(e: KeyboardEvent, s: ShortcutDef): boolean {
+  return (
+    e.key.toLowerCase() === s.key.toLowerCase() &&
+    !!e.ctrlKey === s.ctrl &&
+    !!e.shiftKey === s.shift &&
+    !!e.altKey === s.alt
+  );
+}
 
 function AppContent(): React.JSX.Element {
   const [tabs, setTabs] = useState<TerminalTab[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showHome, setShowHome] = useState(false);
-  const { setHistoryDialogOpen } = useAppContext();
+  const { setHistoryDialogOpen, shortcuts, aiSidebarOpen, setAiSidebarOpen } =
+    useAppContext();
 
   // Wrap setActiveTab so any tab click also dismisses the home overlay and clears activity
   const handleSetActiveTab = (id: string) => {
     setActiveTab(id);
     setShowHome(false);
     setTabs((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, hasActivity: false } : t))
+      prev.map((t) => (t.id === id ? { ...t, hasActivity: false } : t)),
     );
   };
 
   const handleTabActivity = (id: string) => {
     setTabs((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, hasActivity: true } : t))
+      prev.map((t) => (t.id === id ? { ...t, hasActivity: true } : t)),
     );
   };
 
-  // Keyboard shortcut: Primary+Shift+H to open history without stealing Ctrl+H from the shell
+  // Configurable keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (isEditableTarget(e.target)) return;
-
-      if (isPrimaryModifier(e) && e.shiftKey && e.key.toLowerCase() === "h") {
+      if (matchShortcut(e, shortcuts.openHistory)) {
         e.preventDefault();
         setHistoryDialogOpen(true);
+      } else if (matchShortcut(e, shortcuts.toggleSidebar)) {
+        e.preventDefault();
+        setAiSidebarOpen(!aiSidebarOpen);
+      } else if (matchShortcut(e, shortcuts.newTab)) {
+        e.preventDefault();
+        const id = crypto.randomUUID();
+        const newTab: TerminalTab = {
+          id,
+          title: `Terminal ${tabs.length + 1}`,
+          mode: "normal",
+          terminal: new Terminal(),
+        };
+        setTabs((prev) => [...prev, newTab]);
+        handleSetActiveTab(id);
+      } else if (matchShortcut(e, shortcuts.closeTab) && activeTab) {
+        e.preventDefault();
+        closeTab(activeTab, tabs, activeTab, setTabs, handleSetActiveTab);
+      } else if (matchShortcut(e, shortcuts.nextTab) && tabs.length > 1) {
+        e.preventDefault();
+        const idx = tabs.findIndex((t) => t.id === activeTab);
+        handleSetActiveTab(tabs[(idx + 1) % tabs.length].id);
+      } else if (matchShortcut(e, shortcuts.prevTab) && tabs.length > 1) {
+        e.preventDefault();
+        const idx = tabs.findIndex((t) => t.id === activeTab);
+        handleSetActiveTab(tabs[(idx - 1 + tabs.length) % tabs.length].id);
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [setHistoryDialogOpen]);
+  }, [
+    shortcuts,
+    aiSidebarOpen,
+    tabs,
+    activeTab,
+    setHistoryDialogOpen,
+    setAiSidebarOpen,
+  ]);
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
@@ -60,8 +101,9 @@ function AppContent(): React.JSX.Element {
 
   return (
     <div
-      className={`h-screen flex flex-col relative bg-slate-950 text-gray-100 transition-all duration-300 ${isFullscreen ? "fixed inset-0 z-50" : ""
-        }`}
+      className={`h-screen flex flex-col relative bg-slate-950 text-gray-100 transition-all duration-300 ${
+        isFullscreen ? "fixed inset-0 z-50" : ""
+      }`}
     >
       {/* Header with window controls */}
       <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/40 px-4 py-1.5 flex items-center justify-between shadow-xl">
@@ -86,18 +128,20 @@ function AppContent(): React.JSX.Element {
             <div className="flex items-center gap-2">
               <TerminalSquare
                 size={15}
-                className="text-cyan-400 flex-shrink-0"
-                style={{ filter: 'drop-shadow(0 0 5px rgba(6,182,212,0.7))' }}
+                className="text-accent-400 flex-shrink-0"
+                style={{
+                  filter: "drop-shadow(0 0 5px rgba(var(--accent-rgb),0.7))",
+                }}
               />
               <span className="text-sm font-semibold tracking-widest text-gray-300 select-none">
-                <span className="text-cyan-400">calico</span>
+                <span className="text-accent-400">calico</span>
                 <span className="text-slate-500 mx-0.5">/</span>
                 <span className="text-gray-400">term</span>
               </span>
             </div>
 
             <div className="flex items-center gap-2 text-gray-400 text-xs">
-              <span className="px-2 py-0.5 bg-slate-800/50 rounded border border-slate-700/40 text-cyan-400/70 text-[10px] tracking-wider">
+              <span className="px-2 py-0.5 bg-slate-800/50 rounded border border-slate-700/40 text-accent-400/70 text-[10px] tracking-wider">
                 {tabs.length} tab{tabs.length !== 1 ? "s" : ""}
               </span>
             </div>
@@ -122,10 +166,11 @@ function AppContent(): React.JSX.Element {
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`absolute inset-0 transition-all duration-300 ${!showHome && activeTab === tab.id
+            className={`absolute inset-0 transition-all duration-300 ${
+              !showHome && activeTab === tab.id
                 ? "opacity-100 scale-100"
                 : "opacity-0 scale-95 pointer-events-none"
-              }`}
+            }`}
           >
             <TerminalPanel
               tabId={tab.id}
@@ -150,14 +195,23 @@ function AppContent(): React.JSX.Element {
                   mode: "normal",
                   terminal: new Terminal(),
                   initialCommand: command,
+                  badge: conn.tags?.[0] ?? null,
                   isSSH: true,
                 };
                 // Register password-injection session BEFORE the terminal mounts.
                 // If the connection uses a vault credential, inject via vault key.
                 if (conn.credentialId) {
-                  window.electron.ipcRenderer.send("ssh-session-init", id, "vault-" + conn.credentialId);
+                  window.electron.ipcRenderer.send(
+                    "ssh-session-init",
+                    id,
+                    "vault-" + conn.credentialId,
+                  );
                 } else if (conn.hasPassword) {
-                  window.electron.ipcRenderer.send("ssh-session-init", id, conn.id);
+                  window.electron.ipcRenderer.send(
+                    "ssh-session-init",
+                    id,
+                    conn.id,
+                  );
                 }
                 setTabs((prev) => [...prev, newTab]);
                 handleSetActiveTab(id);
@@ -171,8 +225,13 @@ function AppContent(): React.JSX.Element {
       <div className="bg-slate-900/90 backdrop-blur-md border-t border-slate-700/30 px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-500 tracking-wide">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" style={{ boxShadow: '0 0 4px rgba(6,182,212,0.8)' }}></div>
-            <span className="text-cyan-400/80 font-medium uppercase tracking-widest text-[10px]">ready</span>
+            <div
+              className="w-1.5 h-1.5 rounded-full bg-accent-400"
+              style={{ boxShadow: "0 0 4px rgba(var(--accent-rgb),0.8)" }}
+            ></div>
+            <span className="text-accent-400/80 font-medium uppercase tracking-widest text-[10px]">
+              ready
+            </span>
           </span>
           {activeTab && (
             <span className="text-gray-600 truncate max-w-[200px]">

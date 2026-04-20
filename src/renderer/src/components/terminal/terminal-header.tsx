@@ -42,8 +42,8 @@ export default function TerminalHeader({
             flex items-center justify-center w-9 h-8 rounded-lg
             border transition-all duration-150 shadow-sm
             ${isHomeActive
-              ? "bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-cyan-300 border-l-[3px] border-l-cyan-400 border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-cyan-500/20"
-              : "bg-slate-900/60 text-gray-400 border-l-[3px] border-l-slate-700/50 border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-cyan-100 hover:border-l-cyan-400/50"
+              ? "bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-accent-300 border-l-[3px] border-l-cyan-400 border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-accent-500/20"
+              : "bg-slate-900/60 text-gray-400 border-l-[3px] border-l-slate-700/50 border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-accent-100 hover:border-l-cyan-400/50"
             }
             ${tabs.length === 0 ? "cursor-default" : "cursor-pointer"}
           `}
@@ -70,7 +70,7 @@ export default function TerminalHeader({
           className="
               flex items-center justify-center w-8 h-8 rounded-md
               text-gray-500
-              hover:bg-slate-700/60 hover:text-cyan-300
+              hover:bg-slate-700/60 hover:text-accent-300
               transition-all duration-150
             "
           title="New terminal (Ctrl+Shift+T)"
@@ -83,7 +83,7 @@ export default function TerminalHeader({
           className="
               flex items-center justify-center w-8 h-8 rounded-md
               text-gray-500
-              hover:bg-slate-700/60 hover:text-cyan-300
+              hover:bg-slate-700/60 hover:text-accent-300
               transition-all duration-150
             "
           title="Command History"
@@ -96,7 +96,7 @@ export default function TerminalHeader({
           className="
               flex items-center justify-center w-8 h-8 rounded-md
               text-gray-500
-              hover:bg-slate-700/60 hover:text-cyan-300
+              hover:bg-slate-700/60 hover:text-accent-300
               transition-all duration-150
             "
           title="AI Assistant"
