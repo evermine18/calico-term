@@ -17,7 +17,8 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
 
   // Tab operation handlers
   const handleCloseTab = (id: string) => {
-    tabOps.closeTab(id, tabs, activeTab, setTabs, setActiveTab);
+    const tab = tabs.find((t) => t.id === id);
+    if (tab) tabOps.closeTab(tab, tabs, activeTab, setTabs, setActiveTab);
   };
 
   const handleDuplicateTab = (tabId: string) => {

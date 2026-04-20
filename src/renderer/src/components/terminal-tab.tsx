@@ -12,19 +12,25 @@ import { ArrowDown } from "lucide-react";
 import { isMacPlatform } from "@renderer/lib/keyboard";
 
 interface TerminalPanelProps {
+  paneId: string;
   tabId: string;
-  active: boolean;
+  tabVisible: boolean;
+  paneFocused: boolean;
   tabTitle?: string;
   initialCommand?: string;
   onActivity?: () => void;
+  onFocus?: () => void;
 }
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({
+  paneId,
   tabId,
-  active,
+  tabVisible,
+  paneFocused,
   tabTitle = "Terminal",
   initialCommand,
   onActivity,
+  onFocus,
 }) => {
   const { setActive } = useTerminalContext();
   const {
@@ -44,22 +50,20 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   const fitAddonRef = useRef<FitAddon | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const isInitializedRef = useRef(false);
-  const activeRef = useRef(active);
+  const paneFocusedRef = useRef(paneFocused);
 
   const [isScrolledUp, setIsScrolledUp] = useState(false);
 
   const { notificationState, copyText, handleComplete } = useCopyNotification();
 
-  // Keep activeRef in sync so IPC handlers always see the latest value
   useEffect(() => {
-    activeRef.current = active;
-  }, [active]);
+    paneFocusedRef.current = paneFocused;
+  }, [paneFocused]);
 
-  // Exposing API
   const api: TerminalAPI = {
     sendInput(cmd: string) {
       window.electron.ipcRenderer.send("terminal-input", {
-        tabId,
+        paneId,
         data: cmd + "\r",
       });
     },
@@ -86,10 +90,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     },
   };
 
-  /**
-   * Safely fits the terminal to the container size.
-   * Skips fitting when container is not visible.
-   */
   const safeFit = () => {
     const container = containerRef.current;
     const terminal = terminalRef.current;
@@ -105,15 +105,12 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     terminal.refresh(0, terminal.buffer.active.length - 1);
 
     window.electron.ipcRenderer.send("terminal-resize", {
-      tabId,
+      paneId,
       cols: terminal.cols,
       rows: terminal.rows,
     });
   };
 
-  /**
-   * Initialize the terminal instance and event listeners.
-   */
   useEffect(() => {
     if (!containerRef.current || isInitializedRef.current) return;
 
@@ -158,7 +155,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       fontFamily: terminalFontFamily,
       fontSize: terminalFontSize,
       lineHeight: terminalLineHeight,
-      // scrollback: 50000, // Optional: increase scrollback for large output
     });
 
     terminal.onSelectionChange((_) => {
@@ -168,7 +164,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       }
     });
 
-    // Track scroll position for the scroll-to-bottom button
     terminal.onScroll(() => {
       const b = terminal.buffer.active;
       const atBottom = b.viewportY >= b.length - terminal.rows;
@@ -193,7 +188,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
         event.preventDefault();
         window.electron.ipcRenderer.send("terminal-input", {
-          tabId,
+          paneId,
           data: String.fromCharCode(key.charCodeAt(0) - 64),
         });
         return false;
@@ -201,25 +196,20 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     }
 
     terminal.onData((data) => {
-      // Capturar comandos cuando se presiona Enter
       if (data === "\r") {
-        // Read the current line from the terminal buffer
         const buffer = terminal.buffer.active;
         const cursorY = buffer.cursorY;
         const line = buffer.getLine(cursorY);
 
         if (line) {
           let lineText = line.translateToString(true);
-
-          // Clean the prompt and special characters
-          // Detect common prompt patterns and remove them
           lineText = lineText.replace(
             /^\[?[\w\-\.]+@[\w\-\.]+.*?\]?\s*[\$#>]\s*/,
             "",
-          ); // bash/zsh style
-          lineText = lineText.replace(/^PS\s+[\w\:\\\>]+>\s*/, ""); // PowerShell style
-          lineText = lineText.replace(/^C:\\.*?>\s*/, ""); // Windows cmd style
-          lineText = lineText.replace(/^.*?[$#>]\s*/, ""); // Generic prompt
+          );
+          lineText = lineText.replace(/^PS\s+[\w\:\\\>]+>\s*/, "");
+          lineText = lineText.replace(/^C:\\.*?>\s*/, "");
+          lineText = lineText.replace(/^.*?[$#>]\s*/, "");
 
           const cmd = lineText.trim();
           if (cmd && cmd.length > 0) {
@@ -228,13 +218,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         }
       }
 
-      window.electron.ipcRenderer.send("terminal-input", { tabId, data });
+      window.electron.ipcRenderer.send("terminal-input", { paneId, data });
     });
 
     const handleOutput = (_: unknown, incomingId: string, data: string) => {
-      if (incomingId === tabId) {
+      if (incomingId === paneId) {
         terminal.write(data);
-        if (!activeRef.current) {
+        if (!paneFocusedRef.current) {
           onActivity?.();
         }
       }
@@ -246,8 +236,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     document.fonts.ready.then(safeFit);
     terminal.focus();
 
-    // Create PTY instance
-    window.electron.ipcRenderer.send("terminal-create", tabId, {
+    window.electron.ipcRenderer.send("terminal-create", paneId, {
       shell: defaultShell || undefined,
       cwd: defaultCwd || undefined,
     });
@@ -256,7 +245,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       const cmd = initialCommand;
       setTimeout(() => {
         window.electron.ipcRenderer.send("terminal-input", {
-          tabId,
+          paneId,
           data: cmd + "\r",
         });
       }, 900);
@@ -266,7 +255,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     fitAddonRef.current = fitAddon;
 
     return () => {
-      setActive(null);
       resizeObserverRef.current?.disconnect();
       window.electron.ipcRenderer.removeListener(
         "terminal-output",
@@ -277,19 +265,20 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       fitAddonRef.current = null;
       isInitializedRef.current = false;
     };
-  }, [tabId]);
+  }, [paneId]);
 
-  /**
-   * Attach resize observer only when the tab is active.
-   */
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     resizeObserverRef.current?.disconnect();
     resizeObserverRef.current = null;
-    if (active) setActive(api);
-    if (!active) return;
+
+    if (paneFocused) {
+      setActive(api);
+    }
+
+    if (!tabVisible) return;
 
     requestAnimationFrame(() => {
       safeFit();
@@ -304,11 +293,15 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       observer.observe(container);
       resizeObserverRef.current = observer;
     });
-  }, [active]);
+  }, [tabVisible]);
 
-  /**
-   * Live-update xterm options when terminal settings change in context.
-   */
+  useEffect(() => {
+    if (paneFocused) {
+      setActive(api);
+      terminalRef.current?.focus();
+    }
+  }, [paneFocused]);
+
   useEffect(() => {
     const terminal = terminalRef.current;
     if (!terminal) return;
@@ -328,15 +321,6 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     scrollback,
   ]);
 
-  /**
-   * Focus the terminal when tab becomes active.
-   */
-  useEffect(() => {
-    if (active) {
-      terminalRef.current?.focus();
-    }
-  }, [active]);
-
   const handleScrollToBottom = () => {
     terminalRef.current?.scrollToBottom();
     setIsScrolledUp(false);
@@ -347,10 +331,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       <div
         ref={containerRef}
         className="terminal-container flex-1 overflow-hidden h-full w-full"
-        style={{ display: active ? "block" : "none" }}
+        onMouseDown={() => onFocus?.()}
       />
 
-      {active && isScrolledUp && (
+      {paneFocused && isScrolledUp && (
         <button
           onClick={handleScrollToBottom}
           title="Ir al final"

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { TerminalPanel } from "./components/terminal-tab";
 import { TerminalTab } from "./types/terminal";
 import TerminalHeader from "./components/terminal/terminal-header";
 import { AppProvider, useAppContext } from "./contexts/app-context";
@@ -9,10 +8,18 @@ import { TerminalProvider } from "./contexts/terminal-context";
 import CommandHistoryDialog from "./components/command-history/dialog";
 import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
 import { buildSSHCommand } from "./types/ssh";
-import { Terminal } from "@xterm/xterm";
 import { TerminalSquare } from "lucide-react";
 import { closeTab } from "./lib/tab-operations";
-import { isEditableTarget, isPrimaryModifier } from "./lib/keyboard";
+import {
+  createLeaf,
+  mapLeaf,
+  splitLeaf,
+  removeLeaf,
+  collectLeafIds,
+  updateRatio,
+} from "./lib/pane-operations";
+import { isPrimaryModifier } from "./lib/keyboard";
+import { SplitPaneContainer } from "./components/split-pane";
 
 function matchShortcut(e: KeyboardEvent, s: ShortcutDef): boolean {
   return (
@@ -31,7 +38,6 @@ function AppContent(): React.JSX.Element {
   const { setHistoryDialogOpen, shortcuts, aiSidebarOpen, setAiSidebarOpen } =
     useAppContext();
 
-  // Wrap setActiveTab so any tab click also dismisses the home overlay and clears activity
   const handleSetActiveTab = (id: string) => {
     setActiveTab(id);
     setShowHome(false);
@@ -46,7 +52,87 @@ function AppContent(): React.JSX.Element {
     );
   };
 
-  // Configurable keyboard shortcuts
+  // When a tab is removed by closing its last pane, pick a new active tab
+  useEffect(() => {
+    if (tabs.length === 0) {
+      setActiveTab(null);
+    } else if (!tabs.find((t) => t.id === activeTab)) {
+      setActiveTab(tabs[tabs.length - 1].id);
+    }
+  }, [tabs.length]);
+
+  const handlePaneFocus = (tabId: string, paneId: string) => {
+    setTabs((prev) =>
+      prev.map((t) => (t.id === tabId ? { ...t, focusedPaneId: paneId } : t)),
+    );
+  };
+
+  const handleSplitHorizontal = (tabId: string, paneId: string) => {
+    setTabs((prev) =>
+      prev.map((t) => {
+        if (t.id !== tabId) return t;
+        const newRoot = mapLeaf(t.rootPane, paneId, (leaf) =>
+          splitLeaf(leaf, "horizontal"),
+        );
+        const oldIds = new Set(collectLeafIds(t.rootPane));
+        const newPaneId = collectLeafIds(newRoot).find((id) => !oldIds.has(id)) ?? paneId;
+        return { ...t, rootPane: newRoot, focusedPaneId: newPaneId };
+      }),
+    );
+  };
+
+  const handleSplitVertical = (tabId: string, paneId: string) => {
+    setTabs((prev) =>
+      prev.map((t) => {
+        if (t.id !== tabId) return t;
+        const newRoot = mapLeaf(t.rootPane, paneId, (leaf) =>
+          splitLeaf(leaf, "vertical"),
+        );
+        const oldIds = new Set(collectLeafIds(t.rootPane));
+        const newPaneId = collectLeafIds(newRoot).find((id) => !oldIds.has(id)) ?? paneId;
+        return { ...t, rootPane: newRoot, focusedPaneId: newPaneId };
+      }),
+    );
+  };
+
+  const handleClosePane = (tabId: string, paneId: string) => {
+    // Compute next state first, then apply side effects outside the updater
+    setTabs((prev) => {
+      const tab = prev.find((t) => t.id === tabId);
+      if (!tab) return prev;
+
+      const [newRoot, removedLeaf] = removeLeaf(tab.rootPane, paneId);
+
+      // Defer side effects — state updaters must be pure
+      setTimeout(() => {
+        window.electron?.ipcRenderer.send("terminal-kill", paneId);
+        removedLeaf?.terminal.dispose();
+      }, 0);
+
+      if (newRoot === null) {
+        return prev.filter((t) => t.id !== tabId);
+      }
+
+      const leafIds = collectLeafIds(newRoot);
+      const newFocusId = leafIds.includes(tab.focusedPaneId)
+        ? tab.focusedPaneId
+        : leafIds[0];
+
+      return prev.map((t) =>
+        t.id === tabId ? { ...t, rootPane: newRoot, focusedPaneId: newFocusId } : t,
+      );
+    });
+  };
+
+  const handleRatioChange = (tabId: string, paneId: string, newRatio: number) => {
+    setTabs((prev) =>
+      prev.map((t) => {
+        if (t.id !== tabId) return t;
+        return { ...t, rootPane: updateRatio(t.rootPane, paneId, newRatio) };
+      }),
+    );
+  };
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (matchShortcut(e, shortcuts.openHistory)) {
@@ -58,17 +144,20 @@ function AppContent(): React.JSX.Element {
       } else if (matchShortcut(e, shortcuts.newTab)) {
         e.preventDefault();
         const id = crypto.randomUUID();
+        const leaf = createLeaf();
         const newTab: TerminalTab = {
           id,
           title: `Terminal ${tabs.length + 1}`,
           mode: "normal",
-          terminal: new Terminal(),
+          rootPane: leaf,
+          focusedPaneId: leaf.paneId,
         };
         setTabs((prev) => [...prev, newTab]);
         handleSetActiveTab(id);
       } else if (matchShortcut(e, shortcuts.closeTab) && activeTab) {
         e.preventDefault();
-        closeTab(activeTab, tabs, activeTab, setTabs, handleSetActiveTab);
+        const tab = tabs.find((t) => t.id === activeTab);
+        if (tab) closeTab(tab, tabs, activeTab, setTabs, handleSetActiveTab);
       } else if (matchShortcut(e, shortcuts.nextTab) && tabs.length > 1) {
         e.preventDefault();
         const idx = tabs.findIndex((t) => t.id === activeTab);
@@ -77,6 +166,14 @@ function AppContent(): React.JSX.Element {
         e.preventDefault();
         const idx = tabs.findIndex((t) => t.id === activeTab);
         handleSetActiveTab(tabs[(idx - 1 + tabs.length) % tabs.length].id);
+      } else if (isPrimaryModifier(e) && e.key.toLowerCase() === "d" && !e.shiftKey && activeTab) {
+        e.preventDefault();
+        const tab = tabs.find((t) => t.id === activeTab);
+        if (tab) handleSplitHorizontal(tab.id, tab.focusedPaneId);
+      } else if (isPrimaryModifier(e) && e.key.toLowerCase() === "d" && e.shiftKey && activeTab) {
+        e.preventDefault();
+        const tab = tabs.find((t) => t.id === activeTab);
+        if (tab) handleSplitVertical(tab.id, tab.focusedPaneId);
       }
     };
 
@@ -172,12 +269,18 @@ function AppContent(): React.JSX.Element {
                 : "opacity-0 scale-95 pointer-events-none"
             }`}
           >
-            <TerminalPanel
+            <SplitPaneContainer
+              node={tab.rootPane}
               tabId={tab.id}
-              active={!showHome && activeTab === tab.id}
-              tabTitle={tab.title}
-              initialCommand={tab.initialCommand}
+              tabVisible={!showHome && activeTab === tab.id}
+              focusedPaneId={tab.focusedPaneId}
+              onPaneFocus={(paneId) => handlePaneFocus(tab.id, paneId)}
+              onSplitHorizontal={(paneId) => handleSplitHorizontal(tab.id, paneId)}
+              onSplitVertical={(paneId) => handleSplitVertical(tab.id, paneId)}
+              onClosePane={(paneId) => handleClosePane(tab.id, paneId)}
               onActivity={() => handleTabActivity(tab.id)}
+              onRatioChange={(paneId, ratio) => handleRatioChange(tab.id, paneId, ratio)}
+              tabTitle={tab.title}
             />
           </div>
         ))}
@@ -189,27 +292,29 @@ function AppContent(): React.JSX.Element {
               onConnect={(conn) => {
                 const id = crypto.randomUUID();
                 const command = buildSSHCommand(conn);
+                const leaf = createLeaf({
+                  initialCommand: command,
+                  isSSH: true,
+                });
                 const newTab: TerminalTab = {
                   id,
                   title: conn.name,
                   mode: "normal",
-                  terminal: new Terminal(),
-                  initialCommand: command,
+                  rootPane: leaf,
+                  focusedPaneId: leaf.paneId,
                   badge: conn.tags?.[0] ?? null,
                   isSSH: true,
                 };
-                // Register password-injection session BEFORE the terminal mounts.
-                // If the connection uses a vault credential, inject via vault key.
                 if (conn.credentialId) {
                   window.electron.ipcRenderer.send(
                     "ssh-session-init",
-                    id,
+                    leaf.paneId,
                     "vault-" + conn.credentialId,
                   );
                 } else if (conn.hasPassword) {
                   window.electron.ipcRenderer.send(
                     "ssh-session-init",
-                    id,
+                    leaf.paneId,
                     conn.id,
                   );
                 }

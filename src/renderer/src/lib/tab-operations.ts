@@ -1,4 +1,5 @@
-import { Terminal } from "@xterm/xterm";
+import { TerminalTab } from "@renderer/types/terminal";
+import { collectLeafIds, createLeaf } from "./pane-operations";
 
 export function updateTabTitle(
   id: string,
@@ -11,33 +12,37 @@ export function updateTabTitle(
 }
 
 export function closeTab(
-  id: string,
-  tabs: any[],
+  tab: TerminalTab,
+  tabs: TerminalTab[],
   activeTab: string | null,
   setTabs: React.Dispatch<React.SetStateAction<any[]>>,
   setActiveTab: (id: string) => void,
 ) {
-  window.electron?.ipcRenderer.send("terminal-kill", id);
+  collectLeafIds(tab.rootPane).forEach((paneId) => {
+    window.electron?.ipcRenderer.send("terminal-kill", paneId);
+  });
 
-  const currentIndex = tabs.findIndex((tab) => tab.id === id);
+  const currentIndex = tabs.findIndex((t) => t.id === tab.id);
   const nextActiveIndex = currentIndex > 0 ? currentIndex - 1 : 1;
 
-  setTabs((prev) => prev.filter((t) => t.id !== id));
+  setTabs((prev) => prev.filter((t) => t.id !== tab.id));
 
-  if (activeTab === id && tabs.length > 1) {
+  if (activeTab === tab.id && tabs.length > 1) {
     setActiveTab(tabs[nextActiveIndex]?.id ?? tabs[0]?.id);
   }
 }
 
 export function closeOtherTabs(
   id: string,
-  tabs: any[],
+  tabs: TerminalTab[],
   setTabs: React.Dispatch<React.SetStateAction<any[]>>,
   setActiveTab: (id: string) => void,
 ) {
   tabs.forEach((tab) => {
     if (tab.id !== id) {
-      window.electron?.ipcRenderer.send("terminal-kill", tab.id);
+      collectLeafIds(tab.rootPane).forEach((paneId) => {
+        window.electron?.ipcRenderer.send("terminal-kill", paneId);
+      });
     }
   });
   setTabs((prev) => prev.filter((t) => t.id === id));
@@ -46,30 +51,34 @@ export function closeOtherTabs(
 
 export function closeTabsToRight(
   id: string,
-  tabs: any[],
+  tabs: TerminalTab[],
   setTabs: React.Dispatch<React.SetStateAction<any[]>>,
 ) {
   const index = tabs.findIndex((t) => t.id === id);
   tabs.slice(index + 1).forEach((tab) => {
-    window.electron?.ipcRenderer.send("terminal-kill", tab.id);
+    collectLeafIds(tab.rootPane).forEach((paneId) => {
+      window.electron?.ipcRenderer.send("terminal-kill", paneId);
+    });
   });
   setTabs((prev) => prev.slice(0, index + 1));
 }
 
 export function duplicateTab(
   tabId: string,
-  tabs: any[],
+  tabs: TerminalTab[],
   setTabs: React.Dispatch<React.SetStateAction<any[]>>,
   setActiveTab: (id: string) => void,
 ) {
   const tab = tabs.find((t) => t.id === tabId);
   if (tab) {
     const id = crypto.randomUUID();
-    const newTab = {
+    const leaf = createLeaf();
+    const newTab: TerminalTab = {
       id,
       title: `${tab.title} (Copy)`,
       mode: tab.mode,
-      terminal: new Terminal(),
+      rootPane: leaf,
+      focusedPaneId: leaf.paneId,
       badge: tab.badge || null,
     };
     setTabs((prev) => [...prev, newTab]);

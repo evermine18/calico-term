@@ -1,5 +1,5 @@
 import { TerminalTab } from "@renderer/types/terminal";
-import { Terminal } from "@xterm/xterm";
+import { createLeaf } from "@renderer/lib/pane-operations";
 
 import TabsList from "./tabs-list";
 import { Bot, Cog, Plus, Clock, House } from "lucide-react";
@@ -16,11 +16,13 @@ export default function TerminalHeader({
 }) {
   const addTab = () => {
     const id = crypto.randomUUID();
+    const leaf = createLeaf();
     const newTab: TerminalTab = {
       id,
       title: `Terminal ${tabs.length + 1}`,
       mode: "normal",
-      terminal: new Terminal(),
+      rootPane: leaf,
+      focusedPaneId: leaf.paneId,
     };
     setTabs((prev) => [...prev, newTab]);
     setActiveTab(id);

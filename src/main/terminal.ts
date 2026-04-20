@@ -57,7 +57,7 @@ export function removePassword(connId: string): void {
 }
 
 // --- SSH session password-injection state ---
-// Maps tabId -> connId for terminals awaiting a password prompt
+// Maps paneId -> connId for terminals awaiting a password prompt
 const sshPasswordSessions: Record<string, string> = {};
 // Tracks tabs that already injected the password (avoid re-injection on secondary prompts)
 const sshPasswordInjected = new Set<string>();
@@ -167,10 +167,9 @@ export function setupTerminal() {
   // Creating a PTY process for the terminal
   ipcMain.on(
     "terminal-create",
-    (_event, tabId: string, opts?: { shell?: string; cwd?: string }) => {
-      // If it already exists, ignore
-      if (terminals[tabId]) {
-        console.log(`terminal-create: ${tabId} already exists, skipping`);
+    (_event, paneId: string, opts?: { shell?: string; cwd?: string }) => {
+      if (terminals[paneId]) {
+        console.log(`terminal-create: ${paneId} already exists, skipping`);
         return;
       }
 
@@ -183,7 +182,7 @@ export function setupTerminal() {
       const args = getShellArgs(shell);
       const env = prepareEnvironment();
 
-      console.log(`Creating terminal ${tabId} with shell: ${shell} in ${cwd}`);
+      console.log(`Creating terminal ${paneId} with shell: ${shell} in ${cwd}`);
 
       try {
         const ptyProcess = spawn(shell, args, {
@@ -194,31 +193,27 @@ export function setupTerminal() {
           env,
         });
 
-        terminals[tabId] = ptyProcess;
+        terminals[paneId] = ptyProcess;
 
         ptyProcess.onData((data: string) => {
           for (const w of require("electron").BrowserWindow.getAllWindows()) {
-            w.webContents.send("terminal-output", tabId, data);
+            w.webContents.send("terminal-output", paneId, data);
           }
 
-          // Auto-inject SSH password when the remote prompts for it
-          if (sshPasswordSessions[tabId] && !sshPasswordInjected.has(tabId)) {
-            // Match common SSH/sudo password prompts
+          if (sshPasswordSessions[paneId] && !sshPasswordInjected.has(paneId)) {
             if (
               /password\s*:/i.test(data) ||
               /passphrase for key/i.test(data)
             ) {
-              const connId = sshPasswordSessions[tabId];
+              const connId = sshPasswordSessions[paneId];
               const pwd = retrievePassword(connId);
               if (pwd) {
-                sshPasswordInjected.add(tabId);
-                // Small delay so the prompt is fully rendered before sending
-                setTimeout(() => terminals[tabId]?.write(pwd + "\r"), 80);
+                sshPasswordInjected.add(paneId);
+                setTimeout(() => terminals[paneId]?.write(pwd + "\r"), 80);
               }
             }
           }
 
-          // Check for common error patterns in the output
           const errorPatterns = [
             /error/i,
             /failed/i,
@@ -236,58 +231,56 @@ export function setupTerminal() {
           ];
           if (errorPatterns.some((pat) => pat.test(data))) {
             for (const w of require("electron").BrowserWindow.getAllWindows()) {
-              w.webContents.send("terminal-error", tabId, data);
+              w.webContents.send("terminal-error", paneId, data);
             }
-            console.error(`Error detected in terminal ${tabId}: ${data}`);
+            console.error(`Error detected in terminal ${paneId}: ${data}`);
           }
         });
 
         ptyProcess.onExit(({ exitCode, signal }) => {
           console.log(
-            `Terminal ${tabId} exited with code ${exitCode}, signal ${signal}`,
+            `Terminal ${paneId} exited with code ${exitCode}, signal ${signal}`,
           );
-          delete terminals[tabId];
-          delete sshPasswordSessions[tabId];
-          sshPasswordInjected.delete(tabId);
-          // Notify the renderer that the terminal was closed
+          delete terminals[paneId];
+          delete sshPasswordSessions[paneId];
+          sshPasswordInjected.delete(paneId);
           for (const w of require("electron").BrowserWindow.getAllWindows()) {
-            w.webContents.send("terminal-closed", tabId, exitCode);
+            w.webContents.send("terminal-closed", paneId, exitCode);
           }
         });
       } catch (error) {
-        console.error(`Failed to create terminal ${tabId}:`, error);
-        // Notify the renderer of the error
+        console.error(`Failed to create terminal ${paneId}:`, error);
         for (const w of require("electron").BrowserWindow.getAllWindows()) {
-          w.webContents.send("terminal-creation-failed", tabId, error.message);
+          w.webContents.send("terminal-creation-failed", paneId, error.message);
         }
       }
     },
   );
 
-  ipcMain.on("terminal-input", (_event, { tabId, data }) => {
-    terminals[tabId]?.write(data);
+  ipcMain.on("terminal-input", (_event, { paneId, data }) => {
+    terminals[paneId]?.write(data);
   });
 
-  ipcMain.on("terminal-resize", (_event, { tabId, cols, rows }) => {
-    terminals[tabId]?.resize(cols, rows);
+  ipcMain.on("terminal-resize", (_event, { paneId, cols, rows }) => {
+    terminals[paneId]?.resize(cols, rows);
   });
 
-  ipcMain.on("terminal-kill", (_event, tabId: string) => {
-    if (!terminals[tabId]) {
-      console.log(`terminal-kill: ${tabId} does not exist, skipping`);
+  ipcMain.on("terminal-kill", (_event, paneId: string) => {
+    if (!terminals[paneId]) {
+      console.log(`terminal-kill: ${paneId} does not exist, skipping`);
       return;
     }
-    console.log(`Killing terminal: ${tabId}`);
-    terminals[tabId].kill();
-    delete terminals[tabId];
-    delete sshPasswordSessions[tabId];
-    sshPasswordInjected.delete(tabId);
+    console.log(`Killing terminal: ${paneId}`);
+    terminals[paneId].kill();
+    delete terminals[paneId];
+    delete sshPasswordSessions[paneId];
+    sshPasswordInjected.delete(paneId);
   });
 
-  // Associate a terminal with an SSH connection so the password is auto-injected
-  ipcMain.on("ssh-session-init", (_event, tabId: string, connId: string) => {
-    sshPasswordSessions[tabId] = connId;
-    sshPasswordInjected.delete(tabId); // allow fresh injection
+  // Associate a pane with an SSH connection so the password is auto-injected
+  ipcMain.on("ssh-session-init", (_event, paneId: string, connId: string) => {
+    sshPasswordSessions[paneId] = connId;
+    sshPasswordInjected.delete(paneId);
   });
 
   // Securely store a password for an SSH connection (encrypted via safeStorage)
