@@ -3,37 +3,65 @@
 [![Release](https://img.shields.io/github/v/release/evermine18/calico-term?style=flat-square)](https://github.com/evermine18/calico-term/releases)
 [![License](https://img.shields.io/github/license/evermine18/calico-term?style=flat-square)](LICENSE)
 
-A modern cross-platform terminal emulator powered by Electron, Vite, React, and xterm.js, featuring an AI assistant for generating safe and reproducible shell commands.
+Calico Term is a cross-platform terminal emulator built with Electron + React, featuring an AI assistant, SSH connection management, SFTP, and an encrypted credential vault.
 
 ## Table of Contents
 
-- [Features](#features)
+- [Core Features](#core-features)
+- [Technical Stack](#technical-stack)
+- [Requirements](#requirements)
 - [Installation](#installation)
-- [Configuration](#configuration)
 - [Usage](#usage)
-- [Development](#development)
-- [Building](#building)
-- [Technologies](#technologies)
+- [Configuration](#configuration)
+- [Architecture](#architecture)
+- [Available Scripts](#available-scripts)
+- [Build and Distribution](#build-and-distribution)
+- [Project Validation](#project-validation)
 - [Contributing](#contributing)
 - [License](#license)
-- [Acknowledgements](#acknowledgements)
 
-## Features
+## Core Features
 
-- **Multi-tab terminal** sessions with persistent shell processes (bash/zsh on Unix, PowerShell on Windows)
-- **Real-time error detection** and notification in terminal output based on common error patterns
-- **Embedded AI assistant** sidebar (OpenAI GPT-4) for generating safe and clear shell command suggestions
-- **Syntax highlighting** for code snippets via highlight.js
-- Intuitive UI with custom window controls, draggable regions, and theming built on React, TypeScript, and Tailwind CSS
-- Cross-platform support: Windows, macOS, and Linux
-- Automated packaging and auto-update support via electron-builder
+- Multi-tab terminal with persistent PTY processes (`node-pty`)
+- Error pattern detection in terminal output with renderer notifications
+- Built-in AI chat panel with real-time streaming
+- Supported AI providers:
+  - OpenAI
+  - Anthropic
+  - Ollama
+  - Endpoints OpenAI-compatible
+- Terminal context injection into AI chat for more grounded responses
+- Saved SSH connection management (host, port, username, key file, tags)
+- Encrypted credential vault storage (API keys and passwords)
+- Automatic password injection in SSH sessions when authentication prompts are detected
+- Built-in SFTP browser:
+  - directory listing
+  - upload and download
+  - delete
+  - rename
+  - directory creation
+  - transfer progress tracking
+- Command history with configurable retention and sensitive-command filtering
+- Customizable keyboard shortcuts
+- Theme system using CSS variables with `localStorage` persistence
+- Windows, macOS, and Linux support
+
+## Technical Stack
+
+- Electron + electron-vite
+- React 19 + TypeScript
+- xterm.js + addons (fit, search, unicode11, web-links)
+- node-pty
+- ssh2
+- Tailwind CSS 4 + Radix UI + shadcn/ui
+- electron-updater + electron-builder
+
+## Requirements
+
+- Node.js 18+
+- npm
 
 ## Installation
-
-### Prerequisites
-
-- [Node.js](https://nodejs.org/) v18 or higher
-- npm (or yarn)
 
 ```bash
 git clone https://github.com/evermine18/calico-term.git
@@ -43,69 +71,120 @@ npm install
 
 ## Usage
 
-Start the development environment with hot-reload:
+Development environment (Electron + Vite with HMR):
 
 ```bash
 npm run dev
 ```
 
-Launch the Electron application:
+Run the built app in preview mode:
 
 ```bash
 npm run start
 ```
 
-## Development
+## Configuration
 
-- Format code: `npm run format`
-- Lint code: `npm run lint`
-- Type-check: `npm run typecheck`
+User settings are managed from the in-app settings dialog.
 
-## Building
+### AI
 
-Perform a production build and package the application:
+- Provider base URL
+- API key (encrypted at the system level using `safeStorage`)
+- Default model
+- Provider (`openai`, `anthropic`, `ollama`, `openai-compatible`)
+- Custom system prompt
+- Temperature
+- Maximum tokens
+
+### Terminal
+
+- Font family and size
+- Line height
+- Cursor style and blink behavior
+- Scrollback
+- Default shell
+- Default startup directory
+
+### Productivity
+
+- Keyboard shortcuts
+- Command history retention
+- Tag management
+- SSH connection management
+- Credential vault (username/password)
+
+## Architecture
+
+### Main Process (`src/main`)
+
+- `index.ts`: Electron lifecycle and IPC handler registration
+- `terminal.ts`: PTY lifecycle, error detection, encrypted storage, and SSH password injection
+- `chat-api.ts`: chat provider integration and SSE streaming
+- `sftp.ts`: SFTP sessions and transfer operations
+- `updater.ts`: auto-update flow
+
+### Preload (`src/preload`)
+
+Secure bridge between renderer and main through APIs exposed on `window`.
+
+### Renderer (`src/renderer/src`)
+
+- React UI
+- global state via contexts (`app-context`, `terminal-context`)
+- terminal tabs + AI sidebar + SSH home + SFTP panel
+
+## Available Scripts
 
 ```bash
-npm run build
+npm run dev            # Development (Electron + Vite HMR)
+npm run start          # Runs the generated build
+npm run build          # Type-check + build
+npm run lint           # ESLint
+npm run format         # Prettier
+npm run typecheck      # Full type-check
+npm run typecheck:node # Main process type-check
+npm run typecheck:web  # Renderer type-check
 ```
+
+## Build and Distribution
 
 Platform-specific builds:
 
 ```bash
-# Windows
-npm run build:win
-
-# macOS
 npm run build:mac
-
-# Linux
+npm run build:win
 npm run build:linux
 ```
 
-## Technologies
+Optional unpacked build:
 
-- [Electron](https://www.electronjs.org/) & [Vite](https://vitejs.dev/) (electron-vite)
-- [React](https://reactjs.org/) & [TypeScript](https://www.typescriptlang.org/)
-- [xterm.js](https://xtermjs.org/) & [node-pty](https://github.com/microsoft/node-pty)
-- [Tailwind CSS](https://tailwindcss.com/) & [highlight.js](https://highlightjs.org/)
-- [OpenAI GPT-4](https://openai.com/) for AI assistant integration
-- [electron-builder](https://www.electron.build/) for packaging and auto-updates
+```bash
+npm run build:unpack
+```
+
+## Project Validation
+
+There is currently no automated test suite. The main validation step is:
+
+```bash
+npm run typecheck
+```
+
+It is also recommended to run:
+
+```bash
+npm run lint
+```
 
 ## Contributing
 
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/YourFeature`)
-3. Commit your changes (`git commit -m 'Add some feature'`)
-4. Push to the branch (`git push origin feature/YourFeature`)
-5. Open a Pull Request
+1. Fork the repository.
+2. Create a feature branch.
+3. Implement your changes.
+4. Run `npm run typecheck` and `npm run lint`.
+5. Open a Pull Request.
 
 ## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.
-
-## Acknowledgements
-
-- Based on the [electron-vite](https://github.com/electron-vite/electron-vite) template
-- Inspired by [xterm.js](https://xtermjs.org/) and community contributions
+MIT. See [LICENSE](LICENSE).
