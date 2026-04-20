@@ -1,3 +1,5 @@
+<img src="build/icon.png" alt="Calico Term Logo" width="96" />
+
 # Calico Term
 
 [![Release](https://img.shields.io/github/v/release/evermine18/calico-term?style=flat-square)](https://github.com/evermine18/calico-term/releases)
