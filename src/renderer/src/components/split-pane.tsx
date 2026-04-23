@@ -134,6 +134,7 @@ function PaneSplitView({
     function onPointerDown(e: PointerEvent) {
       e.preventDefault();
       dragging = true;
+      document.body.dataset.splitterDragging = '1';
       startPos = isHorizontal ? e.clientX : e.clientY;
       startRatio = ratioRef.current;
       liveRatio = startRatio;
@@ -153,6 +154,9 @@ function PaneSplitView({
     function onPointerUp() {
       if (!dragging) return;
       dragging = false;
+      delete document.body.dataset.splitterDragging;
+      // Notify terminals to do a single fit now that drag is complete
+      window.dispatchEvent(new CustomEvent('splitter-drag-end'));
       // Single state commit on release
       onRatioChangeRef.current(firstPaneIdRef.current, liveRatio);
     }

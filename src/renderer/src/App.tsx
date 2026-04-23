@@ -290,12 +290,30 @@ function AppContent(): React.JSX.Element {
           <div className="absolute inset-0 bg-slate-950 z-10">
             <SSHConnectionsHome
               onConnect={(conn) => {
-                const id = crypto.randomUUID();
                 const command = buildSSHCommand(conn);
-                const leaf = createLeaf({
-                  initialCommand: command,
-                  isSSH: true,
-                });
+
+                // If there is already an active tab, send the SSH command to the
+                // focused pane instead of opening a new tab. This way a split pane
+                // that the user prepared is used directly.
+                if (tabs.length > 0 && activeTab) {
+                  const tab = tabs.find((t) => t.id === activeTab);
+                  if (tab) {
+                    const paneId = tab.focusedPaneId;
+                    if (conn.credentialId) {
+                      window.electron.ipcRenderer.send("ssh-session-init", paneId, "vault-" + conn.credentialId);
+                    } else if (conn.hasPassword) {
+                      window.electron.ipcRenderer.send("ssh-session-init", paneId, conn.id);
+                    }
+                    window.electron.ipcRenderer.send("terminal-input", { paneId, data: command + "\r" });
+                    setTabs((prev) => prev.map((t) => t.id === activeTab ? { ...t, title: conn.name } : t));
+                    handleSetActiveTab(activeTab);
+                    return;
+                  }
+                }
+
+                // No existing tabs — create a new one.
+                const id = crypto.randomUUID();
+                const leaf = createLeaf({ initialCommand: command, isSSH: true });
                 const newTab: TerminalTab = {
                   id,
                   title: conn.name,
@@ -306,17 +324,9 @@ function AppContent(): React.JSX.Element {
                   isSSH: true,
                 };
                 if (conn.credentialId) {
-                  window.electron.ipcRenderer.send(
-                    "ssh-session-init",
-                    leaf.paneId,
-                    "vault-" + conn.credentialId,
-                  );
+                  window.electron.ipcRenderer.send("ssh-session-init", leaf.paneId, "vault-" + conn.credentialId);
                 } else if (conn.hasPassword) {
-                  window.electron.ipcRenderer.send(
-                    "ssh-session-init",
-                    leaf.paneId,
-                    conn.id,
-                  );
+                  window.electron.ipcRenderer.send("ssh-session-init", leaf.paneId, conn.id);
                 }
                 setTabs((prev) => [...prev, newTab]);
                 handleSetActiveTab(id);

@@ -49,7 +49,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
+  const fitRafRef = useRef<number | null>(null);
+  const dragEndListenerRef = useRef<(() => void) | null>(null);
   const isInitializedRef = useRef(false);
+  const initialCmdTimerRef = useRef<number | null>(null);
   const paneFocusedRef = useRef(paneFocused);
 
   const [isScrolledUp, setIsScrolledUp] = useState(false);
@@ -101,8 +104,16 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     const height = container.clientHeight;
     if (width === 0 || height === 0) return;
 
+    const b = terminal.buffer.active;
+    const wasAtBottom = b.viewportY >= b.length - terminal.rows;
+
     fitAddon.fit();
-    terminal.refresh(0, terminal.buffer.active.length - 1);
+
+    // After resize the viewport position may not update automatically — if the
+    // user was already at the bottom, keep them there so content isn't "lost".
+    if (wasAtBottom) {
+      terminal.scrollToBottom();
+    }
 
     window.electron.ipcRenderer.send("terminal-resize", {
       paneId,
@@ -243,7 +254,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
     if (initialCommand) {
       const cmd = initialCommand;
-      setTimeout(() => {
+      initialCmdTimerRef.current = window.setTimeout(() => {
+        initialCmdTimerRef.current = null;
         window.electron.ipcRenderer.send("terminal-input", {
           paneId,
           data: cmd + "\r",
@@ -255,6 +267,15 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     fitAddonRef.current = fitAddon;
 
     return () => {
+      if (initialCmdTimerRef.current !== null) {
+        clearTimeout(initialCmdTimerRef.current);
+        initialCmdTimerRef.current = null;
+      }
+      if (fitRafRef.current !== null) clearTimeout(fitRafRef.current);
+      if (dragEndListenerRef.current) {
+        window.removeEventListener('splitter-drag-end', dragEndListenerRef.current);
+        dragEndListenerRef.current = null;
+      }
       resizeObserverRef.current?.disconnect();
       window.electron.ipcRenderer.removeListener(
         "terminal-output",
@@ -273,6 +294,10 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
     resizeObserverRef.current?.disconnect();
     resizeObserverRef.current = null;
+    if (dragEndListenerRef.current) {
+      window.removeEventListener('splitter-drag-end', dragEndListenerRef.current);
+      dragEndListenerRef.current = null;
+    }
 
     if (paneFocused) {
       setActive(api);
@@ -285,13 +310,24 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
       const observer = new ResizeObserver((entries) => {
         const { width, height } = entries[0].contentRect;
-        if (width && height) {
-          Promise.resolve().then(safeFit);
-        }
+        // Skip fit while a splitter is being dragged — do it on drag-end instead
+        if (!width || !height || document.body.dataset.splitterDragging) return;
+        // Debounce with setTimeout so that during a multi-frame resize (e.g.
+        // window drag) only the final stable size triggers a fit. RAF fires
+        // once per frame so it can't cancel previous calls across frames.
+        if (fitRafRef.current !== null) clearTimeout(fitRafRef.current);
+        fitRafRef.current = window.setTimeout(() => {
+          fitRafRef.current = null;
+          safeFit();
+        }, 50);
       });
 
       observer.observe(container);
       resizeObserverRef.current = observer;
+
+      const onDragEnd = () => safeFit();
+      window.addEventListener('splitter-drag-end', onDragEnd);
+      dragEndListenerRef.current = onDragEnd;
     });
   }, [tabVisible]);
 
