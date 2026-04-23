@@ -104,6 +104,9 @@ function prepareEnvironment(): Record<string, string> {
 
   // Ensure TERM is set correctly
   env.TERM = env.TERM || "xterm-256color";
+  env.TERM_PROGRAM = env.TERM_PROGRAM || "Calico Terminal";
+  env.TERM_PROGRAM_VERSION = env.TERM_PROGRAM_VERSION || app.getVersion();
+  env.COLORTERM = env.COLORTERM || "truecolor";
 
   // On macOS, ensure LANG is set to UTF-8
   if (process.platform === "darwin") {
@@ -149,11 +152,11 @@ function getShellArgs(shell: string): string[] {
   // For Unix shells, use login mode so shell config files are loaded
   // (e.g. .zshrc, .bashrc)
   if (shell.includes("zsh")) {
-    return ["-l"]; // Login shell
+    return ["-i", "-l"]; // Interactive login shell
   }
 
   if (shell.includes("bash")) {
-    return ["-l"]; // Login shell
+    return ["-i", "-l"]; // Interactive login shell
   }
 
   // For other shells, use no arguments

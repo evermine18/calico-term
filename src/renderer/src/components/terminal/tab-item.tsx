@@ -1,4 +1,4 @@
-import { TerminalSquare, X } from 'lucide-react';
+import { TerminalSquare, Server, X } from 'lucide-react';
 import { TabBadge } from './tab-badge';
 import { TabEditInput } from './tab-edit-input';
 import { CustomTag } from '../../types/tabs';
@@ -75,12 +75,22 @@ export function TabItem({
       >
         <TabBadge badge={tab.badge} customTags={customTags} isActive={isActive} />
 
-        {/* Terminal Icon */}
+        {/* Activity indicator: pulsing dot when tab has background output */}
+        {tab.hasActivity && !isActive && (
+          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse z-10"
+            style={{ boxShadow: '0 0 4px rgba(6,182,212,0.8)' }}
+          />
+        )}
+
+        {/* Terminal / SSH Icon */}
         <div
           className={`flex-shrink-0 transition-colors duration-100 ${isActive ? 'text-accent-400' : 'text-slate-500 group-hover:text-accent-400/70'
             }`}
         >
-          <TerminalSquare size={14} strokeWidth={2} />
+          {tab.isSSH
+            ? <Server size={14} strokeWidth={2} />
+            : <TerminalSquare size={14} strokeWidth={2} />
+          }
         </div>
 
         {/* Tab title */}

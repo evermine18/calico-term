@@ -8,6 +8,7 @@ import { ThemeProvider } from "./components/theme-provider";
 import { TerminalProvider } from "./contexts/terminal-context";
 import CommandHistoryDialog from "./components/command-history/dialog";
 import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
+import FileBrowserPanel from "./components/sftp/file-browser-panel";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
 import { TerminalSquare } from "lucide-react";
@@ -27,12 +28,28 @@ function AppContent(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showHome, setShowHome] = useState(false);
-  const { setHistoryDialogOpen, shortcuts, aiSidebarOpen, setAiSidebarOpen } = useAppContext();
+  const [sftpOpen, setSftpOpen] = useState(false);
+  const { setHistoryDialogOpen, shortcuts, aiSidebarOpen, setAiSidebarOpen, sshConnections } =
+    useAppContext();
 
-  // Wrap setActiveTab so any tab click also dismisses the home overlay
+  const activeTabObj = tabs.find((t) => t.id === activeTab) ?? null;
+  const activeSSHConn = activeTabObj?.isSSH && activeTabObj.connId
+    ? sshConnections.find((c) => c.id === activeTabObj.connId) ?? null
+    : null;
+
+  // Wrap setActiveTab so any tab click also dismisses the home overlay and clears activity
   const handleSetActiveTab = (id: string) => {
     setActiveTab(id);
     setShowHome(false);
+    setTabs((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, hasActivity: false } : t)),
+    );
+  };
+
+  const handleTabActivity = (id: string) => {
+    setTabs((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, hasActivity: true } : t)),
+    );
   };
 
   // Configurable keyboard shortcuts
@@ -47,7 +64,12 @@ function AppContent(): React.JSX.Element {
       } else if (matchShortcut(e, shortcuts.newTab)) {
         e.preventDefault();
         const id = crypto.randomUUID();
-        const newTab: TerminalTab = { id, title: `Terminal ${tabs.length + 1}`, mode: "normal", terminal: new Terminal() };
+        const newTab: TerminalTab = {
+          id,
+          title: `Terminal ${tabs.length + 1}`,
+          mode: "normal",
+          terminal: new Terminal(),
+        };
         setTabs((prev) => [...prev, newTab]);
         handleSetActiveTab(id);
       } else if (matchShortcut(e, shortcuts.closeTab) && activeTab) {
@@ -64,9 +86,16 @@ function AppContent(): React.JSX.Element {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [shortcuts, aiSidebarOpen, tabs, activeTab, setHistoryDialogOpen, setAiSidebarOpen]);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [
+    shortcuts,
+    aiSidebarOpen,
+    tabs,
+    activeTab,
+    setHistoryDialogOpen,
+    setAiSidebarOpen,
+  ]);
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
@@ -78,8 +107,9 @@ function AppContent(): React.JSX.Element {
 
   return (
     <div
-      className={`h-screen flex flex-col relative bg-slate-950 text-gray-100 transition-all duration-300 ${isFullscreen ? "fixed inset-0 z-50" : ""
-        }`}
+      className={`h-screen flex flex-col relative bg-slate-950 text-gray-100 transition-all duration-300 ${
+        isFullscreen ? "fixed inset-0 z-50" : ""
+      }`}
     >
       {/* Header with window controls */}
       <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/40 px-4 py-1.5 flex items-center justify-between shadow-xl">
@@ -105,7 +135,9 @@ function AppContent(): React.JSX.Element {
               <TerminalSquare
                 size={15}
                 className="text-accent-400 flex-shrink-0"
-                style={{ filter: 'drop-shadow(0 0 5px rgba(var(--accent-rgb),0.7))' }}
+                style={{
+                  filter: "drop-shadow(0 0 5px rgba(var(--accent-rgb),0.7))",
+                }}
               />
               <span className="text-sm font-semibold tracking-widest text-gray-300 select-none">
                 <span className="text-accent-400">calico</span>
@@ -131,25 +163,37 @@ function AppContent(): React.JSX.Element {
         setActiveTab={handleSetActiveTab}
         showHome={showHome}
         setShowHome={setShowHome}
+        sftpOpen={sftpOpen}
+        setSftpOpen={setSftpOpen}
+        activeTabIsSSH={!!activeSSHConn}
       />
       {/* Terminal Content */}
       <div className="flex-1 bg-slate-950 relative overflow-hidden pb-8">
+        {sftpOpen && activeSSHConn && (
+          <FileBrowserPanel
+            sessionId={activeTabObj!.id}
+            connection={activeSSHConn}
+            onClose={() => setSftpOpen(false)}
+          />
+        )}
         <AISidebarChat />
         <CommandHistoryDialog />
         {/* Terminals — always mounted to preserve PTY state */}
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`absolute inset-0 transition-all duration-300 ${!showHome && activeTab === tab.id
-              ? "opacity-100 scale-100"
-              : "opacity-0 scale-95 pointer-events-none"
-              }`}
+            className={`absolute inset-0 transition-all duration-300 ${
+              !showHome && activeTab === tab.id
+                ? "opacity-100 scale-100"
+                : "opacity-0 scale-95 pointer-events-none"
+            }`}
           >
             <TerminalPanel
               tabId={tab.id}
               active={!showHome && activeTab === tab.id}
               tabTitle={tab.title}
               initialCommand={tab.initialCommand}
+              onActivity={() => handleTabActivity(tab.id)}
             />
           </div>
         ))}
@@ -168,13 +212,23 @@ function AppContent(): React.JSX.Element {
                   terminal: new Terminal(),
                   initialCommand: command,
                   badge: conn.tags?.[0] ?? null,
+                  isSSH: true,
+                  connId: conn.id,
                 };
                 // Register password-injection session BEFORE the terminal mounts.
                 // If the connection uses a vault credential, inject via vault key.
                 if (conn.credentialId) {
-                  window.electron.ipcRenderer.send("ssh-session-init", id, "vault-" + conn.credentialId);
+                  window.electron.ipcRenderer.send(
+                    "ssh-session-init",
+                    id,
+                    "vault-" + conn.credentialId,
+                  );
                 } else if (conn.hasPassword) {
-                  window.electron.ipcRenderer.send("ssh-session-init", id, conn.id);
+                  window.electron.ipcRenderer.send(
+                    "ssh-session-init",
+                    id,
+                    conn.id,
+                  );
                 }
                 setTabs((prev) => [...prev, newTab]);
                 handleSetActiveTab(id);
@@ -188,8 +242,13 @@ function AppContent(): React.JSX.Element {
       <div className="bg-slate-900/90 backdrop-blur-md border-t border-slate-700/30 px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-500 tracking-wide">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-accent-400" style={{ boxShadow: '0 0 4px rgba(var(--accent-rgb),0.8)' }}></div>
-            <span className="text-accent-400/80 font-medium uppercase tracking-widest text-[10px]">ready</span>
+            <div
+              className="w-1.5 h-1.5 rounded-full bg-accent-400"
+              style={{ boxShadow: "0 0 4px rgba(var(--accent-rgb),0.8)" }}
+            ></div>
+            <span className="text-accent-400/80 font-medium uppercase tracking-widest text-[10px]">
+              ready
+            </span>
           </span>
           {activeTab && (
             <span className="text-gray-600 truncate max-w-[200px]">

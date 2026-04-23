@@ -2,7 +2,7 @@ import { TerminalTab } from "@renderer/types/terminal";
 import { Terminal } from "@xterm/xterm";
 
 import TabsList from "./tabs-list";
-import { Bot, Cog, Plus, Clock, House } from "lucide-react";
+import { Bot, Cog, Plus, Clock, House, FolderOpen } from "lucide-react";
 import { useAppContext } from "@renderer/contexts/app-context";
 import SettingsDialog from "../app-settings/dialog";
 
@@ -13,6 +13,19 @@ export default function TerminalHeader({
   setActiveTab,
   showHome,
   setShowHome,
+  sftpOpen,
+  setSftpOpen,
+  activeTabIsSSH,
+}: {
+  tabs: TerminalTab[];
+  setTabs: React.Dispatch<React.SetStateAction<TerminalTab[]>>;
+  activeTab: string | null;
+  setActiveTab: (id: string) => void;
+  showHome: boolean;
+  setShowHome: (v: boolean) => void;
+  sftpOpen: boolean;
+  setSftpOpen: (v: boolean) => void;
+  activeTabIsSSH: boolean;
 }) {
   const addTab = () => {
     const id = crypto.randomUUID();
@@ -90,6 +103,23 @@ export default function TerminalHeader({
         >
           <Clock size={16} />
         </button>
+
+        {activeTabIsSSH && (
+          <button
+            onClick={() => setSftpOpen(!sftpOpen)}
+            className={`
+              flex items-center justify-center w-8 h-8 rounded-md
+              transition-all duration-150
+              ${sftpOpen
+                ? "bg-slate-700/60 text-accent-300"
+                : "text-gray-500 hover:bg-slate-700/60 hover:text-accent-300"
+              }
+            `}
+            title="File Browser (SFTP)"
+          >
+            <FolderOpen size={16} />
+          </button>
+        )}
 
         <button
           onClick={() => setAiSidebarOpen(true)}

@@ -7,4 +7,7 @@ export type TerminalTab = {
   terminal: Terminal;
   initialCommand?: string;
   badge?: string | null;
+  hasActivity?: boolean;
+  isSSH?: boolean;
+  connId?: string;
 };
