@@ -11,7 +11,7 @@ import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
 import FileBrowserPanel from "./components/sftp/file-browser-panel";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
-import { TerminalSquare } from "lucide-react";
+import { Minus, Square, TerminalSquare, X } from "lucide-react";
 import { closeTab } from "./lib/tab-operations";
 
 function matchShortcut(e: KeyboardEvent, s: ShortcutDef): boolean {
@@ -26,7 +26,6 @@ function matchShortcut(e: KeyboardEvent, s: ShortcutDef): boolean {
 function AppContent(): React.JSX.Element {
   const [tabs, setTabs] = useState<TerminalTab[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
   const [showHome, setShowHome] = useState(false);
   const [sftpOpen, setSftpOpen] = useState(false);
   const { setHistoryDialogOpen, shortcuts, aiSidebarOpen, setAiSidebarOpen, sshConnections } =
@@ -97,62 +96,59 @@ function AppContent(): React.JSX.Element {
     setAiSidebarOpen,
   ]);
 
-  const toggleFullscreen = () => {
-    setIsFullscreen(!isFullscreen);
-  };
-
-  const closeApp = () => {
-    window.electron?.ipcRenderer.send("app-close");
-  };
-
   return (
     <div
-      className={`h-screen flex flex-col relative bg-slate-950 text-gray-100 transition-all duration-300 ${
-        isFullscreen ? "fixed inset-0 z-50" : ""
-      }`}
+      className="h-screen flex flex-col relative bg-slate-950 text-gray-100"
     >
       {/* Header with window controls */}
-      <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/40 px-4 py-1.5 flex items-center justify-between shadow-xl">
-        <div className="flex items-center gap-2 w-full">
-          {window.platform?.os !== "darwin" ? (
-            <div className="flex items-center gap-2.5">
-              <div
-                className="w-3 h-3 rounded-full bg-red-500/90 hover:bg-red-400 transition-colors cursor-pointer shadow-sm"
-                onClick={closeApp}
-              ></div>
-              <div className="w-3 h-3 rounded-full bg-amber-500/90 hover:bg-amber-400 transition-colors cursor-pointer shadow-sm"></div>
-              <div
-                className="w-3 h-3 rounded-full bg-green-500/90 hover:bg-green-400 transition-colors cursor-pointer shadow-sm"
-                onClick={toggleFullscreen}
-              ></div>
-            </div>
-          ) : (
-            <div className="ml-16"></div>
-          )}
-
-          <div className="drag-region flex w-full items-center gap-2 left-0 right-0">
-            <div className="flex items-center gap-2">
-              <TerminalSquare
-                size={15}
-                className="text-accent-400 flex-shrink-0"
-                style={{
-                  filter: "drop-shadow(0 0 5px rgba(var(--accent-rgb),0.7))",
-                }}
-              />
-              <span className="text-sm font-semibold tracking-widest text-gray-300 select-none">
-                <span className="text-accent-400">calico</span>
-                <span className="text-slate-500 mx-0.5">/</span>
-                <span className="text-gray-400">term</span>
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2 text-gray-400 text-xs">
-              <span className="px-2 py-0.5 bg-slate-800/50 rounded border border-slate-700/40 text-accent-400/70 text-[10px] tracking-wider">
-                {tabs.length} tab{tabs.length !== 1 ? "s" : ""}
-              </span>
-            </div>
+      <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/40 px-4 py-1.5 flex items-center gap-2 shadow-xl">
+        {window.platform?.os === "darwin" && <div className="ml-16 flex-shrink-0" />}
+        <div className="drag-region flex flex-1 items-center gap-2">
+          <div className="flex items-center gap-2">
+            <TerminalSquare
+              size={15}
+              className="text-accent-400 flex-shrink-0"
+              style={{
+                filter: "drop-shadow(0 0 5px rgba(var(--accent-rgb),0.7))",
+              }}
+            />
+            <span className="text-sm font-semibold tracking-widest text-gray-300 select-none">
+              <span className="text-accent-400">calico</span>
+              <span className="text-slate-500 mx-0.5">/</span>
+              <span className="text-gray-400">term</span>
+            </span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-400 text-xs">
+            <span className="px-2 py-0.5 bg-slate-800/50 rounded border border-slate-700/40 text-accent-400/70 text-[10px] tracking-wider">
+              {tabs.length} tab{tabs.length !== 1 ? "s" : ""}
+            </span>
           </div>
         </div>
+        {window.platform?.os === "linux" && (
+          <div className="flex items-center gap-0.5 flex-shrink-0">
+            <button
+              onClick={() => window.api.windowControls.minimize()}
+              className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-slate-700/60 hover:text-gray-300 transition-all duration-150"
+              title="Minimize"
+            >
+              <Minus size={12} />
+            </button>
+            <button
+              onClick={() => window.api.windowControls.maximize()}
+              className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-slate-700/60 hover:text-gray-300 transition-all duration-150"
+              title="Maximize"
+            >
+              <Square size={10} />
+            </button>
+            <button
+              onClick={() => window.api.windowControls.close()}
+              className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-red-500/20 hover:text-red-400 transition-all duration-150"
+              title="Close"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Tabs Header */}
@@ -182,11 +178,10 @@ function AppContent(): React.JSX.Element {
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`absolute inset-0 transition-all duration-300 ${
-              !showHome && activeTab === tab.id
+            className={`absolute inset-0 transition-all duration-300 ${!showHome && activeTab === tab.id
                 ? "opacity-100 scale-100"
                 : "opacity-0 scale-95 pointer-events-none"
-            }`}
+              }`}
           >
             <TerminalPanel
               tabId={tab.id}

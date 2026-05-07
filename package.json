@@ -1,6 +1,6 @@
 {
   "name": "calico-term",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Cross-platform terminal emulator with AI assistant, SSH manager, SFTP, and encrypted credential vault.",
   "main": "./out/main/index.js",
   "author": "Edgar Sanou",
