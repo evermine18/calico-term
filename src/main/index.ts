@@ -78,12 +78,20 @@ function createWindow(): void {
     contextMenu.popup({ window: mainWindow, x: params.x, y: params.y });
   });
 
-  mainWindow.on("ready-to-show", () => {
+  mainWindow.once("ready-to-show", () => {
     mainWindow.show();
   });
 
-  mainWindow.on("ready-to-show", () => {
-    mainWindow.show();
+  // Fallback: titleBarOverlay on Windows can prevent ready-to-show from firing.
+  // If the window is still hidden after load completes, force show it.
+  mainWindow.webContents.once("did-finish-load", () => {
+    setTimeout(() => {
+      if (!mainWindow.isVisible()) mainWindow.show();
+    }, 300);
+  });
+
+  mainWindow.webContents.on("render-process-gone", (_event, details) => {
+    console.error("Renderer process gone:", details.reason, details.exitCode);
   });
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
