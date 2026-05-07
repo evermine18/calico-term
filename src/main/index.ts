@@ -53,6 +53,15 @@ function createWindow(): void {
     autoHideMenuBar: true,
     titleBarStyle: "hidden",
     ...(process.platform === "linux" ? { icon } : {}),
+    ...(process.platform === "win32"
+      ? {
+          titleBarOverlay: {
+            color: "#0f172a",
+            symbolColor: "#9ca3af",
+            height: 36,
+          },
+        }
+      : {}),
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
@@ -209,6 +218,17 @@ app.whenReady().then(() => {
   setupSFTPHandlers();
   ipcMain.on("app-close", () => {
     console.log("App close requested");
+    app.quit();
+  });
+  ipcMain.on("win-minimize", () => {
+    BrowserWindow.getAllWindows()[0]?.minimize();
+  });
+  ipcMain.on("win-maximize", () => {
+    const win = BrowserWindow.getAllWindows()[0];
+    if (win?.isMaximized()) win.unmaximize();
+    else win?.maximize();
+  });
+  ipcMain.on("win-close", () => {
     app.quit();
   });
   app.once("before-quit", async (event) => {

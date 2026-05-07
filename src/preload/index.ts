@@ -40,6 +40,11 @@ const api = {
     writeText: (text: string) => clipboard.writeText(text),
     readText: () => clipboard.readText(),
   },
+  windowControls: {
+    minimize: () => ipcRenderer.send("win-minimize"),
+    maximize: () => ipcRenderer.send("win-maximize"),
+    close: () => ipcRenderer.send("win-close"),
+  },
   updater: {
     check: () => ipcRenderer.invoke("updater:check"),
     download: () => ipcRenderer.invoke("updater:download"),
@@ -49,7 +54,9 @@ const api = {
     onUpToDate: (cb: (info: UpdateInfo) => void) =>
       ipcRenderer.on("updater:up-to-date", (_e, info) => cb(info)),
     onDownloadProgress: (cb: (progress: DownloadProgress) => void) =>
-      ipcRenderer.on("updater:download-progress", (_e, progress) => cb(progress)),
+      ipcRenderer.on("updater:download-progress", (_e, progress) =>
+        cb(progress),
+      ),
     onUpdateDownloaded: (cb: (info: UpdateInfo) => void) =>
       ipcRenderer.on("updater:update-downloaded", (_e, info) => cb(info)),
     onError: (cb: (message: string) => void) =>

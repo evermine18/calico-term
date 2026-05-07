@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 const useCopyNotification = () => {
   const [notificationState, setNotificationState] = useState({
@@ -31,9 +31,9 @@ const useCopyNotification = () => {
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = useCallback(() => {
     setNotificationState((prev) => ({ ...prev, isVisible: false }));
-  };
+  }, []);
 
   return {
     notificationState,
