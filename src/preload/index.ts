@@ -166,6 +166,10 @@ const api = {
   alerts: {
     setRules: (rules: AlertRule[]) =>
       ipcRenderer.send("alert-rules-set", rules),
+    setWorkspaceMap: (map: Record<string, string[]>) =>
+      ipcRenderer.send("alert-workspace-map-set", map),
+    setTabConn: (tabId: string, connId: string | null) =>
+      ipcRenderer.send("alert-tab-conn-set", tabId, connId),
     onMatch: (
       cb: (data: {
         ruleId: string;
@@ -178,6 +182,31 @@ const api = {
       const wrapped = (_e: unknown, d: unknown) => cb(d as any);
       ipcRenderer.on("alert-match", wrapped);
       return () => ipcRenderer.removeListener("alert-match", wrapped);
+    },
+  },
+  guardrails: {
+    list: () => ipcRenderer.invoke("guardrails-list"),
+    set: (rules: GuardrailRuleEntry[]) =>
+      ipcRenderer.invoke("guardrails-set", rules),
+    resetDefaults: () => ipcRenderer.invoke("guardrails-reset-defaults"),
+    setProdTabs: (tabIds: string[]) =>
+      ipcRenderer.send("guardrails-set-prod-tabs", tabIds),
+    setTabConn: (tabId: string, connId: string | null) =>
+      ipcRenderer.send("terminal-set-conn", tabId, connId),
+    resolve: (tabId: string, confirmed: boolean) =>
+      ipcRenderer.send("terminal-guardrail-resolve", tabId, confirmed),
+    onPrompt: (
+      cb: (data: {
+        tabId: string;
+        command: string;
+        ruleId: string;
+        description: string;
+      }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("terminal-guardrail-prompt", wrapped);
+      return () =>
+        ipcRenderer.removeListener("terminal-guardrail-prompt", wrapped);
     },
   },
   workspaces: {
@@ -258,6 +287,15 @@ interface AlertRule {
   flags: string;
   severity: "info" | "warning" | "critical";
   message?: string;
+  enabled: boolean;
+  scope?: "global" | { workspaceId: string };
+}
+
+interface GuardrailRuleEntry {
+  id: string;
+  pattern: string;
+  flags?: string;
+  description: string;
   enabled: boolean;
 }
 

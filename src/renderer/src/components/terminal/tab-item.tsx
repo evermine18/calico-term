@@ -5,10 +5,19 @@ import { CustomTag } from '../../types/tabs';
 import { useAppContext } from '../../contexts/app-context';
 
 function WorkspaceDot({ connId }: { connId?: string }) {
-  const { workspaces } = useAppContext();
+  const { workspaces, activeWorkspaceId } = useAppContext();
   if (!connId) return null;
-  const ws = workspaces.find((w) => w.sshConnectionIds.includes(connId));
-  if (!ws) return null;
+  const owning = workspaces.filter((w) =>
+    w.sshConnectionIds.includes(connId),
+  );
+  if (owning.length === 0) return null;
+  // Prefer the active workspace when the connection belongs to several.
+  const ws =
+    owning.find((w) => w.id === activeWorkspaceId) ?? owning[0];
+  const tooltip =
+    owning.length === 1
+      ? `Workspace: ${ws.name}${ws.environment === "prod" ? " (PROD)" : ""}`
+      : `Workspaces: ${owning.map((w) => w.name).join(", ")}`;
   return (
     <span
       className="w-1.5 h-1.5 rounded-full flex-shrink-0"
@@ -16,7 +25,7 @@ function WorkspaceDot({ connId }: { connId?: string }) {
         backgroundColor: ws.color,
         boxShadow: `0 0 4px ${ws.color}aa`,
       }}
-      title={`Workspace: ${ws.name}${ws.environment === 'prod' ? ' (PROD)' : ''}`}
+      title={tooltip}
     />
   );
 }

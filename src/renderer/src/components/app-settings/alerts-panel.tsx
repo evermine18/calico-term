@@ -10,8 +10,25 @@ import {
   SelectValue,
 } from "@renderer/components/ui/select";
 import { Bell, Plus, Trash2 } from "lucide-react";
+import { useAppContext } from "@renderer/contexts/app-context";
 
 const STORAGE_KEY = "calico-alert-rules";
+const GLOBAL_SCOPE_VALUE = "global";
+
+function scopeToValue(scope?: AlertScope): string {
+  if (!scope || scope === "global") return GLOBAL_SCOPE_VALUE;
+  if (typeof scope === "object" && "workspaceId" in scope) {
+    return `workspace:${scope.workspaceId}`;
+  }
+  return GLOBAL_SCOPE_VALUE;
+}
+
+function valueToScope(value: string): AlertScope {
+  if (value.startsWith("workspace:")) {
+    return { workspaceId: value.slice("workspace:".length) };
+  }
+  return "global";
+}
 
 function load(): AlertRule[] {
   try {
@@ -29,10 +46,12 @@ function persist(rules: AlertRule[]) {
 }
 
 export function AlertsPanel() {
+  const { workspaces } = useAppContext();
   const [rules, setRules] = useState<AlertRule[]>([]);
   const [pattern, setPattern] = useState("");
   const [flags, setFlags] = useState("i");
   const [severity, setSeverity] = useState<AlertSeverity>("warning");
+  const [scopeValue, setScopeValue] = useState<string>(GLOBAL_SCOPE_VALUE);
   const [message, setMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
 
@@ -66,10 +85,19 @@ export function AlertsPanel() {
       severity,
       message: message.trim() || undefined,
       enabled: true,
+      scope: valueToScope(scopeValue),
     };
     update([next, ...rules]);
     setPattern("");
     setMessage("");
+  };
+
+  const setRuleScope = (id: string, value: string) => {
+    update(
+      rules.map((r) =>
+        r.id === id ? { ...r, scope: valueToScope(value) } : r,
+      ),
+    );
   };
 
   const toggle = (id: string) => {
@@ -119,6 +147,22 @@ export function AlertsPanel() {
                 </div>
               )}
             </div>
+            <Select
+              value={scopeToValue(r.scope)}
+              onValueChange={(v) => setRuleScope(r.id, v)}
+            >
+              <SelectTrigger className="h-6 px-1.5 text-[10px] bg-slate-900/60 border-slate-700/40 text-gray-300 w-[100px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-900 border-slate-700/50">
+                <SelectItem value={GLOBAL_SCOPE_VALUE}>Global</SelectItem>
+                {workspaces.map((w) => (
+                  <SelectItem key={w.id} value={`workspace:${w.id}`}>
+                    {w.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <span className="text-[10px] uppercase tracking-wider text-gray-500">
               {r.severity}
             </span>
@@ -173,14 +217,32 @@ export function AlertsPanel() {
           <Plus size={14} />
         </Button>
       </div>
-      <div className="grid gap-1">
-        <Label className="text-gray-300 text-xs">Message (optional)</Label>
-        <Input
-          placeholder="Friendly description"
-          value={message}
-          onChange={(e) => setMessage(e.target.value)}
-          className="bg-slate-800/60 border-slate-700 text-gray-100 text-sm h-8"
-        />
+      <div className="grid grid-cols-[1fr_2fr] gap-2">
+        <div className="grid gap-1">
+          <Label className="text-gray-300 text-xs">Scope</Label>
+          <Select value={scopeValue} onValueChange={setScopeValue}>
+            <SelectTrigger className="h-8 bg-slate-800/60 border-slate-700 text-gray-100">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-900 border-slate-700/50">
+              <SelectItem value={GLOBAL_SCOPE_VALUE}>Global</SelectItem>
+              {workspaces.map((w) => (
+                <SelectItem key={w.id} value={`workspace:${w.id}`}>
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="grid gap-1">
+          <Label className="text-gray-300 text-xs">Message (optional)</Label>
+          <Input
+            placeholder="Friendly description"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            className="bg-slate-800/60 border-slate-700 text-gray-100 text-sm h-8"
+          />
+        </div>
       </div>
       {error && <p className="text-xs text-red-400">{error}</p>}
     </div>

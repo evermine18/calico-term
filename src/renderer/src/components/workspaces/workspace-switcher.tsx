@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { useAppContext } from "@renderer/contexts/app-context";
 import {
   Popover,
@@ -23,16 +22,20 @@ const ENV_LABEL: Record<string, string> = {
 };
 
 export function WorkspaceSwitcher() {
-  const { workspaces, activeWorkspaceId, setActiveWorkspaceId } =
-    useAppContext();
-  const [open, setOpen] = useState(false);
+  const {
+    workspaces,
+    activeWorkspaceId,
+    setActiveWorkspaceId,
+    workspaceSwitcherOpen,
+    setWorkspaceSwitcherOpen,
+  } = useAppContext();
   const active =
     workspaces.find((w) => w.id === activeWorkspaceId) ?? workspaces[0];
 
   if (!active) return null;
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={workspaceSwitcherOpen} onOpenChange={setWorkspaceSwitcherOpen}>
       <PopoverTrigger asChild>
         <button
           className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-800/60 border border-slate-700/40 text-[11px] text-gray-300 hover:bg-slate-700/60 transition-colors"
@@ -82,7 +85,7 @@ export function WorkspaceSwitcher() {
                   value={w.name}
                   onSelect={() => {
                     setActiveWorkspaceId(w.id);
-                    setOpen(false);
+                    setWorkspaceSwitcherOpen(false);
                   }}
                   className="flex items-center gap-2 text-gray-200 data-[selected=true]:bg-accent-500/15 data-[selected=true]:text-accent-100"
                 >

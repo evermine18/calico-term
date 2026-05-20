@@ -4,6 +4,7 @@ export type Snippet = {
   id: string;
   name: string;
   command: string;
+  description?: string;
 };
 
 export type Workspace = {

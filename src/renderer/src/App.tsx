@@ -13,10 +13,20 @@ import MetricsPanel from "./components/observability/metrics-panel";
 import MetricsStatusInline from "./components/observability/metrics-status-inline";
 import { useMetrics } from "./components/observability/use-metrics";
 import { WorkspaceSwitcher } from "./components/workspaces/workspace-switcher";
+import { SnippetPalette } from "./components/workspaces/snippet-palette";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
-import { Minus, Square, TerminalSquare, X } from "lucide-react";
+import { Minus, Square, TerminalSquare, X, ShieldAlert } from "lucide-react";
 import { closeTab } from "./lib/tab-operations";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./components/ui/dialog";
+import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
 
 function matchShortcut(e: KeyboardEvent, s: ShortcutDef): boolean {
   return (
@@ -25,6 +35,26 @@ function matchShortcut(e: KeyboardEvent, s: ShortcutDef): boolean {
     !!e.shiftKey === s.shift &&
     !!e.altKey === s.alt
   );
+}
+
+function buildEnvScopes(
+  activeWorkspaceId: string,
+  connId: string | undefined,
+  workspaces: WorkspaceEntry[],
+): string[] {
+  const scopes = ["global", `workspace:${activeWorkspaceId}`];
+  if (connId) {
+    // If the connection lives in workspaces other than the active one,
+    // include those scopes too so per-workspace env still applies.
+    for (const w of workspaces) {
+      if (w.id === activeWorkspaceId) continue;
+      if (w.sshConnectionIds.includes(connId)) {
+        scopes.push(`workspace:${w.id}`);
+      }
+    }
+    scopes.push(`host:${connId}`);
+  }
+  return scopes;
 }
 
 function AppContent(): React.JSX.Element {
@@ -41,7 +71,15 @@ function AppContent(): React.JSX.Element {
     sshConnections,
     workspaces,
     activeWorkspaceId,
+    setWorkspaceSwitcherOpen,
+    setSnippetPaletteOpen,
   } = useAppContext();
+  const [guardrailPrompt, setGuardrailPrompt] = useState<{
+    tabId: string;
+    command: string;
+    description: string;
+  } | null>(null);
+  const [guardrailConfirm, setGuardrailConfirm] = useState("");
   const activeWorkspace =
     workspaces.find((w) => w.id === activeWorkspaceId) ?? workspaces[0] ?? null;
 
@@ -127,6 +165,12 @@ function AppContent(): React.JSX.Element {
         e.preventDefault();
         const idx = tabs.findIndex((t) => t.id === activeTab);
         handleSetActiveTab(tabs[(idx - 1 + tabs.length) % tabs.length].id);
+      } else if (matchShortcut(e, shortcuts.openWorkspaceSwitcher)) {
+        e.preventDefault();
+        setWorkspaceSwitcherOpen(true);
+      } else if (matchShortcut(e, shortcuts.openSnippetPalette)) {
+        e.preventDefault();
+        setSnippetPaletteOpen(true);
       }
     };
 
@@ -139,7 +183,46 @@ function AppContent(): React.JSX.Element {
     activeTab,
     setHistoryDialogOpen,
     setAiSidebarOpen,
+    setWorkspaceSwitcherOpen,
+    setSnippetPaletteOpen,
   ]);
+
+  // Sync workspace ↔ main: alert rule scoping and prod guardrails need to
+  // know which connections live in which workspace, and which tabs are
+  // currently associated with a prod-owned connection.
+  useEffect(() => {
+    const map: Record<string, string[]> = {};
+    for (const w of workspaces) map[w.id] = [...w.sshConnectionIds];
+    window.api.alerts.setWorkspaceMap(map);
+  }, [workspaces]);
+
+  // Push the set of prod-owning tabIds whenever tabs or workspaces change.
+  useEffect(() => {
+    const prodConnIds = new Set<string>();
+    for (const w of workspaces) {
+      if (w.environment === "prod") {
+        for (const cid of w.sshConnectionIds) prodConnIds.add(cid);
+      }
+    }
+    const prodTabIds: string[] = [];
+    for (const t of tabs) {
+      if (t.connId && prodConnIds.has(t.connId)) prodTabIds.push(t.id);
+    }
+    window.api.guardrails.setProdTabs(prodTabIds);
+  }, [tabs, workspaces]);
+
+  // Listen for guardrail prompts from main.
+  useEffect(() => {
+    const off = window.api.guardrails.onPrompt((data) => {
+      setGuardrailPrompt({
+        tabId: data.tabId,
+        command: data.command,
+        description: data.description,
+      });
+      setGuardrailConfirm("");
+    });
+    return off;
+  }, []);
 
   return (
     <div
@@ -148,7 +231,9 @@ function AppContent(): React.JSX.Element {
       {/* Workspace environment stripe */}
       {activeWorkspace && (
         <div
-          className="h-[3px] w-full shrink-0"
+          className={`w-full shrink-0 ${
+            activeWorkspace.environment === "prod" ? "h-[6px]" : "h-[3px]"
+          }`}
           style={{
             backgroundColor: activeWorkspace.color,
             boxShadow: `0 0 8px ${activeWorkspace.color}`,
@@ -239,23 +324,31 @@ function AppContent(): React.JSX.Element {
         <AISidebarChat />
         <CommandHistoryDialog />
         {/* Terminals — always mounted to preserve PTY state */}
-        {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            className={`absolute inset-0 transition-all duration-300 ${!showHome && activeTab === tab.id
+        {tabs.map((tab) => {
+          const tabEnvScopes = buildEnvScopes(
+            activeWorkspaceId,
+            tab.connId,
+            workspaces,
+          );
+          return (
+            <div
+              key={tab.id}
+              className={`absolute inset-0 transition-all duration-300 ${!showHome && activeTab === tab.id
                 ? "opacity-100 scale-100"
                 : "opacity-0 scale-95 pointer-events-none"
-              }`}
-          >
-            <TerminalPanel
-              tabId={tab.id}
-              active={!showHome && activeTab === tab.id}
-              tabTitle={tab.title}
-              initialCommand={tab.initialCommand}
-              onActivity={() => handleTabActivity(tab.id)}
-            />
-          </div>
-        ))}
+                }`}
+            >
+              <TerminalPanel
+                tabId={tab.id}
+                active={!showHome && activeTab === tab.id}
+                tabTitle={tab.title}
+                initialCommand={tab.initialCommand}
+                onActivity={() => handleTabActivity(tab.id)}
+                envScopes={tabEnvScopes}
+              />
+            </div>
+          );
+        })}
 
         {/* Home overlay — shown when no tabs, or user toggled home */}
         {(tabs.length === 0 || showHome) && (
@@ -317,6 +410,11 @@ function AppContent(): React.JSX.Element {
                     conn.id,
                   );
                 }
+                // Always inform main of the tab→conn mapping so alert scopes
+                // and prod guardrails resolve correctly (independent of the
+                // password-injection path above).
+                window.api.guardrails.setTabConn(id, conn.id);
+                window.api.alerts.setTabConn(id, conn.id);
                 setTabs((prev) => [...prev, newTab]);
                 handleSetActiveTab(id);
               }}
@@ -324,6 +422,81 @@ function AppContent(): React.JSX.Element {
           </div>
         )}
       </div>
+
+      {/* Snippet palette (cmdk dialog) */}
+      <SnippetPalette />
+
+      {/* Prod guardrail confirmation */}
+      <Dialog
+        open={!!guardrailPrompt}
+        onOpenChange={(o) => {
+          if (!o && guardrailPrompt) {
+            window.api.guardrails.resolve(guardrailPrompt.tabId, false);
+            setGuardrailPrompt(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[460px] bg-slate-900 border-red-500/40">
+          <DialogHeader>
+            <DialogTitle className="text-red-300 flex items-center gap-2">
+              <ShieldAlert size={16} />
+              Production guardrail
+            </DialogTitle>
+          </DialogHeader>
+          {guardrailPrompt && (
+            <div className="space-y-3 py-1">
+              <p className="text-sm text-gray-300">
+                The command you are about to execute matched:
+              </p>
+              <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1.5">
+                {guardrailPrompt.description}
+              </div>
+              <pre className="text-xs font-mono text-gray-100 bg-slate-800/80 border border-slate-700/40 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
+                {guardrailPrompt.command || "(empty)"}
+              </pre>
+              <p className="text-xs text-gray-400">
+                This tab belongs to a workspace marked <span className="text-red-400 font-bold">PROD</span>. Type{" "}
+                <span className="font-mono text-red-300">yes</span> below to confirm.
+              </p>
+              <Input
+                autoFocus
+                value={guardrailConfirm}
+                onChange={(e) => setGuardrailConfirm(e.target.value)}
+                placeholder="yes"
+                className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono"
+              />
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (guardrailPrompt) {
+                  window.api.guardrails.resolve(guardrailPrompt.tabId, false);
+                }
+                setGuardrailPrompt(null);
+              }}
+              className="border-slate-700/50 text-gray-300"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={guardrailConfirm.trim().toLowerCase() !== "yes"}
+              onClick={() => {
+                if (guardrailPrompt) {
+                  window.api.guardrails.resolve(guardrailPrompt.tabId, true);
+                }
+                setGuardrailPrompt(null);
+              }}
+              className="bg-red-600/90 hover:bg-red-600 text-white"
+            >
+              Execute
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Status Bar */}
       <div className="bg-slate-900/90 backdrop-blur-md border-t border-slate-700/30 px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-500 tracking-wide">

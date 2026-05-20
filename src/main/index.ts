@@ -21,6 +21,7 @@ import { setupAuditHandlers } from "./audit";
 import { setupHostMetricsHandlers } from "./host-metrics";
 import { setupAlertHandlers } from "./alerts";
 import { setupWorkspaceHandlers } from "./workspaces";
+import { setupGuardrailHandlers } from "./guardrails";
 
 // --- AI streaming controllers ---
 const streamControllers = new Map<string, AbortController>();
@@ -242,6 +243,7 @@ app.whenReady().then(() => {
   setupHostMetricsHandlers();
   setupAlertHandlers();
   setupWorkspaceHandlers();
+  setupGuardrailHandlers();
   ipcMain.on("app-close", () => {
     console.log("App close requested");
     app.quit();

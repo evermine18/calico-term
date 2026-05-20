@@ -47,7 +47,7 @@ import {
   Settings2,
   Keyboard, Info, Download, RefreshCw, RotateCcw,
   Variable,
-  Circle, Bell, FileSignature, Layers,
+  Circle, Bell, FileSignature, Layers, ShieldAlert,
 } from "lucide-react";
 import { ThemePicker } from "./theme-picker";
 import { SSHKeysPanel } from "./ssh-keys-panel";
@@ -56,6 +56,7 @@ import { RecordingsPanel } from "./recordings-panel";
 import { AlertsPanel } from "./alerts-panel";
 import { AuditPanel } from "./audit-panel";
 import { WorkspacesPanel } from "../workspaces/workspaces-panel";
+import { GuardrailsPanel } from "./guardrails-panel";
 import type { ThemeId } from "@renderer/themes";
 
 interface TagItem {
@@ -486,6 +487,10 @@ export default function SettingsDialog({ children }) {
               <TabsTrigger value="workspaces" className="flex items-center gap-1.5">
                 <Layers size={14} />
                 Workspaces
+              </TabsTrigger>
+              <TabsTrigger value="guardrails" className="flex items-center gap-1.5">
+                <ShieldAlert size={14} />
+                Guardrails
               </TabsTrigger>
               <TabsTrigger value="about" className="flex items-center gap-1.5">
                 <Info size={14} />
@@ -1190,6 +1195,8 @@ export default function SettingsDialog({ children }) {
                       prevTab: "Previous Tab",
                       toggleSidebar: "Toggle AI Sidebar",
                       openHistory: "Open Command History",
+                      openWorkspaceSwitcher: "Open Workspace Switcher",
+                      openSnippetPalette: "Open Snippet Palette",
                     };
                     const isCapturing = capturingKey === action;
                     return (
@@ -1474,6 +1481,9 @@ export default function SettingsDialog({ children }) {
             </TabsContent>
             <TabsContent value="workspaces" className="flex-1 overflow-y-auto px-1 mt-4">
               <WorkspacesPanel />
+            </TabsContent>
+            <TabsContent value="guardrails" className="flex-1 overflow-y-auto px-1 mt-4">
+              <GuardrailsPanel />
             </TabsContent>
 
             {/* About Tab */}

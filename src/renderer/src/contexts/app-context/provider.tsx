@@ -10,7 +10,14 @@ const DEFAULT_SHORTCUTS: AppShortcuts = {
   prevTab: { key: "Tab", ctrl: true, shift: true, alt: false },
   toggleSidebar: { key: "a", ctrl: true, shift: true, alt: false },
   openHistory: { key: "h", ctrl: true, shift: false, alt: false },
+  openWorkspaceSwitcher: { key: "k", ctrl: true, shift: false, alt: false },
+  openSnippetPalette: { key: "j", ctrl: true, shift: false, alt: false },
 };
+
+function mergeShortcuts(stored: Partial<AppShortcuts> | null): AppShortcuts {
+  // Forward-compat: fill any missing shortcut with the default.
+  return { ...DEFAULT_SHORTCUTS, ...(stored ?? {}) };
+}
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [theme, setThemeState] = useState<ThemeId>(() => {
@@ -181,7 +188,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     const s = localStorage.getItem("shortcuts");
     if (s) {
       try {
-        return JSON.parse(s);
+        return mergeShortcuts(JSON.parse(s));
       } catch {
         /* ignore */
       }
@@ -347,19 +354,51 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const assignConnectionToWorkspace = (
     connId: string,
     workspaceId: string,
+    mode: "toggle" | "add" | "remove" | "exclusive" = "toggle",
   ) => {
     setWorkspacesState((prev) =>
-      prev.map((w) => ({
-        ...w,
-        sshConnectionIds:
-          w.id === workspaceId
-            ? w.sshConnectionIds.includes(connId)
-              ? w.sshConnectionIds
-              : [...w.sshConnectionIds, connId]
-            : w.sshConnectionIds.filter((c) => c !== connId),
-      })),
+      prev.map((w) => {
+        if (mode === "exclusive") {
+          // Old behaviour: connection only lives in target workspace.
+          return {
+            ...w,
+            sshConnectionIds:
+              w.id === workspaceId
+                ? w.sshConnectionIds.includes(connId)
+                  ? w.sshConnectionIds
+                  : [...w.sshConnectionIds, connId]
+                : w.sshConnectionIds.filter((c) => c !== connId),
+          };
+        }
+        if (w.id !== workspaceId) return w;
+        const has = w.sshConnectionIds.includes(connId);
+        if (mode === "add") {
+          return has
+            ? w
+            : { ...w, sshConnectionIds: [...w.sshConnectionIds, connId] };
+        }
+        if (mode === "remove") {
+          return has
+            ? {
+                ...w,
+                sshConnectionIds: w.sshConnectionIds.filter((c) => c !== connId),
+              }
+            : w;
+        }
+        // toggle (default): add if missing, remove if present, only on target ws.
+        return {
+          ...w,
+          sshConnectionIds: has
+            ? w.sshConnectionIds.filter((c) => c !== connId)
+            : [...w.sshConnectionIds, connId],
+        };
+      }),
     );
   };
+
+  // Switcher / palette open state (controlled by keyboard shortcuts)
+  const [workspaceSwitcherOpen, setWorkspaceSwitcherOpen] = useState(false);
+  const [snippetPaletteOpen, setSnippetPaletteOpen] = useState(false);
 
   const [commandHistory, setCommandHistory] = useState<CommandHistoryEntry[]>(
     () => {
@@ -563,6 +602,10 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       updateWorkspace,
       deleteWorkspace,
       assignConnectionToWorkspace,
+      workspaceSwitcherOpen,
+      setWorkspaceSwitcherOpen,
+      snippetPaletteOpen,
+      setSnippetPaletteOpen,
     }),
     [
       theme,
@@ -590,6 +633,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       shortcuts,
       workspaces,
       activeWorkspaceId,
+      workspaceSwitcherOpen,
+      snippetPaletteOpen,
     ],
   );
 

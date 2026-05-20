@@ -14,6 +14,8 @@ type AppShortcuts = {
   prevTab: ShortcutDef;
   toggleSidebar: ShortcutDef;
   openHistory: ShortcutDef;
+  openWorkspaceSwitcher: ShortcutDef;
+  openSnippetPalette: ShortcutDef;
 };
 
 type CommandHistoryEntry = {
@@ -58,6 +60,7 @@ type WorkspaceSnippetEntry = {
   id: string;
   name: string;
   command: string;
+  description?: string;
 };
 
 type WorkspaceEntry = {
@@ -140,5 +143,15 @@ type AppContextType = {
   addWorkspace: (ws: WorkspaceEntry) => void;
   updateWorkspace: (ws: WorkspaceEntry) => void;
   deleteWorkspace: (id: string) => void;
-  assignConnectionToWorkspace: (connId: string, workspaceId: string) => void;
+  assignConnectionToWorkspace: (
+    connId: string,
+    workspaceId: string,
+    mode?: "toggle" | "add" | "remove" | "exclusive",
+  ) => void;
+  // Workspace switcher control (used by keyboard shortcut)
+  workspaceSwitcherOpen: boolean;
+  setWorkspaceSwitcherOpen: (open: boolean) => void;
+  // Snippet palette control
+  snippetPaletteOpen: boolean;
+  setSnippetPaletteOpen: (open: boolean) => void;
 };

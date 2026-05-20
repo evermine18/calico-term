@@ -74,12 +74,23 @@ declare global {
 
   type AlertSeverity = "info" | "warning" | "critical";
 
+  type AlertScope = "global" | { workspaceId: string };
+
   interface AlertRule {
     id: string;
     pattern: string;
     flags: string;
     severity: AlertSeverity;
     message?: string;
+    enabled: boolean;
+    scope?: AlertScope;
+  }
+
+  interface GuardrailRule {
+    id: string;
+    pattern: string;
+    flags?: string;
+    description: string;
     enabled: boolean;
   }
 
@@ -293,6 +304,8 @@ declare global {
       };
       alerts: {
         setRules: (rules: AlertRule[]) => void;
+        setWorkspaceMap: (map: Record<string, string[]>) => void;
+        setTabConn: (tabId: string, connId: string | null) => void;
         onMatch: (
           cb: (data: {
             ruleId: string;
@@ -300,6 +313,22 @@ declare global {
             severity: AlertSeverity;
             message: string;
             ts: number;
+          }) => void,
+        ) => () => void;
+      };
+      guardrails: {
+        list: () => Promise<GuardrailRule[]>;
+        set: (rules: GuardrailRule[]) => Promise<void>;
+        resetDefaults: () => Promise<GuardrailRule[]>;
+        setProdTabs: (tabIds: string[]) => void;
+        setTabConn: (tabId: string, connId: string | null) => void;
+        resolve: (tabId: string, confirmed: boolean) => void;
+        onPrompt: (
+          cb: (data: {
+            tabId: string;
+            command: string;
+            ruleId: string;
+            description: string;
           }) => void,
         ) => () => void;
       };

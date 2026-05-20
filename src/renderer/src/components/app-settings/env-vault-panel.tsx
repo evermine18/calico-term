@@ -15,7 +15,7 @@ import { useAppContext } from "@renderer/contexts/app-context";
 const GLOBAL = "global";
 
 export function EnvVaultPanel() {
-  const { sshConnections } = useAppContext();
+  const { sshConnections, workspaces } = useAppContext();
   const [scopeId, setScopeId] = useState<string>(GLOBAL);
   const [entries, setEntries] = useState<{ key: string; value: string }[]>([]);
   const [newKey, setNewKey] = useState("");
@@ -33,12 +33,25 @@ export function EnvVaultPanel() {
   }, [scopeId]);
 
   const scopeOptions = useMemo(() => {
-    const base = [{ id: GLOBAL, label: "Global (all terminals)" }];
+    const base: { id: string; label: string; group: string }[] = [
+      { id: GLOBAL, label: "Global (all terminals)", group: "Global" },
+    ];
+    for (const w of workspaces) {
+      base.push({
+        id: `workspace:${w.id}`,
+        label: `${w.name}${w.environment === "prod" ? " · PROD" : ""}`,
+        group: "Workspace",
+      });
+    }
     for (const c of sshConnections) {
-      base.push({ id: `host:${c.id}`, label: `Host: ${c.name}` });
+      base.push({
+        id: `host:${c.id}`,
+        label: `${c.name}`,
+        group: "Host",
+      });
     }
     return base;
-  }, [sshConnections]);
+  }, [sshConnections, workspaces]);
 
   const handleAdd = async () => {
     setError(null);
@@ -77,8 +90,9 @@ export function EnvVaultPanel() {
         <p className="text-gray-300 text-sm font-semibold">Env Var Vault</p>
         <p className="text-xs text-gray-400 mt-0.5">
           Encrypted environment variables injected into terminals at startup.
-          Global scope applies everywhere; host scopes apply only when launching
-          that SSH connection.
+          Global applies everywhere; workspace scopes apply to tabs whose
+          connection belongs to that workspace; host scopes only to that SSH
+          connection.
         </p>
       </div>
 
@@ -89,11 +103,22 @@ export function EnvVaultPanel() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent className="bg-slate-900 border-slate-700/50">
-            {scopeOptions.map((o) => (
-              <SelectItem key={o.id} value={o.id}>
-                {o.label}
-              </SelectItem>
-            ))}
+            {(["Global", "Workspace", "Host"] as const).map((g) => {
+              const items = scopeOptions.filter((o) => o.group === g);
+              if (items.length === 0) return null;
+              return (
+                <div key={g}>
+                  <div className="px-2 pt-1.5 pb-0.5 text-[10px] uppercase tracking-widest text-gray-500">
+                    {g}
+                  </div>
+                  {items.map((o) => (
+                    <SelectItem key={o.id} value={o.id}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </div>
+              );
+            })}
           </SelectContent>
         </Select>
       </div>

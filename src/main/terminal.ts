@@ -6,7 +6,8 @@ import path from "path";
 import { resolveEnv } from "./env-vault";
 import { resolveSecret, SecretProvider } from "./secret-providers";
 import { recordOutput } from "./recording";
-import { checkData, clearTabBuffer } from "./alerts";
+import { checkData, clearTabBuffer, setTabConn } from "./alerts";
+import { matchGuardrail, isProdTab } from "./guardrails";
 
 let terminals: Record<string, any> = {};
 
@@ -59,6 +60,14 @@ export function removePassword(connId: string): void {
   delete store[connId];
   saveEncryptedPasswords(store);
 }
+
+// --- Guardrail input buffering ---
+// For prod tabs we accumulate the typed line (per tab) so that, on Enter, we
+// can match against a dangerous-command list before forwarding \r to the PTY.
+const guardrailLineBuf: Record<string, string> = {};
+// When a guardrail prompt is awaiting user confirmation, the input handler
+// short-circuits all further keystrokes for that tab.
+const guardrailPending = new Set<string>();
 
 // --- SSH session password-injection state ---
 // Maps tabId -> connId for terminals awaiting a password prompt
@@ -279,6 +288,9 @@ export function setupTerminal() {
           delete terminals[tabId];
           delete sshPasswordSessions[tabId];
           sshPasswordInjected.delete(tabId);
+          delete guardrailLineBuf[tabId];
+          guardrailPending.delete(tabId);
+          setTabConn(tabId, null);
           clearTabBuffer(tabId);
           // Notify the renderer that the terminal was closed
           for (const w of require("electron").BrowserWindow.getAllWindows()) {
@@ -296,8 +308,77 @@ export function setupTerminal() {
   );
 
   ipcMain.on("terminal-input", (_event, { tabId, data }) => {
-    terminals[tabId]?.write(data);
+    const pty = terminals[tabId];
+    if (!pty) return;
+
+    // While a guardrail modal is open for this tab, swallow all input until
+    // the renderer resolves it.
+    if (guardrailPending.has(tabId)) return;
+
+    if (!isProdTab(tabId)) {
+      pty.write(data);
+      return;
+    }
+
+    // Prod tab: walk through each byte tracking the in-progress command line.
+    let line = guardrailLineBuf[tabId] ?? "";
+    for (let i = 0; i < data.length; i++) {
+      const ch = data[i];
+      if (ch === "\r" || ch === "\n") {
+        const matched = matchGuardrail(line);
+        if (matched) {
+          // Hold the rest of the data (including the \r) — emit a prompt.
+          guardrailPending.add(tabId);
+          guardrailLineBuf[tabId] = line;
+          for (const w of require("electron").BrowserWindow.getAllWindows()) {
+            w.webContents.send("terminal-guardrail-prompt", {
+              tabId,
+              command: line,
+              ruleId: matched.id,
+              description: matched.description,
+            });
+          }
+          return;
+        }
+        pty.write(ch);
+        line = "";
+      } else if (ch === "\x7f" || ch === "\b") {
+        pty.write(ch);
+        line = line.slice(0, -1);
+      } else if (ch === "\x03" || ch === "\x15") {
+        // Ctrl-C / Ctrl-U cancels the current line
+        pty.write(ch);
+        line = "";
+      } else if (ch >= " ") {
+        pty.write(ch);
+        line += ch;
+      } else {
+        // Other control codes: pass through, don't try to track.
+        pty.write(ch);
+      }
+    }
+    guardrailLineBuf[tabId] = line;
   });
+
+  ipcMain.on(
+    "terminal-guardrail-resolve",
+    (_event, tabId: string, confirmed: boolean) => {
+      const pty = terminals[tabId];
+      guardrailPending.delete(tabId);
+      const heldLine = guardrailLineBuf[tabId] ?? "";
+      guardrailLineBuf[tabId] = "";
+      if (!pty) return;
+      if (confirmed) {
+        // Send \r to execute the command that's already on the prompt.
+        pty.write("\r");
+      } else {
+        // Cancel: clear the current line in the remote shell so the user
+        // doesn't accidentally execute it later by pressing Enter.
+        pty.write("\x15");
+      }
+      void heldLine; // currently unused, retained for potential audit hook
+    },
+  );
 
   ipcMain.on("terminal-resize", (_event, { tabId, cols, rows }) => {
     terminals[tabId]?.resize(cols, rows);
@@ -313,6 +394,9 @@ export function setupTerminal() {
     delete terminals[tabId];
     delete sshPasswordSessions[tabId];
     sshPasswordInjected.delete(tabId);
+    delete guardrailLineBuf[tabId];
+    guardrailPending.delete(tabId);
+    setTabConn(tabId, null);
   });
 
   // Associate a terminal with an SSH connection so the password is auto-injected
@@ -320,6 +404,15 @@ export function setupTerminal() {
     sshPasswordSessions[tabId] = connId;
     sshPasswordInjected.delete(tabId); // allow fresh injection
   });
+
+  // Register the SSH connection a tab is tied to (regardless of password use).
+  // Drives alert-rule scoping and prod-guardrail evaluation by host.
+  ipcMain.on(
+    "terminal-set-conn",
+    (_event, tabId: string, connId: string | null) => {
+      setTabConn(tabId, connId);
+    },
+  );
 
   // Resolve a secret reference and arm it as a one-shot password for the next
   // SSH prompt on `connId`. Returns true if a value was successfully fetched.
