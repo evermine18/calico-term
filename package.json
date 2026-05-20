@@ -43,6 +43,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^4.0.0",
+    "@monaco-editor/react": "^4.7.0",
     "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",
     "@radix-ui/react-popover": "^1.1.14",
@@ -64,6 +65,7 @@
     "electron-updater": "^6.3.9",
     "highlight.js": "^11.11.1",
     "lucide-react": "^0.536.0",
+    "monaco-editor": "^0.55.1",
     "node-pty": "^1.1.0-beta34",
     "react-markdown": "^10.1.0",
     "rehype-highlight": "^7.0.2",
