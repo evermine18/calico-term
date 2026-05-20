@@ -2,12 +2,38 @@ import { net } from "electron";
 
 type AIProvider = "openai" | "anthropic" | "ollama" | "openai-compatible";
 
-type ChatMessage = {
-  id: number;
-  type: string;
+export interface AgentToolCallPayload {
+  id: string;
+  name: string;
+  args: unknown;
+  result?: string;
+  isError?: boolean;
+}
+
+export interface AgentMessage {
+  // Renderer-side ChatMessage shape: id/type/content/timestamp plus optional toolCalls
+  id?: number;
+  type: "user" | "assistant" | string;
   content: string;
-  timestamp: string;
-};
+  timestamp?: string;
+  toolCalls?: AgentToolCallPayload[];
+}
+
+export interface ToolSpec {
+  name: string;
+  description: string;
+  inputSchema: {
+    type: "object";
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+}
+
+export type EmitToolCall = (call: {
+  id: string;
+  name: string;
+  args: unknown;
+}) => void;
 
 const defaultSystemContent = `You are an expert DevOps/SRE/systems engineer assistant embedded in a terminal emulator.
 
@@ -30,13 +56,26 @@ const defaultSystemContent = `You are an expert DevOps/SRE/systems engineer assi
 - You may add ONE focused tip at the end only when it directly prevents a likely follow-up problem — format it as a Markdown blockquote (\`>\`).
 `;
 
+const agentSystemAddon = `
+
+## AGENT MODE
+You can call tools to inspect and act on the user's machine (read/write files, run commands in their terminal, query SSH/env config). Always:
+- Plan briefly in 1–2 sentences before calling tools.
+- After calling run_command, follow up with read_terminal to observe the result.
+- Stop when the task is done — do not loop forever.
+- If a tool returns an error, acknowledge it and adapt instead of retrying blindly.`;
+
 type TokenUsage = {
   prompt_tokens: number;
   completion_tokens: number;
   total_tokens: number;
 };
 
-// --- Auth headers per provider ---
+export interface SendChatResult {
+  usage?: TokenUsage;
+  stopReason: "end_turn" | "tool_use" | "stop" | string;
+}
+
 function buildAuthHeaders(
   provider: AIProvider,
   apiKey: string,
@@ -47,9 +86,7 @@ function buildAuthHeaders(
       "anthropic-version": "2023-06-01",
     };
   }
-  if (provider === "ollama" && !apiKey) {
-    return {};
-  }
+  if (provider === "ollama" && !apiKey) return {};
   return { Authorization: `Bearer ${apiKey}` };
 }
 
@@ -57,7 +94,7 @@ export async function sendChat(
   basepath: string,
   apiKey: string,
   selectedModel: string,
-  messages: ChatMessage[],
+  messages: AgentMessage[],
   onChunk: (delta: string) => void,
   signal?: AbortSignal,
   terminalContent: string | undefined = undefined,
@@ -65,19 +102,20 @@ export async function sendChat(
   temperature = 0.7,
   maxTokens = 0,
   provider: AIProvider = "openai",
-): Promise<TokenUsage | undefined> {
-  const parsedMessages = parseMessages(messages);
-  const systemContent = systemPrompt.trim()
-    ? systemPrompt.trim()
-    : defaultSystemContent;
-
+  tools?: ToolSpec[],
+  onToolCall?: EmitToolCall,
+): Promise<SendChatResult> {
+  const baseSystem = systemPrompt.trim() ? systemPrompt.trim() : defaultSystemContent;
+  const systemContent = tools && tools.length > 0
+    ? baseSystem + agentSystemAddon
+    : baseSystem;
   const authHeaders = buildAuthHeaders(provider, apiKey);
 
   if (provider === "anthropic") {
     return sendChatAnthropic(
       basepath,
       selectedModel,
-      parsedMessages,
+      messages,
       systemContent,
       terminalContent,
       temperature,
@@ -85,21 +123,88 @@ export async function sendChat(
       authHeaders,
       onChunk,
       signal,
+      tools,
+      onToolCall,
     );
   }
 
-  // OpenAI / Ollama / OpenAI-compatible — all use /v1/chat/completions + SSE choices[0].delta.content
-  const context: { role: string; content: string }[] = [];
+  return sendChatOpenAI(
+    basepath,
+    selectedModel,
+    messages,
+    systemContent,
+    terminalContent,
+    temperature,
+    maxTokens,
+    authHeaders,
+    onChunk,
+    signal,
+    provider,
+    tools,
+    onToolCall,
+  );
+}
+
+// --- OpenAI / Ollama / OpenAI-compatible ---
+async function sendChatOpenAI(
+  basepath: string,
+  selectedModel: string,
+  messages: AgentMessage[],
+  systemContent: string,
+  terminalContent: string | undefined,
+  temperature: number,
+  maxTokens: number,
+  authHeaders: Record<string, string>,
+  onChunk: (delta: string) => void,
+  signal: AbortSignal | undefined,
+  provider: AIProvider,
+  tools: ToolSpec[] | undefined,
+  onToolCall: EmitToolCall | undefined,
+): Promise<SendChatResult> {
+  const context: any[] = [];
 
   if (terminalContent) {
     context.push({
-      role: "system" as const,
+      role: "system",
       content: `The user's current terminal context is:\n\n${terminalContent}`,
     });
-    console.log("[AI Chat] Terminal context detected!");
   }
-  context.push({ role: "system" as const, content: systemContent });
-  context.push(...parsedMessages);
+  context.push({ role: "system", content: systemContent });
+
+  // Serialize agent messages into OpenAI-shaped messages.
+  for (const m of messages) {
+    if (m.type === "user") {
+      context.push({ role: "user", content: m.content });
+    } else if (m.type === "assistant") {
+      if (m.toolCalls && m.toolCalls.length > 0) {
+        context.push({
+          role: "assistant",
+          content: m.content || null,
+          tool_calls: m.toolCalls.map((tc) => ({
+            id: tc.id,
+            type: "function",
+            function: {
+              name: tc.name,
+              arguments:
+                typeof tc.args === "string"
+                  ? tc.args
+                  : JSON.stringify(tc.args ?? {}),
+            },
+          })),
+        });
+        for (const tc of m.toolCalls) {
+          context.push({
+            role: "tool",
+            tool_call_id: tc.id,
+            content:
+              tc.result ?? (tc.isError ? "error" : ""),
+          });
+        }
+      } else {
+        context.push({ role: "assistant", content: m.content });
+      }
+    }
+  }
 
   const body: Record<string, unknown> = {
     model: selectedModel,
@@ -108,22 +213,26 @@ export async function sendChat(
     stream: true,
     ...(maxTokens > 0 ? { max_tokens: maxTokens } : {}),
   };
-
-  // include_usage is an OpenAI-only extension — skip for other providers
   if (provider === "openai") {
     body.stream_options = { include_usage: true };
+  }
+  if (tools && tools.length > 0) {
+    body.tools = tools.map((t) => ({
+      type: "function",
+      function: {
+        name: t.name,
+        description: t.description,
+        parameters: t.inputSchema,
+      },
+    }));
   }
 
   const res = await net.fetch(`${basepath}/v1/chat/completions`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders,
-    },
+    headers: { "Content-Type": "application/json", ...authHeaders },
     body: JSON.stringify(body),
     signal,
   });
-
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`API error ${res.status}: ${errorText}`);
@@ -133,61 +242,136 @@ export async function sendChat(
   const decoder = new TextDecoder();
   let buffer = "";
   let usage: TokenUsage | undefined;
+  let stopReason = "stop";
+
+  // Accumulate streaming tool calls by index.
+  const pendingTools = new Map<
+    number,
+    { id?: string; name?: string; args: string }
+  >();
 
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
-
       for (const line of lines) {
         const trimmed = line.trim();
         if (!trimmed.startsWith("data: ")) continue;
         const data = trimmed.slice(6);
-        if (data === "[DONE]") return usage;
+        if (data === "[DONE]") {
+          flushPendingTools(pendingTools, onToolCall);
+          return { usage, stopReason };
+        }
         try {
           const json = JSON.parse(data);
-          const delta = json.choices?.[0]?.delta?.content;
-          if (delta) onChunk(delta);
+          const choice = json.choices?.[0];
+          const delta = choice?.delta;
+          if (delta?.content) onChunk(delta.content);
+          if (Array.isArray(delta?.tool_calls)) {
+            for (const tcDelta of delta.tool_calls) {
+              const idx = tcDelta.index ?? 0;
+              const entry = pendingTools.get(idx) ?? { args: "" };
+              if (tcDelta.id) entry.id = tcDelta.id;
+              if (tcDelta.function?.name) entry.name = tcDelta.function.name;
+              if (typeof tcDelta.function?.arguments === "string") {
+                entry.args += tcDelta.function.arguments;
+              }
+              pendingTools.set(idx, entry);
+            }
+          }
+          if (choice?.finish_reason) {
+            stopReason =
+              choice.finish_reason === "tool_calls" ? "tool_use" : choice.finish_reason;
+          }
           if (json.usage) usage = json.usage as TokenUsage;
         } catch {
-          // skip malformed SSE line
+          /* skip malformed SSE line */
         }
       }
     }
   } finally {
     reader.releaseLock();
   }
-  return usage;
+  flushPendingTools(pendingTools, onToolCall);
+  return { usage, stopReason };
 }
 
-// --- Anthropic Messages API (native SSE) ---
+function flushPendingTools(
+  pending: Map<number, { id?: string; name?: string; args: string }>,
+  onToolCall: EmitToolCall | undefined,
+) {
+  if (!onToolCall || pending.size === 0) return;
+  const ordered = [...pending.entries()].sort((a, b) => a[0] - b[0]);
+  for (const [, t] of ordered) {
+    if (!t.name) continue;
+    let parsed: unknown = {};
+    try {
+      parsed = t.args ? JSON.parse(t.args) : {};
+    } catch {
+      parsed = { _raw: t.args };
+    }
+    onToolCall({
+      id: t.id ?? `tc_${Math.random().toString(36).slice(2)}`,
+      name: t.name,
+      args: parsed,
+    });
+  }
+}
+
+// --- Anthropic Messages API ---
 async function sendChatAnthropic(
   basepath: string,
   selectedModel: string,
-  parsedMessages: { role: string; content: string }[],
+  messages: AgentMessage[],
   systemContent: string,
   terminalContent: string | undefined,
   temperature: number,
   maxTokens: number,
   authHeaders: Record<string, string>,
   onChunk: (delta: string) => void,
-  signal?: AbortSignal,
-): Promise<TokenUsage | undefined> {
-  // Anthropic system prompt — merge terminal context into it if present
+  signal: AbortSignal | undefined,
+  tools: ToolSpec[] | undefined,
+  onToolCall: EmitToolCall | undefined,
+): Promise<SendChatResult> {
   let system = systemContent;
   if (terminalContent) {
     system += `\n\nThe user's current terminal context is:\n\n${terminalContent}`;
-    console.log("[AI Chat] Terminal context detected!");
   }
 
-  // Anthropic only accepts user/assistant roles in messages
-  const anthropicMessages = parsedMessages.filter(
-    (m) => m.role === "user" || m.role === "assistant",
-  );
+  const anthropicMessages: any[] = [];
+  for (const m of messages) {
+    if (m.type === "user") {
+      anthropicMessages.push({ role: "user", content: m.content });
+    } else if (m.type === "assistant") {
+      if (m.toolCalls && m.toolCalls.length > 0) {
+        const blocks: any[] = [];
+        if (m.content) blocks.push({ type: "text", text: m.content });
+        for (const tc of m.toolCalls) {
+          blocks.push({
+            type: "tool_use",
+            id: tc.id,
+            name: tc.name,
+            input: typeof tc.args === "string" ? safeJsonParse(tc.args) : tc.args ?? {},
+          });
+        }
+        anthropicMessages.push({ role: "assistant", content: blocks });
+        anthropicMessages.push({
+          role: "user",
+          content: m.toolCalls.map((tc) => ({
+            type: "tool_result",
+            tool_use_id: tc.id,
+            content: tc.result ?? "",
+            ...(tc.isError ? { is_error: true } : {}),
+          })),
+        });
+      } else {
+        anthropicMessages.push({ role: "assistant", content: m.content });
+      }
+    }
+  }
 
   const body: Record<string, unknown> = {
     model: selectedModel,
@@ -197,17 +381,20 @@ async function sendChatAnthropic(
     max_tokens: maxTokens > 0 ? maxTokens : 8192,
     stream: true,
   };
+  if (tools && tools.length > 0) {
+    body.tools = tools.map((t) => ({
+      name: t.name,
+      description: t.description,
+      input_schema: t.inputSchema,
+    }));
+  }
 
   const res = await net.fetch(`${basepath}/v1/messages`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders,
-    },
+    headers: { "Content-Type": "application/json", ...authHeaders },
     body: JSON.stringify(body),
     signal,
   });
-
   if (!res.ok) {
     const errorText = await res.text();
     throw new Error(`API error ${res.status}: ${errorText}`);
@@ -218,16 +405,21 @@ async function sendChatAnthropic(
   let buffer = "";
   let inputTokens = 0;
   let outputTokens = 0;
+  let stopReason = "end_turn";
+
+  // Track per-index content blocks (tool_use entries get input_json deltas)
+  const blocks = new Map<
+    number,
+    { type: "tool_use"; id: string; name: string; args: string } | { type: "text" }
+  >();
 
   try {
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
-
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split("\n");
       buffer = lines.pop() ?? "";
-
       let currentEvent = "";
       for (const line of lines) {
         const trimmed = line.trim();
@@ -240,25 +432,52 @@ async function sendChatAnthropic(
         if (data === "[DONE]") break;
         try {
           const json = JSON.parse(data);
-          if (
-            currentEvent === "content_block_delta" ||
-            json.type === "content_block_delta"
-          ) {
-            const text = json.delta?.text;
-            if (text) onChunk(text);
-          } else if (
-            currentEvent === "message_start" ||
-            json.type === "message_start"
-          ) {
+          const evt = currentEvent || json.type;
+          if (evt === "content_block_start") {
+            const idx = json.index ?? 0;
+            const cb = json.content_block;
+            if (cb?.type === "tool_use") {
+              blocks.set(idx, {
+                type: "tool_use",
+                id: cb.id,
+                name: cb.name,
+                args: "",
+              });
+            } else {
+              blocks.set(idx, { type: "text" });
+            }
+          } else if (evt === "content_block_delta") {
+            const idx = json.index ?? 0;
+            const block = blocks.get(idx);
+            const d = json.delta;
+            if (d?.type === "text_delta" && d.text) onChunk(d.text);
+            else if (
+              d?.type === "input_json_delta" &&
+              block &&
+              block.type === "tool_use"
+            ) {
+              block.args += d.partial_json ?? "";
+            }
+          } else if (evt === "content_block_stop") {
+            const idx = json.index ?? 0;
+            const block = blocks.get(idx);
+            if (block && block.type === "tool_use" && onToolCall) {
+              let parsed: unknown = {};
+              try {
+                parsed = block.args ? JSON.parse(block.args) : {};
+              } catch {
+                parsed = { _raw: block.args };
+              }
+              onToolCall({ id: block.id, name: block.name, args: parsed });
+            }
+          } else if (evt === "message_start") {
             inputTokens = json.message?.usage?.input_tokens ?? 0;
-          } else if (
-            currentEvent === "message_delta" ||
-            json.type === "message_delta"
-          ) {
-            outputTokens = json.usage?.output_tokens ?? 0;
+          } else if (evt === "message_delta") {
+            outputTokens = json.usage?.output_tokens ?? outputTokens;
+            if (json.delta?.stop_reason) stopReason = json.delta.stop_reason;
           }
         } catch {
-          // skip malformed SSE line
+          /* skip malformed SSE line */
         }
       }
     }
@@ -266,23 +485,23 @@ async function sendChatAnthropic(
     reader.releaseLock();
   }
 
-  if (inputTokens > 0 || outputTokens > 0) {
-    return {
-      prompt_tokens: inputTokens,
-      completion_tokens: outputTokens,
-      total_tokens: inputTokens + outputTokens,
-    };
-  }
-  return undefined;
+  const usage =
+    inputTokens > 0 || outputTokens > 0
+      ? {
+          prompt_tokens: inputTokens,
+          completion_tokens: outputTokens,
+          total_tokens: inputTokens + outputTokens,
+        }
+      : undefined;
+  return { usage, stopReason };
 }
 
-function parseMessages(
-  messages: ChatMessage[],
-): { role: string; content: string }[] {
-  return messages.map((msg) => ({
-    role: msg.type === "user" ? "user" : "assistant",
-    content: msg.content,
-  }));
+function safeJsonParse(s: string): unknown {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return {};
+  }
 }
 
 export async function getModels(
@@ -292,23 +511,17 @@ export async function getModels(
 ): Promise<string[]> {
   try {
     const authHeaders = buildAuthHeaders(provider, apiKey);
-
     const res = await net.fetch(`${basepath}/v1/models`, {
       method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        ...authHeaders,
-      },
+      headers: { "Content-Type": "application/json", ...authHeaders },
     });
-
     if (!res.ok) {
       const errorText = await res.text();
       throw new Error(`API error ${res.status}: ${errorText}`);
     }
-
     const data = await res.json();
     if (data.data) {
-      const ids: string[] = data.data.map((item) => item.id);
+      const ids: string[] = data.data.map((item: any) => item.id);
       return ids;
     }
     throw new Error("Unexpected response format from API");

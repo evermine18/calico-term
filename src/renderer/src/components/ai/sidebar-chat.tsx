@@ -7,11 +7,13 @@ import {
   UserMessage,
 } from "./chat";
 import { useTerminalContext } from "@renderer/contexts/terminal-context";
-import { ArrowDown } from "lucide-react";
+import { ArrowDown, Bot, MessageSquare, AlertTriangle } from "lucide-react";
 import type { Conversation } from "./chat/conversation-types";
 import { loadConversations, saveConversations } from "./chat/conversation-types";
 import ConversationList from "./chat/conversation-list";
 import type { ChatMessage } from "./chat/conversation-types";
+import { AgentLoop } from "@renderer/lib/agent/agent-loop";
+import { supportsTools } from "@renderer/lib/agent/tools";
 
 const INITIAL_MESSAGE: ChatMessage = {
   id: 1,
@@ -85,6 +87,23 @@ export default function AISidebarChat() {
   const activeStreamId = useRef<string | null>(null);
   const cleanupStreamRef = useRef<(() => void) | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+
+  // --- Agent mode ---
+  const [agentMode, setAgentModeState] = useState<boolean>(() => {
+    return localStorage.getItem("aiAgentMode") === "1";
+  });
+  const setAgentMode = (v: boolean) => {
+    localStorage.setItem("aiAgentMode", v ? "1" : "0");
+    setAgentModeState(v);
+  };
+  const agentLoopRef = useRef<AgentLoop | null>(null);
+  const [confirmDialog, setConfirmDialog] = useState<{
+    name: string;
+    args: unknown;
+    resolve: (ok: boolean) => void;
+  } | null>(null);
+  const toolingSupported = supportsTools(aiProvider, selectedModel);
+  const effectiveAgentMode = agentMode && toolingSupported;
 
   // Detect if user has scrolled up manually
   const handleScroll = () => {
@@ -247,6 +266,42 @@ export default function AISidebarChat() {
     );
   };
 
+  const sendAgentTurn = (allMessages: ChatMessage[]) => {
+    setIsTyping(true);
+    const termApi = getActive();
+    const screen = enableTerminalContext
+      ? (termApi?.getVisibleText() ?? "")
+      : undefined;
+
+    const loop = new AgentLoop(allMessages, {
+      basepath: apiUrl || defaultBaseUrl(aiProvider),
+      selectedModel,
+      provider: aiProvider,
+      systemPrompt: aiSystemPrompt,
+      temperature: aiTemperature,
+      maxTokens: aiMaxTokens,
+      terminalContent: screen,
+      runtime: {
+        getActiveTerminal: () => getActive(),
+      },
+      confirmRisky: (name, args) =>
+        new Promise((resolve) => {
+          setConfirmDialog({ name, args, resolve });
+        }),
+      onMessages: (msgs) => setMessages(msgs),
+      onUsage: (u) => setLastUsage(u),
+      onError: (errMsg) => {
+        console.error("[Agent]", errMsg);
+      },
+      onDone: () => {
+        setIsTyping(false);
+        agentLoopRef.current = null;
+      },
+    });
+    agentLoopRef.current = loop;
+    loop.start();
+  };
+
   const handleSendMessage = (messageText: string) => {
     const userMessage: ChatMessage = {
       id: Date.now(),
@@ -261,10 +316,22 @@ export default function AISidebarChat() {
     const updated = [...messages, userMessage];
     setMessages(updated);
     setRetryCount(0);
-    sendMessageToAI(updated);
+    if (effectiveAgentMode) {
+      sendAgentTurn(updated);
+    } else {
+      sendMessageToAI(updated);
+    }
   };
 
   const handleCancel = () => {
+    if (agentLoopRef.current) {
+      agentLoopRef.current.abort();
+      agentLoopRef.current = null;
+    }
+    if (confirmDialog) {
+      confirmDialog.resolve(false);
+      setConfirmDialog(null);
+    }
     if (activeStreamId.current) {
       window.electron.ipcRenderer.send(
         "ai-stream-cancel",
@@ -510,12 +577,16 @@ export default function AISidebarChat() {
                   timestamp={message.timestamp}
                   error={message.error}
                   isTyping={
-                    isTyping && message.content === "" && !message.error
+                    isTyping &&
+                    message.content === "" &&
+                    (!message.toolCalls || message.toolCalls.length === 0) &&
+                    !message.error
                   }
                   onExecute={(cmd) => getActive()?.sendInput(cmd)}
                   onRetry={
                     message.error ? () => handleRetry(message.id) : undefined
                   }
+                  toolCalls={message.toolCalls}
                 />
               ),
             )}
@@ -538,6 +609,46 @@ export default function AISidebarChat() {
             </button>
           )}
         </div>
+        <div className="px-4 pt-2 bg-slate-900/95 border-t border-slate-700/50 flex items-center justify-between">
+          <div
+            className="inline-flex rounded-md border border-slate-700/60 overflow-hidden"
+            title={
+              toolingSupported
+                ? "Switch between plain chat and autonomous agent mode"
+                : "This model does not support tool calling — agent mode disabled"
+            }
+          >
+            <button
+              onClick={() => setAgentMode(false)}
+              disabled={isTyping}
+              className={`px-2 py-1 text-[11px] flex items-center gap-1 transition-colors ${
+                !agentMode
+                  ? "bg-accent-500/20 text-accent-300"
+                  : "text-slate-400 hover:bg-slate-800"
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              <MessageSquare size={11} />
+              Chat
+            </button>
+            <button
+              onClick={() => toolingSupported && setAgentMode(true)}
+              disabled={!toolingSupported || isTyping}
+              className={`px-2 py-1 text-[11px] flex items-center gap-1 transition-colors ${
+                effectiveAgentMode
+                  ? "bg-accent-500/20 text-accent-300"
+                  : "text-slate-400 hover:bg-slate-800"
+              } disabled:opacity-40 disabled:cursor-not-allowed`}
+            >
+              <Bot size={11} />
+              Agent
+            </button>
+          </div>
+          {effectiveAgentMode && (
+            <span className="text-[10px] text-accent-400/80">
+              Tools enabled · risky actions confirm
+            </span>
+          )}
+        </div>
         <MessageInput
           onSendMessage={handleSendMessage}
           onCancel={handleCancel}
@@ -546,6 +657,49 @@ export default function AISidebarChat() {
           disabled={isTyping}
         />
         </>
+      )}
+
+      {confirmDialog && (
+        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-lg shadow-2xl max-w-md w-full p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertTriangle size={18} className="text-amber-400" />
+              <h3 className="text-sm font-semibold text-slate-100">
+                Confirm agent action
+              </h3>
+            </div>
+            <p className="text-xs text-slate-300 mb-2">
+              The agent wants to run{" "}
+              <code className="px-1 py-0.5 bg-slate-950 rounded text-accent-300 font-mono">
+                {confirmDialog.name}
+              </code>
+              :
+            </p>
+            <pre className="text-xs font-mono bg-slate-950 text-slate-300 rounded px-2 py-2 overflow-auto max-h-48 mb-3 border border-slate-800">
+              {JSON.stringify(confirmDialog.args, null, 2)}
+            </pre>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  confirmDialog.resolve(false);
+                  setConfirmDialog(null);
+                }}
+                className="px-3 py-1.5 text-xs rounded border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
+              >
+                Deny
+              </button>
+              <button
+                onClick={() => {
+                  confirmDialog.resolve(true);
+                  setConfirmDialog(null);
+                }}
+                className="px-3 py-1.5 text-xs rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 transition-colors"
+              >
+                Approve
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

@@ -5,6 +5,8 @@ import rehypeHighlight from "rehype-highlight";
 import "highlight.js/styles/github-dark.css";
 import { useState } from "react";
 import type { Components } from "react-markdown";
+import type { ToolCall } from "./conversation-types";
+import ToolCallCard from "./tool-call-card";
 
 const EXECUTABLE_LANGS = new Set(["bash", "sh", "zsh", "shell"]);
 
@@ -15,6 +17,7 @@ interface AssistantMessageProps {
   error?: boolean;
   onRetry?: () => void;
   onExecute?: (cmd: string) => void;
+  toolCalls?: ToolCall[];
 }
 
 function CodeBlock({
@@ -110,6 +113,7 @@ export default function AssistantMessage({
   error = false,
   onRetry,
   onExecute,
+  toolCalls,
 }: AssistantMessageProps) {
   const handleCopy = () => {
     window.api.clipboard.writeText(message);
@@ -232,13 +236,23 @@ export default function AssistantMessage({
                 </div>
               ) : null}
 
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                rehypePlugins={[rehypeHighlight]}
-                components={components}
-              >
-                {message}
-              </ReactMarkdown>
+              {message && (
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeHighlight]}
+                  components={components}
+                >
+                  {message}
+                </ReactMarkdown>
+              )}
+
+              {toolCalls && toolCalls.length > 0 && (
+                <div className="mt-1">
+                  {toolCalls.map((tc) => (
+                    <ToolCallCard key={tc.id} call={tc} />
+                  ))}
+                </div>
+              )}
 
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs text-gray-500">{timestamp}</span>
