@@ -47,7 +47,7 @@ import {
   Settings2,
   Keyboard, Info, Download, RefreshCw, RotateCcw,
   Variable,
-  Circle, Bell, FileSignature, Layers, ShieldAlert,
+  Circle, Bell, FileSignature, Layers, ShieldAlert, Sparkles,
 } from "lucide-react";
 import { ThemePicker } from "./theme-picker";
 import { SSHKeysPanel } from "./ssh-keys-panel";
@@ -56,6 +56,7 @@ import { RecordingsPanel } from "./recordings-panel";
 import { AlertsPanel } from "./alerts-panel";
 import { AuditPanel } from "./audit-panel";
 import { WorkspacesPanel } from "../workspaces/workspaces-panel";
+import { WorkspaceIdentityPanel } from "./workspace-identity-panel";
 import { GuardrailsPanel } from "./guardrails-panel";
 import type { ThemeId } from "@renderer/themes";
 
@@ -122,7 +123,10 @@ const SETTINGS_GROUPS: SettingsGroup[] = [
   },
   {
     label: "Workspaces",
-    items: [{ value: "workspaces", label: "Workspaces", icon: Layers }],
+    items: [
+      { value: "workspaces", label: "Workspaces", icon: Layers },
+      { value: "workspace-identity", label: "Identity", icon: Sparkles },
+    ],
   },
   {
     label: "About",
@@ -1501,6 +1505,9 @@ export default function SettingsDialog({ children }) {
             </TabsContent>
             <TabsContent value="workspaces" className="flex-1 overflow-y-auto px-1 mt-4">
               <WorkspacesPanel />
+            </TabsContent>
+            <TabsContent value="workspace-identity" className="flex-1 overflow-y-auto px-1 mt-4">
+              <WorkspaceIdentityPanel />
             </TabsContent>
             <TabsContent value="guardrails" className="flex-1 overflow-y-auto px-1 mt-4">
               <GuardrailsPanel />

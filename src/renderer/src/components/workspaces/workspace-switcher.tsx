@@ -14,13 +14,6 @@ import {
 } from "@renderer/components/ui/command";
 import { Check, ChevronsUpDown, Layers } from "lucide-react";
 
-const ENV_LABEL: Record<string, string> = {
-  dev: "DEV",
-  staging: "STG",
-  prod: "PROD",
-  other: "",
-};
-
 export function WorkspaceSwitcher() {
   const {
     workspaces,
@@ -49,17 +42,9 @@ export function WorkspaceSwitcher() {
             }}
           />
           <span className="font-medium tracking-wide">{active.name}</span>
-          {active.environment && active.environment !== "other" && (
-            <span
-              className={`px-1 rounded text-[9px] font-mono ${
-                active.environment === "prod"
-                  ? "bg-red-500/20 text-red-300"
-                  : active.environment === "staging"
-                    ? "bg-amber-500/20 text-amber-300"
-                    : "bg-emerald-500/20 text-emerald-300"
-              }`}
-            >
-              {ENV_LABEL[active.environment]}
+          {active.environment === "prod" && (
+            <span className="px-1 rounded text-[9px] font-mono bg-red-500/20 text-red-300">
+              PROD
             </span>
           )}
           <ChevronsUpDown size={11} className="text-gray-500" />
@@ -94,9 +79,9 @@ export function WorkspaceSwitcher() {
                     style={{ backgroundColor: w.color }}
                   />
                   <span className="flex-1 truncate">{w.name}</span>
-                  {w.environment && w.environment !== "other" && (
-                    <span className="text-[9px] font-mono text-gray-500">
-                      {ENV_LABEL[w.environment]}
+                  {w.environment === "prod" && (
+                    <span className="text-[9px] font-mono text-red-400">
+                      PROD
                     </span>
                   )}
                   {w.id === activeWorkspaceId && (

@@ -396,6 +396,26 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     );
   };
 
+  // Workspace identity visual feedback intensity
+  const [workspaceIdentity, setWorkspaceIdentityState] =
+    useState<WorkspaceIdentityMode>(() => {
+      const stored = localStorage.getItem("workspaceIdentity");
+      const valid: WorkspaceIdentityMode[] = [
+        "off",
+        "subtle",
+        "strong",
+        "prod-only",
+      ];
+      return valid.includes(stored as WorkspaceIdentityMode)
+        ? (stored as WorkspaceIdentityMode)
+        : "subtle";
+    });
+
+  const setWorkspaceIdentity = (mode: WorkspaceIdentityMode) => {
+    localStorage.setItem("workspaceIdentity", mode);
+    setWorkspaceIdentityState(mode);
+  };
+
   // Switcher / palette open state (controlled by keyboard shortcuts)
   const [workspaceSwitcherOpen, setWorkspaceSwitcherOpen] = useState(false);
   const [snippetPaletteOpen, setSnippetPaletteOpen] = useState(false);
@@ -602,6 +622,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       updateWorkspace,
       deleteWorkspace,
       assignConnectionToWorkspace,
+      workspaceIdentity,
+      setWorkspaceIdentity,
       workspaceSwitcherOpen,
       setWorkspaceSwitcherOpen,
       snippetPaletteOpen,
@@ -633,6 +655,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       shortcuts,
       workspaces,
       activeWorkspaceId,
+      workspaceIdentity,
       workspaceSwitcherOpen,
       snippetPaletteOpen,
     ],

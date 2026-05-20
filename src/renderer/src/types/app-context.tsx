@@ -63,6 +63,8 @@ type WorkspaceSnippetEntry = {
   description?: string;
 };
 
+type WorkspaceIdentityMode = "off" | "subtle" | "strong" | "prod-only";
+
 type WorkspaceEntry = {
   id: string;
   name: string;
@@ -148,6 +150,9 @@ type AppContextType = {
     workspaceId: string,
     mode?: "toggle" | "add" | "remove" | "exclusive",
   ) => void;
+  // Workspace identity visual feedback intensity
+  workspaceIdentity: WorkspaceIdentityMode;
+  setWorkspaceIdentity: (mode: WorkspaceIdentityMode) => void;
   // Workspace switcher control (used by keyboard shortcut)
   workspaceSwitcherOpen: boolean;
   setWorkspaceSwitcherOpen: (open: boolean) => void;

@@ -13,6 +13,7 @@ import MetricsPanel from "./components/observability/metrics-panel";
 import MetricsStatusInline from "./components/observability/metrics-status-inline";
 import { useMetrics } from "./components/observability/use-metrics";
 import { WorkspaceSwitcher } from "./components/workspaces/workspace-switcher";
+import { WorkspaceChip } from "./components/workspaces/workspace-chip";
 import { SnippetPalette } from "./components/workspaces/snippet-palette";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
@@ -80,8 +81,6 @@ function AppContent(): React.JSX.Element {
     description: string;
   } | null>(null);
   const [guardrailConfirm, setGuardrailConfirm] = useState("");
-  const activeWorkspace =
-    workspaces.find((w) => w.id === activeWorkspaceId) ?? workspaces[0] ?? null;
 
   const activeTabObj = tabs.find((t) => t.id === activeTab) ?? null;
   const activeSSHConn = activeTabObj?.isSSH && activeTabObj.connId
@@ -228,19 +227,6 @@ function AppContent(): React.JSX.Element {
     <div
       className="h-screen flex flex-col relative bg-slate-950 text-gray-100"
     >
-      {/* Workspace environment stripe */}
-      {activeWorkspace && (
-        <div
-          className={`w-full shrink-0 ${
-            activeWorkspace.environment === "prod" ? "h-[6px]" : "h-[3px]"
-          }`}
-          style={{
-            backgroundColor: activeWorkspace.color,
-            boxShadow: `0 0 8px ${activeWorkspace.color}`,
-          }}
-          title={`Workspace: ${activeWorkspace.name}`}
-        />
-      )}
       {/* Header with window controls */}
       <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/40 px-4 py-1.5 flex items-center gap-2 shadow-xl">
         {window.platform?.os === "darwin" && <div className="ml-16 flex-shrink-0" />}
@@ -260,10 +246,9 @@ function AppContent(): React.JSX.Element {
             </span>
           </div>
           <div className="flex items-center gap-2 text-gray-400 text-xs">
-            <span className="px-2 py-0.5 bg-slate-800/50 rounded border border-slate-700/40 text-accent-400/70 text-[10px] tracking-wider">
-              {tabs.length} tab{tabs.length !== 1 ? "s" : ""}
+            <span className="selectable-section">
+              <WorkspaceSwitcher />
             </span>
-            <WorkspaceSwitcher />
           </div>
         </div>
         {window.platform?.os === "linux" && (
@@ -510,6 +495,7 @@ function AppContent(): React.JSX.Element {
               ready
             </span>
           </span>
+          <WorkspaceChip />
           {activeTab && (
             <span className="text-gray-600 truncate max-w-[200px]">
               {tabs.find((t) => t.id === activeTab)?.title}

@@ -3,6 +3,10 @@ import { TabBadge } from './tab-badge';
 import { TabEditInput } from './tab-edit-input';
 import { CustomTag } from '../../types/tabs';
 import { useAppContext } from '../../contexts/app-context';
+import {
+  shouldShowWorkspaceIdentity,
+  workspaceForConnection,
+} from '../../lib/workspace-helpers';
 
 function WorkspaceDot({ connId }: { connId?: string }) {
   const { workspaces, activeWorkspaceId } = useAppContext();
@@ -28,6 +32,21 @@ function WorkspaceDot({ connId }: { connId?: string }) {
       title={tooltip}
     />
   );
+}
+
+function useTabAccent(connId?: string): {
+  borderColor: string | undefined;
+  tintBg: string | undefined;
+} {
+  const { workspaces, activeWorkspaceId, workspaceIdentity } = useAppContext();
+  const ws = workspaceForConnection(workspaces, activeWorkspaceId, connId);
+  if (!shouldShowWorkspaceIdentity(workspaceIdentity, ws) || !ws) {
+    return { borderColor: undefined, tintBg: undefined };
+  }
+  return {
+    borderColor: ws.color,
+    tintBg: workspaceIdentity === "strong" ? `${ws.color}14` : undefined,
+  };
 }
 
 interface TabItemProps {
@@ -67,6 +86,16 @@ export function TabItem({
   onFinishEdit,
   onClose
 }: TabItemProps) {
+  const accent = useTabAccent(tab.connId);
+  const accentStyle: React.CSSProperties = {};
+  if (accent.borderColor) {
+    accentStyle.borderLeftColor = isActive
+      ? accent.borderColor
+      : `${accent.borderColor}80`;
+  }
+  if (isActive && accent.tintBg) {
+    accentStyle.backgroundColor = accent.tintBg;
+  }
   return (
     <div key={tab.id} className="relative flex flex-col">
       <div
@@ -76,6 +105,7 @@ export function TabItem({
         onDrop={onDrop}
         onDragEnd={onDragEnd}
         title={tab.title}
+        style={accentStyle}
         className={`tab-item
           relative group flex items-center gap-2 px-3 py-2 rounded-lg
           text-sm font-medium border-l-[3px] border-r border-t border-b
@@ -83,8 +113,8 @@ export function TabItem({
           backdrop-blur-md transition-all duration-100
           ${isDragged ? 'opacity-50' : ''}
           ${isActive
-            ? 'bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-gray-100 border-l-cyan-400 border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-xl shadow-accent-500/20 z-10'
-            : 'bg-slate-900/60 text-gray-400 border-l-slate-700/50 border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-accent-100 hover:border-l-cyan-400/50 hover:shadow-lg hover:shadow-accent-500/10'
+            ? `bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-gray-100 ${accent.borderColor ? '' : 'border-l-cyan-400'} border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-xl shadow-accent-500/20 z-10`
+            : `bg-slate-900/60 text-gray-400 ${accent.borderColor ? '' : 'border-l-slate-700/50'} border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-accent-100 ${accent.borderColor ? '' : 'hover:border-l-cyan-400/50'} hover:shadow-lg hover:shadow-accent-500/10`
           }
         `}
         onClick={onSelect}
