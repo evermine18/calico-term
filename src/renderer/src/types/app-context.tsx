@@ -52,6 +52,25 @@ type VaultCredential = {
   hasPassword: boolean;
 };
 
+type WorkspaceEnvironmentEntry = "dev" | "staging" | "prod" | "other";
+
+type WorkspaceSnippetEntry = {
+  id: string;
+  name: string;
+  command: string;
+};
+
+type WorkspaceEntry = {
+  id: string;
+  name: string;
+  color: string;
+  environment?: WorkspaceEnvironmentEntry;
+  sshConnectionIds: string[];
+  envVarKeys?: string[];
+  alertRuleIds?: string[];
+  snippets?: WorkspaceSnippetEntry[];
+};
+
 type AppContextType = {
   theme: import("../themes").ThemeId;
   setTheme: (id: import("../themes").ThemeId) => void;
@@ -114,4 +133,12 @@ type AppContextType = {
   addVaultCredential: (cred: VaultCredential) => void;
   updateVaultCredential: (cred: VaultCredential) => void;
   deleteVaultCredential: (id: string) => void;
+  // Workspaces (phase 4)
+  workspaces: WorkspaceEntry[];
+  activeWorkspaceId: string;
+  setActiveWorkspaceId: (id: string) => void;
+  addWorkspace: (ws: WorkspaceEntry) => void;
+  updateWorkspace: (ws: WorkspaceEntry) => void;
+  deleteWorkspace: (id: string) => void;
+  assignConnectionToWorkspace: (connId: string, workspaceId: string) => void;
 };

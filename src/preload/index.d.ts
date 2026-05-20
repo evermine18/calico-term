@@ -303,6 +303,19 @@ declare global {
           }) => void,
         ) => () => void;
       };
+      workspaces: {
+        exportFile: (payload: {
+          defaultName: string;
+          body: string;
+          signaturePayload: string;
+        }) => Promise<{ ok: boolean; path?: string }>;
+        importFile: () => Promise<{ ok: boolean; content?: string }>;
+        verify: (payload: {
+          signaturePayload: string;
+          signature: string;
+          publicKey: string;
+        }) => Promise<boolean>;
+      };
       windowControls: {
         minimize: () => void;
         maximize: () => void;

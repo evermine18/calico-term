@@ -180,6 +180,19 @@ const api = {
       return () => ipcRenderer.removeListener("alert-match", wrapped);
     },
   },
+  workspaces: {
+    exportFile: (payload: {
+      defaultName: string;
+      body: string;
+      signaturePayload: string;
+    }) => ipcRenderer.invoke("workspace-export", payload),
+    importFile: () => ipcRenderer.invoke("workspace-import"),
+    verify: (payload: {
+      signaturePayload: string;
+      signature: string;
+      publicKey: string;
+    }) => ipcRenderer.invoke("workspace-verify", payload),
+  },
   windowControls: {
     minimize: () => ipcRenderer.send("win-minimize"),
     maximize: () => ipcRenderer.send("win-maximize"),

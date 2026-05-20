@@ -2,6 +2,24 @@ import { TerminalSquare, Server, X } from 'lucide-react';
 import { TabBadge } from './tab-badge';
 import { TabEditInput } from './tab-edit-input';
 import { CustomTag } from '../../types/tabs';
+import { useAppContext } from '../../contexts/app-context';
+
+function WorkspaceDot({ connId }: { connId?: string }) {
+  const { workspaces } = useAppContext();
+  if (!connId) return null;
+  const ws = workspaces.find((w) => w.sshConnectionIds.includes(connId));
+  if (!ws) return null;
+  return (
+    <span
+      className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+      style={{
+        backgroundColor: ws.color,
+        boxShadow: `0 0 4px ${ws.color}aa`,
+      }}
+      title={`Workspace: ${ws.name}${ws.environment === 'prod' ? ' (PROD)' : ''}`}
+    />
+  );
+}
 
 interface TabItemProps {
   tab: any;
@@ -92,6 +110,8 @@ export function TabItem({
             : <TerminalSquare size={14} strokeWidth={2} />
           }
         </div>
+        <WorkspaceDot connId={tab.connId} />
+
 
         {/* Tab title */}
         {tab.mode === 'edit' ? (

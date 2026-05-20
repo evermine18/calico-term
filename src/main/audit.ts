@@ -49,6 +49,14 @@ function ensureSigningKey(): { privatePem: string; publicPem: string } {
   return { privatePem, publicPem };
 }
 
+export function readPrivateKeyPem(): string {
+  return readPrivateKey();
+}
+
+export function readPublicKeyPem(): string {
+  return ensureSigningKey().publicPem;
+}
+
 function readPrivateKey(): string {
   ensureSigningKey();
   const raw = fs.readFileSync(signingKeyPath());

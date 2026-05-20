@@ -12,6 +12,7 @@ import FileBrowserPanel from "./components/sftp/file-browser-panel";
 import MetricsPanel from "./components/observability/metrics-panel";
 import MetricsStatusInline from "./components/observability/metrics-status-inline";
 import { useMetrics } from "./components/observability/use-metrics";
+import { WorkspaceSwitcher } from "./components/workspaces/workspace-switcher";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
 import { Minus, Square, TerminalSquare, X } from "lucide-react";
@@ -32,8 +33,17 @@ function AppContent(): React.JSX.Element {
   const [showHome, setShowHome] = useState(false);
   const [sftpOpen, setSftpOpen] = useState(false);
   const [metricsOpen, setMetricsOpen] = useState(false);
-  const { setHistoryDialogOpen, shortcuts, aiSidebarOpen, setAiSidebarOpen, sshConnections } =
-    useAppContext();
+  const {
+    setHistoryDialogOpen,
+    shortcuts,
+    aiSidebarOpen,
+    setAiSidebarOpen,
+    sshConnections,
+    workspaces,
+    activeWorkspaceId,
+  } = useAppContext();
+  const activeWorkspace =
+    workspaces.find((w) => w.id === activeWorkspaceId) ?? workspaces[0] ?? null;
 
   const activeTabObj = tabs.find((t) => t.id === activeTab) ?? null;
   const activeSSHConn = activeTabObj?.isSSH && activeTabObj.connId
@@ -135,6 +145,17 @@ function AppContent(): React.JSX.Element {
     <div
       className="h-screen flex flex-col relative bg-slate-950 text-gray-100"
     >
+      {/* Workspace environment stripe */}
+      {activeWorkspace && (
+        <div
+          className="h-[3px] w-full shrink-0"
+          style={{
+            backgroundColor: activeWorkspace.color,
+            boxShadow: `0 0 8px ${activeWorkspace.color}`,
+          }}
+          title={`Workspace: ${activeWorkspace.name}`}
+        />
+      )}
       {/* Header with window controls */}
       <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/40 px-4 py-1.5 flex items-center gap-2 shadow-xl">
         {window.platform?.os === "darwin" && <div className="ml-16 flex-shrink-0" />}
@@ -157,6 +178,7 @@ function AppContent(): React.JSX.Element {
             <span className="px-2 py-0.5 bg-slate-800/50 rounded border border-slate-700/40 text-accent-400/70 text-[10px] tracking-wider">
               {tabs.length} tab{tabs.length !== 1 ? "s" : ""}
             </span>
+            <WorkspaceSwitcher />
           </div>
         </div>
         {window.platform?.os === "linux" && (
@@ -240,6 +262,18 @@ function AppContent(): React.JSX.Element {
           <div className="absolute inset-0 bg-slate-950 z-10">
             <SSHConnectionsHome
               onConnect={async (conn) => {
+                // Prod confirmation: any workspace marked `prod` that owns this connection
+                const inProd = workspaces.some(
+                  (w) =>
+                    w.environment === "prod" &&
+                    w.sshConnectionIds.includes(conn.id),
+                );
+                if (inProd) {
+                  const ok = window.confirm(
+                    `⚠ Production environment\n\nYou are about to connect to "${conn.name}" which belongs to a PROD workspace. Continue?`,
+                  );
+                  if (!ok) return;
+                }
                 const id = crypto.randomUUID();
                 const jumpChain = (conn.jumpHostIds ?? [])
                   .map((jid) => sshConnections.find((c) => c.id === jid))
