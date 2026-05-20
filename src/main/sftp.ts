@@ -20,7 +20,7 @@ export type SFTPFileEntry = {
   isSymlink: boolean;
 };
 
-type SSHHopInfo = {
+export type SSHHopInfo = {
   host: string;
   port: number;
   username: string;
@@ -28,7 +28,7 @@ type SSHHopInfo = {
   identityKeyId?: string;
 };
 
-type SSHConnectionInfo = SSHHopInfo & {
+export type SSHConnectionInfo = SSHHopInfo & {
   id: string;
   hasPassword?: boolean;
   credentialId?: string;
@@ -81,7 +81,7 @@ export function getSessionTargetClient(sessionId: string): Client | null {
   return s ? s.clients[0] : null;
 }
 
-function buildAuthConfig(hop: SSHHopInfo, password?: string): ConnectConfig {
+export function buildAuthConfig(hop: SSHHopInfo, password?: string): ConnectConfig {
   const cfg: ConnectConfig = {
     host: hop.host,
     port: hop.port,
@@ -114,7 +114,7 @@ function buildAuthConfig(hop: SSHHopInfo, password?: string): ConnectConfig {
   return cfg;
 }
 
-function connectHop(cfg: ConnectConfig): Promise<Client> {
+export function connectHop(cfg: ConnectConfig): Promise<Client> {
   return new Promise((resolve, reject) => {
     const client = new Client();
     client.on("ready", () => resolve(client));
@@ -123,7 +123,7 @@ function connectHop(cfg: ConnectConfig): Promise<Client> {
   });
 }
 
-function forwardOut(
+export function forwardOut(
   via: Client,
   dstHost: string,
   dstPort: number,

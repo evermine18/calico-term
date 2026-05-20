@@ -1,38 +1,12 @@
-import { useEffect, useState } from "react";
 import { Activity, X, AlertTriangle } from "lucide-react";
 
 type Props = {
-  sessionId: string;
+  samples: HostSample[];
+  error: string | null;
   onClose: () => void;
 };
 
-const MAX_HISTORY = 60;
-
-export default function MetricsPanel({ sessionId, onClose }: Props) {
-  const [samples, setSamples] = useState<HostSample[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    setSamples([]);
-    setError(null);
-    window.api.metrics.start(sessionId, 2000);
-    const offData = window.api.metrics.onSample(({ sessionId: sid, sample }) => {
-      if (sid !== sessionId) return;
-      setSamples((prev) => {
-        const next = [...prev, sample];
-        return next.length > MAX_HISTORY ? next.slice(-MAX_HISTORY) : next;
-      });
-    });
-    const offErr = window.api.metrics.onError(({ sessionId: sid, error: e }) => {
-      if (sid === sessionId) setError(e);
-    });
-    return () => {
-      window.api.metrics.stop(sessionId);
-      offData();
-      offErr();
-    };
-  }, [sessionId]);
-
+export default function MetricsPanel({ samples, error, onClose }: Props) {
   const latest = samples[samples.length - 1];
 
   return (

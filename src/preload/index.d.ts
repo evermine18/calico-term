@@ -261,7 +261,28 @@ declare global {
         }>;
       };
       metrics: {
-        start: (sessionId: string, intervalMs?: number) => void;
+        start: (
+          sessionId: string,
+          conn: {
+            id: string;
+            host: string;
+            port: number;
+            username: string;
+            identityFile?: string;
+            identityKeyId?: string;
+            hasPassword?: boolean;
+            credentialId?: string;
+            passwordRef?: { provider: SecretProvider; ref: string };
+            jumpHosts?: {
+              host: string;
+              port: number;
+              username: string;
+              identityFile?: string;
+              identityKeyId?: string;
+            }[];
+          },
+          intervalMs?: number,
+        ) => Promise<{ ok: boolean; error?: string }>;
         stop: (sessionId: string) => void;
         onSample: (
           cb: (data: { sessionId: string; sample: HostSample }) => void,

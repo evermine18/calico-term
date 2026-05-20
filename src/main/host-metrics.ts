@@ -1,17 +1,24 @@
 import { BrowserWindow, ipcMain } from "electron";
-import { Client } from "ssh2";
-import { getSessionTargetClient } from "./sftp";
+import { Client, ConnectConfig } from "ssh2";
+import {
+  buildAuthConfig,
+  connectHop,
+  forwardOut,
+  SSHConnectionInfo,
+} from "./sftp";
+import { retrievePassword } from "./terminal";
+import { resolveSecret } from "./secret-providers";
 
 export type HostSample = {
   ts: number;
-  cpuPct: number; // 0..100
-  memUsedPct: number; // 0..100
+  cpuPct: number;
+  memUsedPct: number;
   memTotalKb: number;
   memFreeKb: number;
   load1: number;
   load5: number;
   load15: number;
-  diskRootPct: number; // 0..100
+  diskRootPct: number;
 };
 
 type Poll = {
@@ -19,6 +26,7 @@ type Poll = {
   intervalMs: number;
   prevCpu?: { total: number; idle: number };
   timer: NodeJS.Timeout;
+  clients: Client[];
 };
 
 const polls = new Map<string, Poll>();
@@ -41,6 +49,42 @@ function execOnce(client: Client, cmd: string): Promise<string> {
       stream.on("close", () => resolve(out));
     });
   });
+}
+
+async function establishClients(conn: SSHConnectionInfo): Promise<Client[]> {
+  let password: string | undefined;
+  if (conn.credentialId) {
+    password = retrievePassword("vault-" + conn.credentialId) ?? undefined;
+  } else if (conn.passwordRef) {
+    try {
+      password = await resolveSecret(
+        conn.passwordRef.provider,
+        conn.passwordRef.ref,
+      );
+    } catch {
+      /* fall through */
+    }
+  }
+  if (!password) password = retrievePassword(conn.id) ?? undefined;
+
+  const clients: Client[] = [];
+  let sock: (NodeJS.ReadableStream & NodeJS.WritableStream) | undefined;
+  for (const hop of conn.jumpHosts ?? []) {
+    const hopCfg = buildAuthConfig(hop);
+    if (sock) (hopCfg as ConnectConfig).sock = sock as any;
+    const hopClient = await connectHop(hopCfg);
+    clients.push(hopClient);
+    const nextTarget = conn.jumpHosts?.[clients.length];
+    const target = nextTarget
+      ? { host: nextTarget.host, port: nextTarget.port }
+      : { host: conn.host, port: conn.port };
+    sock = await forwardOut(hopClient, target.host, target.port);
+  }
+  const targetCfg = buildAuthConfig(conn, password);
+  if (sock) (targetCfg as ConnectConfig).sock = sock as any;
+  const targetClient = await connectHop(targetCfg);
+  clients.unshift(targetClient);
+  return clients;
 }
 
 function parseSnapshot(
@@ -116,14 +160,9 @@ function parseSnapshot(
 
 async function tick(sessionId: string): Promise<void> {
   const poll = polls.get(sessionId);
-  if (!poll) return;
-  const client = getSessionTargetClient(sessionId);
-  if (!client) {
-    stopMetrics(sessionId);
-    return;
-  }
+  if (!poll || poll.clients.length === 0) return;
   try {
-    const out = await execOnce(client, SNAPSHOT_CMD);
+    const out = await execOnce(poll.clients[0], SNAPSHOT_CMD);
     const parsed = parseSnapshot(out, poll.prevCpu);
     if (parsed) {
       poll.prevCpu = parsed.prevCpu;
@@ -141,11 +180,15 @@ async function tick(sessionId: string): Promise<void> {
   }
 }
 
-export function startMetrics(sessionId: string, intervalMs: number = 2000): void {
+export async function startMetrics(
+  sessionId: string,
+  conn: SSHConnectionInfo,
+  intervalMs: number = 2000,
+): Promise<void> {
   stopMetrics(sessionId);
+  const clients = await establishClients(conn);
   const timer = setInterval(() => tick(sessionId), Math.max(500, intervalMs));
-  polls.set(sessionId, { sessionId, intervalMs, timer });
-  // Immediate first poll to populate baseline (won't yield CPU% on the first run).
+  polls.set(sessionId, { sessionId, intervalMs, timer, clients });
   tick(sessionId);
 }
 
@@ -153,13 +196,31 @@ export function stopMetrics(sessionId: string): void {
   const p = polls.get(sessionId);
   if (!p) return;
   clearInterval(p.timer);
+  for (const c of p.clients) {
+    try {
+      c.end();
+    } catch {
+      /* ignore */
+    }
+  }
   polls.delete(sessionId);
 }
 
 export function setupHostMetricsHandlers(): void {
-  ipcMain.on("metrics-start", (_e, sessionId: string, intervalMs?: number) => {
-    startMetrics(sessionId, intervalMs);
-  });
+  ipcMain.handle(
+    "metrics-start",
+    async (_e, sessionId: string, conn: SSHConnectionInfo, intervalMs?: number) => {
+      try {
+        await startMetrics(sessionId, conn, intervalMs);
+        return { ok: true };
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : String(err),
+        };
+      }
+    },
+  );
   ipcMain.on("metrics-stop", (_e, sessionId: string) => {
     stopMetrics(sessionId);
   });

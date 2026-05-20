@@ -10,6 +10,8 @@ import CommandHistoryDialog from "./components/command-history/dialog";
 import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
 import FileBrowserPanel from "./components/sftp/file-browser-panel";
 import MetricsPanel from "./components/observability/metrics-panel";
+import MetricsStatusInline from "./components/observability/metrics-status-inline";
+import { useMetrics } from "./components/observability/use-metrics";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
 import { Minus, Square, TerminalSquare, X } from "lucide-react";
@@ -37,6 +39,37 @@ function AppContent(): React.JSX.Element {
   const activeSSHConn = activeTabObj?.isSSH && activeTabObj.connId
     ? sshConnections.find((c) => c.id === activeTabObj.connId) ?? null
     : null;
+
+  // Build metrics-connection info from the active SSH connection (independent
+  // of SFTP). null when no SSH tab is active so the polling stops.
+  const metricsConn = activeSSHConn
+    ? {
+        id: activeSSHConn.id,
+        host: activeSSHConn.host,
+        port: activeSSHConn.port,
+        username: activeSSHConn.username,
+        identityFile: activeSSHConn.identityFile,
+        identityKeyId: activeSSHConn.identityKeyId,
+        hasPassword: activeSSHConn.hasPassword,
+        credentialId: activeSSHConn.credentialId,
+        passwordRef: activeSSHConn.passwordRef,
+        jumpHosts: (activeSSHConn.jumpHostIds ?? [])
+          .map((jid) => sshConnections.find((c) => c.id === jid))
+          .filter((c): c is SSHConnectionEntry => !!c)
+          .map((j) => ({
+            host: j.host,
+            port: j.port,
+            username: j.username,
+            identityFile: j.identityFile,
+            identityKeyId: j.identityKeyId,
+          })),
+      }
+    : null;
+
+  const metricsSessionId = activeSSHConn && activeTabObj
+    ? `metrics-${activeTabObj.id}`
+    : null;
+  const metrics = useMetrics(metricsSessionId, metricsConn);
 
   // Wrap setActiveTab so any tab click also dismisses the home overlay and clears activity
   const handleSetActiveTab = (id: string) => {
@@ -164,8 +197,6 @@ function AppContent(): React.JSX.Element {
         sftpOpen={sftpOpen}
         setSftpOpen={setSftpOpen}
         activeTabIsSSH={!!activeSSHConn}
-        metricsOpen={metricsOpen}
-        setMetricsOpen={setMetricsOpen}
       />
       {/* Terminal Content */}
       <div className="flex-1 bg-slate-950 relative overflow-hidden pb-8">
@@ -176,9 +207,10 @@ function AppContent(): React.JSX.Element {
             onClose={() => setSftpOpen(false)}
           />
         )}
-        {metricsOpen && activeSSHConn && sftpOpen && (
+        {metricsOpen && activeSSHConn && (
           <MetricsPanel
-            sessionId={activeTabObj!.id}
+            samples={metrics.samples}
+            error={metrics.error}
             onClose={() => setMetricsOpen(false)}
           />
         )}
@@ -275,6 +307,18 @@ function AppContent(): React.JSX.Element {
             <span className="text-gray-600 truncate max-w-[200px]">
               {tabs.find((t) => t.id === activeTab)?.title}
             </span>
+          )}
+          {activeSSHConn && (
+            <>
+              <span className="text-slate-700">·</span>
+              <MetricsStatusInline
+                sample={metrics.latest}
+                error={metrics.error}
+                loading={metrics.loading}
+                expanded={metricsOpen}
+                onClick={() => setMetricsOpen((v) => !v)}
+              />
+            </>
           )}
         </div>
         <div className="flex items-center gap-3 text-gray-600">

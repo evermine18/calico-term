@@ -145,8 +145,8 @@ const api = {
     exportSigned: () => ipcRenderer.invoke("audit-export-signed"),
   },
   metrics: {
-    start: (sessionId: string, intervalMs?: number) =>
-      ipcRenderer.send("metrics-start", sessionId, intervalMs ?? 2000),
+    start: (sessionId: string, conn: unknown, intervalMs?: number) =>
+      ipcRenderer.invoke("metrics-start", sessionId, conn, intervalMs ?? 2000),
     stop: (sessionId: string) => ipcRenderer.send("metrics-stop", sessionId),
     onSample: (
       cb: (data: { sessionId: string; sample: HostSample }) => void,
