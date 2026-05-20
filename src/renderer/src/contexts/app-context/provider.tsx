@@ -357,6 +357,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       pinned: false,
     };
 
+    // Mirror to the persistent audit log (sanitized, append-only on disk).
+    window.api.audit.append({
+      ts: Date.now(),
+      command: trimmed,
+      tabId,
+    });
+
     setCommandHistory((prev) => {
       // Limit to 500 most recent commands
       const updated = [newEntry, ...prev].slice(0, 500);

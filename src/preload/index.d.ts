@@ -38,6 +38,51 @@ declare global {
     proxyJump?: string;
   }
 
+  interface RecordingMeta {
+    id: string;
+    tabId: string;
+    title: string;
+    createdAt: number;
+    durationMs: number;
+    cols: number;
+    rows: number;
+    bytes: number;
+    path: string;
+  }
+
+  interface AuditEntry {
+    ts: number;
+    command: string;
+    hostId?: string;
+    workspaceId?: string;
+    cwd?: string;
+    exitCode?: number;
+    tabId?: string;
+  }
+
+  interface HostSample {
+    ts: number;
+    cpuPct: number;
+    memUsedPct: number;
+    memTotalKb: number;
+    memFreeKb: number;
+    load1: number;
+    load5: number;
+    load15: number;
+    diskRootPct: number;
+  }
+
+  type AlertSeverity = "info" | "warning" | "critical";
+
+  interface AlertRule {
+    id: string;
+    pattern: string;
+    flags: string;
+    severity: AlertSeverity;
+    message?: string;
+    enabled: boolean;
+  }
+
   interface Window {
     electron: ElectronAPI;
     platform: {
@@ -188,6 +233,54 @@ declare global {
         onUpdateDownloaded: (cb: (info: UpdateInfo) => void) => void;
         onError: (cb: (message: string) => void) => void;
         removeAllListeners: () => void;
+      };
+      recording: {
+        start: (
+          tabId: string,
+          title: string,
+          cols: number,
+          rows: number,
+        ) => Promise<RecordingMeta>;
+        stop: (tabId: string) => Promise<RecordingMeta | null>;
+        isActive: (tabId: string) => Promise<boolean>;
+        list: () => Promise<RecordingMeta[]>;
+        load: (id: string) => Promise<string | null>;
+        delete: (id: string) => Promise<boolean>;
+        exportPath: (id: string) => Promise<string | null>;
+      };
+      audit: {
+        append: (entry: AuditEntry) => void;
+        list: (limit?: number) => Promise<AuditEntry[]>;
+        clear: () => Promise<boolean>;
+        publicKey: () => Promise<string>;
+        exportSigned: () => Promise<{
+          ok: boolean;
+          path?: string;
+          error?: string;
+          canceled?: boolean;
+        }>;
+      };
+      metrics: {
+        start: (sessionId: string, intervalMs?: number) => void;
+        stop: (sessionId: string) => void;
+        onSample: (
+          cb: (data: { sessionId: string; sample: HostSample }) => void,
+        ) => () => void;
+        onError: (
+          cb: (data: { sessionId: string; error: string }) => void,
+        ) => () => void;
+      };
+      alerts: {
+        setRules: (rules: AlertRule[]) => void;
+        onMatch: (
+          cb: (data: {
+            ruleId: string;
+            tabId: string;
+            severity: AlertSeverity;
+            message: string;
+            ts: number;
+          }) => void,
+        ) => () => void;
       };
       windowControls: {
         minimize: () => void;

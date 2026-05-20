@@ -74,6 +74,13 @@ function getSession(sessionId: string): SFTPSession {
   return session;
 }
 
+// Exposed so other modules (host metrics, etc.) can run exec channels on the
+// existing SSH target client without opening another connection.
+export function getSessionTargetClient(sessionId: string): Client | null {
+  const s = sessions.get(sessionId);
+  return s ? s.clients[0] : null;
+}
+
 function buildAuthConfig(hop: SSHHopInfo, password?: string): ConnectConfig {
   const cfg: ConnectConfig = {
     host: hop.host,

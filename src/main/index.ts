@@ -16,6 +16,10 @@ import { setupSSHKeysHandlers } from "./ssh-keys";
 import { setupSSHConfigHandlers } from "./ssh-config";
 import { setupEnvVaultHandlers } from "./env-vault";
 import { setupSecretProviderHandlers } from "./secret-providers";
+import { setupRecordingHandlers } from "./recording";
+import { setupAuditHandlers } from "./audit";
+import { setupHostMetricsHandlers } from "./host-metrics";
+import { setupAlertHandlers } from "./alerts";
 
 // --- AI streaming controllers ---
 const streamControllers = new Map<string, AbortController>();
@@ -232,6 +236,10 @@ app.whenReady().then(() => {
   setupSSHConfigHandlers();
   setupEnvVaultHandlers();
   setupSecretProviderHandlers();
+  setupRecordingHandlers();
+  setupAuditHandlers();
+  setupHostMetricsHandlers();
+  setupAlertHandlers();
   ipcMain.on("app-close", () => {
     console.log("App close requested");
     app.quit();

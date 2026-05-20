@@ -47,10 +47,14 @@ import {
   Settings2,
   Keyboard, Info, Download, RefreshCw, RotateCcw,
   Variable,
+  Circle, Bell, FileSignature,
 } from "lucide-react";
 import { ThemePicker } from "./theme-picker";
 import { SSHKeysPanel } from "./ssh-keys-panel";
 import { EnvVaultPanel } from "./env-vault-panel";
+import { RecordingsPanel } from "./recordings-panel";
+import { AlertsPanel } from "./alerts-panel";
+import { AuditPanel } from "./audit-panel";
 import type { ThemeId } from "@renderer/themes";
 
 interface TagItem {
@@ -465,6 +469,18 @@ export default function SettingsDialog({ children }) {
               <TabsTrigger value="env" className="flex items-center gap-1.5">
                 <Variable size={14} />
                 Env
+              </TabsTrigger>
+              <TabsTrigger value="recordings" className="flex items-center gap-1.5">
+                <Circle size={14} />
+                Recordings
+              </TabsTrigger>
+              <TabsTrigger value="alerts" className="flex items-center gap-1.5">
+                <Bell size={14} />
+                Alerts
+              </TabsTrigger>
+              <TabsTrigger value="audit" className="flex items-center gap-1.5">
+                <FileSignature size={14} />
+                Audit
               </TabsTrigger>
               <TabsTrigger value="about" className="flex items-center gap-1.5">
                 <Info size={14} />
@@ -1440,6 +1456,16 @@ export default function SettingsDialog({ children }) {
             {/* Env Vault Tab */}
             <TabsContent value="env" className="flex-1 overflow-y-auto px-1 mt-4">
               <EnvVaultPanel />
+            </TabsContent>
+
+            <TabsContent value="recordings" className="flex-1 overflow-y-auto px-1 mt-4">
+              <RecordingsPanel />
+            </TabsContent>
+            <TabsContent value="alerts" className="flex-1 overflow-y-auto px-1 mt-4">
+              <AlertsPanel />
+            </TabsContent>
+            <TabsContent value="audit" className="flex-1 overflow-y-auto px-1 mt-4">
+              <AuditPanel />
             </TabsContent>
 
             {/* About Tab */}

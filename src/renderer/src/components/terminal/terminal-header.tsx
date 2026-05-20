@@ -2,9 +2,10 @@ import { TerminalTab } from "@renderer/types/terminal";
 import { Terminal } from "@xterm/xterm";
 
 import TabsList from "./tabs-list";
-import { Bot, Cog, Plus, Clock, House, FolderOpen } from "lucide-react";
+import { Bot, Cog, Plus, Clock, House, FolderOpen, Circle, Activity } from "lucide-react";
 import { useAppContext } from "@renderer/contexts/app-context";
 import SettingsDialog from "../app-settings/dialog";
+import { useEffect, useState } from "react";
 
 export default function TerminalHeader({
   tabs,
@@ -16,6 +17,8 @@ export default function TerminalHeader({
   sftpOpen,
   setSftpOpen,
   activeTabIsSSH,
+  metricsOpen,
+  setMetricsOpen,
 }: {
   tabs: TerminalTab[];
   setTabs: React.Dispatch<React.SetStateAction<TerminalTab[]>>;
@@ -26,7 +29,42 @@ export default function TerminalHeader({
   sftpOpen: boolean;
   setSftpOpen: (v: boolean) => void;
   activeTabIsSSH: boolean;
+  metricsOpen: boolean;
+  setMetricsOpen: (v: boolean) => void;
 }) {
+  const [recording, setRecording] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!activeTab) {
+      setRecording(false);
+      return;
+    }
+    window.api.recording.isActive(activeTab).then((on) => {
+      if (!cancelled) setRecording(on);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab]);
+
+  const toggleRecording = async () => {
+    if (!activeTab) return;
+    const tab = tabs.find((t) => t.id === activeTab);
+    if (!tab) return;
+    if (recording) {
+      await window.api.recording.stop(activeTab);
+      setRecording(false);
+    } else {
+      await window.api.recording.start(
+        activeTab,
+        tab.title,
+        tab.terminal.cols,
+        tab.terminal.rows,
+      );
+      setRecording(true);
+    }
+  };
   const addTab = () => {
     const id = crypto.randomUUID();
     const newTab: TerminalTab = {
@@ -103,6 +141,47 @@ export default function TerminalHeader({
         >
           <Clock size={16} />
         </button>
+
+        {activeTab && (
+          <button
+            onClick={toggleRecording}
+            className={`
+              flex items-center justify-center w-8 h-8 rounded-md
+              transition-all duration-150
+              ${recording
+                ? "bg-red-500/20 text-red-400"
+                : "text-gray-500 hover:bg-slate-700/60 hover:text-red-400"
+              }
+            `}
+            title={recording ? "Stop recording" : "Record session"}
+          >
+            <Circle
+              size={12}
+              className={recording ? "fill-red-500 animate-pulse" : ""}
+            />
+          </button>
+        )}
+
+        {activeTabIsSSH && (
+          <button
+            onClick={() => {
+              const next = !metricsOpen;
+              setMetricsOpen(next);
+              if (next && !sftpOpen) setSftpOpen(true);
+            }}
+            className={`
+              flex items-center justify-center w-8 h-8 rounded-md
+              transition-all duration-150
+              ${metricsOpen
+                ? "bg-slate-700/60 text-accent-300"
+                : "text-gray-500 hover:bg-slate-700/60 hover:text-accent-300"
+              }
+            `}
+            title="Host metrics"
+          >
+            <Activity size={16} />
+          </button>
+        )}
 
         {activeTabIsSSH && (
           <button

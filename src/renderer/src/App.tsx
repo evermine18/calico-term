@@ -9,6 +9,7 @@ import { TerminalProvider } from "./contexts/terminal-context";
 import CommandHistoryDialog from "./components/command-history/dialog";
 import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
 import FileBrowserPanel from "./components/sftp/file-browser-panel";
+import MetricsPanel from "./components/observability/metrics-panel";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
 import { Minus, Square, TerminalSquare, X } from "lucide-react";
@@ -28,6 +29,7 @@ function AppContent(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [showHome, setShowHome] = useState(false);
   const [sftpOpen, setSftpOpen] = useState(false);
+  const [metricsOpen, setMetricsOpen] = useState(false);
   const { setHistoryDialogOpen, shortcuts, aiSidebarOpen, setAiSidebarOpen, sshConnections } =
     useAppContext();
 
@@ -162,6 +164,8 @@ function AppContent(): React.JSX.Element {
         sftpOpen={sftpOpen}
         setSftpOpen={setSftpOpen}
         activeTabIsSSH={!!activeSSHConn}
+        metricsOpen={metricsOpen}
+        setMetricsOpen={setMetricsOpen}
       />
       {/* Terminal Content */}
       <div className="flex-1 bg-slate-950 relative overflow-hidden pb-8">
@@ -170,6 +174,12 @@ function AppContent(): React.JSX.Element {
             sessionId={activeTabObj!.id}
             connection={activeSSHConn}
             onClose={() => setSftpOpen(false)}
+          />
+        )}
+        {metricsOpen && activeSSHConn && sftpOpen && (
+          <MetricsPanel
+            sessionId={activeTabObj!.id}
+            onClose={() => setMetricsOpen(false)}
           />
         )}
         <AISidebarChat />

@@ -5,6 +5,8 @@ import fs from "fs";
 import path from "path";
 import { resolveEnv } from "./env-vault";
 import { resolveSecret, SecretProvider } from "./secret-providers";
+import { recordOutput } from "./recording";
+import { checkData, clearTabBuffer } from "./alerts";
 
 let terminals: Record<string, any> = {};
 
@@ -224,6 +226,8 @@ export function setupTerminal() {
           for (const w of require("electron").BrowserWindow.getAllWindows()) {
             w.webContents.send("terminal-output", tabId, data);
           }
+          recordOutput(tabId, data);
+          checkData(tabId, data);
 
           // Auto-inject SSH password when the remote prompts for it
           if (sshPasswordSessions[tabId] && !sshPasswordInjected.has(tabId)) {
@@ -275,6 +279,7 @@ export function setupTerminal() {
           delete terminals[tabId];
           delete sshPasswordSessions[tabId];
           sshPasswordInjected.delete(tabId);
+          clearTabBuffer(tabId);
           // Notify the renderer that the terminal was closed
           for (const w of require("electron").BrowserWindow.getAllWindows()) {
             w.webContents.send("terminal-closed", tabId, exitCode);

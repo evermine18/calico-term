@@ -126,6 +126,60 @@ const api = {
       ref: string,
     ) => ipcRenderer.invoke("ssh-session-prime-secret", connId, provider, ref),
   },
+  recording: {
+    start: (tabId: string, title: string, cols: number, rows: number) =>
+      ipcRenderer.invoke("recording-start", tabId, title, cols, rows),
+    stop: (tabId: string) => ipcRenderer.invoke("recording-stop", tabId),
+    isActive: (tabId: string) => ipcRenderer.invoke("recording-is-active", tabId),
+    list: () => ipcRenderer.invoke("recording-list"),
+    load: (id: string) => ipcRenderer.invoke("recording-load", id),
+    delete: (id: string) => ipcRenderer.invoke("recording-delete", id),
+    exportPath: (id: string) =>
+      ipcRenderer.invoke("recording-export-path", id),
+  },
+  audit: {
+    append: (entry: AuditEntry) => ipcRenderer.send("audit-append", entry),
+    list: (limit?: number) => ipcRenderer.invoke("audit-list", limit),
+    clear: () => ipcRenderer.invoke("audit-clear"),
+    publicKey: () => ipcRenderer.invoke("audit-public-key"),
+    exportSigned: () => ipcRenderer.invoke("audit-export-signed"),
+  },
+  metrics: {
+    start: (sessionId: string, intervalMs?: number) =>
+      ipcRenderer.send("metrics-start", sessionId, intervalMs ?? 2000),
+    stop: (sessionId: string) => ipcRenderer.send("metrics-stop", sessionId),
+    onSample: (
+      cb: (data: { sessionId: string; sample: HostSample }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("metrics-sample", wrapped);
+      return () => ipcRenderer.removeListener("metrics-sample", wrapped);
+    },
+    onError: (
+      cb: (data: { sessionId: string; error: string }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("metrics-error", wrapped);
+      return () => ipcRenderer.removeListener("metrics-error", wrapped);
+    },
+  },
+  alerts: {
+    setRules: (rules: AlertRule[]) =>
+      ipcRenderer.send("alert-rules-set", rules),
+    onMatch: (
+      cb: (data: {
+        ruleId: string;
+        tabId: string;
+        severity: "info" | "warning" | "critical";
+        message: string;
+        ts: number;
+      }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("alert-match", wrapped);
+      return () => ipcRenderer.removeListener("alert-match", wrapped);
+    },
+  },
   windowControls: {
     minimize: () => ipcRenderer.send("win-minimize"),
     maximize: () => ipcRenderer.send("win-maximize"),
@@ -161,6 +215,37 @@ interface UpdateInfo {
   version: string;
   releaseDate?: string;
   releaseName?: string;
+}
+
+interface AuditEntry {
+  ts: number;
+  command: string;
+  hostId?: string;
+  workspaceId?: string;
+  cwd?: string;
+  exitCode?: number;
+  tabId?: string;
+}
+
+interface HostSample {
+  ts: number;
+  cpuPct: number;
+  memUsedPct: number;
+  memTotalKb: number;
+  memFreeKb: number;
+  load1: number;
+  load5: number;
+  load15: number;
+  diskRootPct: number;
+}
+
+interface AlertRule {
+  id: string;
+  pattern: string;
+  flags: string;
+  severity: "info" | "warning" | "critical";
+  message?: string;
+  enabled: boolean;
 }
 
 interface DownloadProgress {
