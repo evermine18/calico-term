@@ -98,6 +98,38 @@ declare global {
             total: number;
           }) => void,
         ) => () => void;
+        readText: (sessionId: string, remotePath: string) => Promise<string>;
+        writeText: (
+          sessionId: string,
+          remotePath: string,
+          content: string,
+        ) => Promise<void>;
+        tailStart: (
+          sessionId: string,
+          remotePath: string,
+          lines?: number,
+        ) => Promise<string>;
+        tailStop: (tailId: string) => void;
+        onTailData: (
+          cb: (data: { tailId: string; data: string; isErr: boolean }) => void,
+        ) => () => void;
+        onTailEnd: (cb: (data: { tailId: string }) => void) => () => void;
+        syncDir: (
+          sessionId: string,
+          remoteDir: string,
+          localDir: string,
+          direction: "download" | "upload",
+        ) => Promise<{ syncId: string; filesTransferred: number }>;
+        onSyncProgress: (
+          cb: (data: {
+            sessionId: string;
+            syncId: string;
+            current: string;
+            filesDone: number;
+            filesTotal: number;
+          }) => void,
+        ) => () => void;
+        pickLocalDir: () => Promise<string | null>;
       };
       clipboard: {
         writeText: (text: string) => void;

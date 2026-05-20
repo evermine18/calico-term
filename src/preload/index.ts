@@ -35,6 +35,46 @@ const api = {
       ipcRenderer.on("sftp-progress", wrapped);
       return () => ipcRenderer.removeListener("sftp-progress", wrapped);
     },
+    readText: (sessionId: string, remotePath: string) =>
+      ipcRenderer.invoke("sftp-read-text", sessionId, remotePath),
+    writeText: (sessionId: string, remotePath: string, content: string) =>
+      ipcRenderer.invoke("sftp-write-text", sessionId, remotePath, content),
+    tailStart: (sessionId: string, remotePath: string, lines?: number) =>
+      ipcRenderer.invoke("sftp-tail-start", sessionId, remotePath, lines ?? 200),
+    tailStop: (tailId: string) =>
+      ipcRenderer.send("sftp-tail-stop", tailId),
+    onTailData: (
+      cb: (data: { tailId: string; data: string; isErr: boolean }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("sftp-tail-data", wrapped);
+      return () => ipcRenderer.removeListener("sftp-tail-data", wrapped);
+    },
+    onTailEnd: (cb: (data: { tailId: string }) => void): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("sftp-tail-end", wrapped);
+      return () => ipcRenderer.removeListener("sftp-tail-end", wrapped);
+    },
+    syncDir: (
+      sessionId: string,
+      remoteDir: string,
+      localDir: string,
+      direction: "download" | "upload",
+    ) => ipcRenderer.invoke("sftp-sync-dir", sessionId, remoteDir, localDir, direction),
+    onSyncProgress: (
+      cb: (data: {
+        sessionId: string;
+        syncId: string;
+        current: string;
+        filesDone: number;
+        filesTotal: number;
+      }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("sftp-sync-progress", wrapped);
+      return () => ipcRenderer.removeListener("sftp-sync-progress", wrapped);
+    },
+    pickLocalDir: () => ipcRenderer.invoke("sftp-pick-local-dir"),
   },
   clipboard: {
     writeText: (text: string) => clipboard.writeText(text),
