@@ -225,10 +225,10 @@ function AppContent(): React.JSX.Element {
 
   return (
     <div
-      className="h-screen flex flex-col relative bg-slate-950 text-gray-100"
+      className="h-screen flex flex-col relative bg-background text-foreground"
     >
       {/* Header with window controls */}
-      <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/40 px-4 py-1.5 flex items-center gap-2 shadow-xl">
+      <div className="glass border-b border-border/60 px-4 py-1.5 flex items-center gap-2 relative z-30">
         {window.platform?.os === "darwin" && <div className="ml-16 flex-shrink-0" />}
         <div className="drag-region flex flex-1 items-center gap-2">
           <div className="flex items-center gap-2">
@@ -236,16 +236,21 @@ function AppContent(): React.JSX.Element {
               size={15}
               className="text-accent-400 flex-shrink-0"
               style={{
-                filter: "drop-shadow(0 0 5px rgba(var(--accent-rgb),0.7))",
+                filter: "drop-shadow(0 0 6px rgba(var(--accent-rgb),0.8))",
               }}
             />
-            <span className="text-sm font-semibold tracking-widest text-gray-300 select-none">
-              <span className="text-accent-400">calico</span>
-              <span className="text-slate-500 mx-0.5">/</span>
-              <span className="text-gray-400">term</span>
+            <span className="text-sm font-semibold tracking-tight select-none">
+              <span
+                className="bg-clip-text text-transparent"
+                style={{ backgroundImage: "var(--accent-gradient)" }}
+              >
+                calico
+              </span>
+              <span className="text-muted-foreground mx-0.5">/</span>
+              <span className="text-foreground/70">term</span>
             </span>
           </div>
-          <div className="flex items-center gap-2 text-gray-400 text-xs">
+          <div className="flex items-center gap-2 text-muted-foreground text-xs">
             <span className="selectable-section">
               <WorkspaceSwitcher />
             </span>
@@ -255,21 +260,21 @@ function AppContent(): React.JSX.Element {
           <div className="flex items-center gap-0.5 flex-shrink-0">
             <button
               onClick={() => window.api.windowControls.minimize()}
-              className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-slate-700/60 hover:text-gray-300 transition-all duration-150"
+              className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-150"
               title="Minimize"
             >
               <Minus size={12} />
             </button>
             <button
               onClick={() => window.api.windowControls.maximize()}
-              className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-slate-700/60 hover:text-gray-300 transition-all duration-150"
+              className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-150"
               title="Maximize"
             >
               <Square size={10} />
             </button>
             <button
               onClick={() => window.api.windowControls.close()}
-              className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-red-500/20 hover:text-red-400 transition-all duration-150"
+              className="flex items-center justify-center w-7 h-7 rounded-md text-muted-foreground hover:bg-red-500/20 hover:text-red-400 transition-colors duration-150"
               title="Close"
             >
               <X size={12} />
@@ -291,7 +296,7 @@ function AppContent(): React.JSX.Element {
         activeTabIsSSH={!!activeSSHConn}
       />
       {/* Terminal Content */}
-      <div className="flex-1 bg-slate-950 relative overflow-hidden pb-8">
+      <div className="flex-1 bg-background relative overflow-hidden pb-8">
         {sftpOpen && activeSSHConn && (
           <FileBrowserPanel
             sessionId={activeTabObj!.id}
@@ -337,7 +342,7 @@ function AppContent(): React.JSX.Element {
 
         {/* Home overlay — shown when no tabs, or user toggled home */}
         {(tabs.length === 0 || showHome) && (
-          <div className="absolute inset-0 bg-slate-950 z-10">
+          <div className="absolute inset-0 bg-background z-10">
             <SSHConnectionsHome
               onConnect={async (conn) => {
                 // Prod confirmation: any workspace marked `prod` that owns this connection
@@ -421,7 +426,7 @@ function AppContent(): React.JSX.Element {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[460px] bg-slate-900 border-red-500/40">
+        <DialogContent className="sm:max-w-[460px] border border-red-500/40">
           <DialogHeader>
             <DialogTitle className="text-red-300 flex items-center gap-2">
               <ShieldAlert size={16} />
@@ -430,16 +435,16 @@ function AppContent(): React.JSX.Element {
           </DialogHeader>
           {guardrailPrompt && (
             <div className="space-y-3 py-1">
-              <p className="text-sm text-gray-300">
+              <p className="text-sm text-foreground/80">
                 The command you are about to execute matched:
               </p>
-              <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1.5">
+              <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-md px-2 py-1.5">
                 {guardrailPrompt.description}
               </div>
-              <pre className="text-xs font-mono text-gray-100 bg-slate-800/80 border border-slate-700/40 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
+              <pre className="text-xs font-mono text-foreground bg-card/60 border border-border rounded-md p-2 overflow-x-auto whitespace-pre-wrap break-all">
                 {guardrailPrompt.command || "(empty)"}
               </pre>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-muted-foreground">
                 This tab belongs to a workspace marked <span className="text-red-400 font-bold">PROD</span>. Type{" "}
                 <span className="font-mono text-red-300">yes</span> below to confirm.
               </p>
@@ -448,7 +453,7 @@ function AppContent(): React.JSX.Element {
                 value={guardrailConfirm}
                 onChange={(e) => setGuardrailConfirm(e.target.value)}
                 placeholder="yes"
-                className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono"
+                className="font-mono"
               />
             </div>
           )}
@@ -462,7 +467,6 @@ function AppContent(): React.JSX.Element {
                 }
                 setGuardrailPrompt(null);
               }}
-              className="border-slate-700/50 text-gray-300"
             >
               Cancel
             </Button>
@@ -484,26 +488,26 @@ function AppContent(): React.JSX.Element {
       </Dialog>
 
       {/* Status Bar */}
-      <div className="bg-slate-900/90 backdrop-blur-md border-t border-slate-700/30 px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-500 tracking-wide">
+      <div className="glass border-t border-border/60 px-4 py-1.5 flex items-center justify-between text-[11px] text-muted-foreground tracking-wide">
         <div className="flex items-center gap-3">
           <span className="flex items-center gap-1.5">
             <div
               className="w-1.5 h-1.5 rounded-full bg-accent-400"
-              style={{ boxShadow: "0 0 4px rgba(var(--accent-rgb),0.8)" }}
+              style={{ boxShadow: "0 0 6px rgba(var(--accent-rgb),0.9)" }}
             ></div>
-            <span className="text-accent-400/80 font-medium uppercase tracking-widest text-[10px]">
+            <span className="text-accent-400 font-medium uppercase tracking-widest text-[10px]">
               ready
             </span>
           </span>
           <WorkspaceChip />
           {activeTab && (
-            <span className="text-gray-600 truncate max-w-[200px]">
+            <span className="text-muted-foreground/70 truncate max-w-[200px]">
               {tabs.find((t) => t.id === activeTab)?.title}
             </span>
           )}
           {activeSSHConn && (
             <>
-              <span className="text-slate-700">·</span>
+              <span className="text-border">·</span>
               <MetricsStatusInline
                 sample={metrics.latest}
                 error={metrics.error}
@@ -514,11 +518,11 @@ function AppContent(): React.JSX.Element {
             </>
           )}
         </div>
-        <div className="flex items-center gap-3 text-gray-600">
+        <div className="flex items-center gap-3 text-muted-foreground/70">
           <span>UTF-8</span>
-          <span className="text-slate-700">·</span>
+          <span className="text-border">·</span>
           <span>LF</span>
-          <span className="text-slate-700">·</span>
+          <span className="text-border">·</span>
           <span>zsh</span>
         </div>
       </div>

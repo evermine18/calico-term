@@ -69,11 +69,11 @@ export function GuardrailsPanel() {
     <div className="space-y-3">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <p className="text-gray-300 text-sm font-semibold flex items-center gap-1.5">
+          <p className="text-foreground/80 text-sm font-semibold flex items-center gap-1.5">
             <ShieldAlert size={14} className="text-red-400" />
             Production guardrails
           </p>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-xs text-muted-foreground mt-0.5">
             When the active tab belongs to a workspace marked PROD and a
             command matches any enabled rule, Calico prompts for explicit
             confirmation before forwarding the Enter to the remote shell.
@@ -83,7 +83,7 @@ export function GuardrailsPanel() {
           variant="outline"
           size="sm"
           onClick={resetDefaults}
-          className="bg-slate-800/60 border-slate-700/50 text-gray-300 gap-1 shrink-0"
+          className="bg-card/50 border-border/80 text-foreground/80 gap-1 shrink-0"
         >
           <RotateCcw size={12} />
           Reset
@@ -92,27 +92,27 @@ export function GuardrailsPanel() {
 
       <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-accent-600/40 scrollbar-track-transparent">
         {rules.length === 0 && (
-          <div className="text-center py-8 text-xs text-gray-500">
+          <div className="text-center py-8 text-xs text-muted-foreground/70">
             No guardrails configured.
           </div>
         )}
         {rules.map((r) => (
           <div
             key={r.id}
-            className="flex items-center gap-2 p-2 rounded-md bg-slate-800/60 border border-slate-700/50"
+            className="flex items-center gap-2 p-2 rounded-md bg-card/50 border border-border/80"
           >
             <button
               onClick={() => toggle(r.id)}
               className={`w-2 h-2 rounded-full shrink-0 ${
-                r.enabled ? "bg-red-500" : "bg-slate-600"
+                r.enabled ? "bg-red-500" : "bg-muted"
               }`}
               title={r.enabled ? "Disable" : "Enable"}
             />
             <div className="flex-1 min-w-0">
-              <div className="text-xs text-gray-200 truncate">
+              <div className="text-xs text-foreground truncate">
                 {r.description}
               </div>
-              <div className="text-[10px] font-mono text-gray-500 truncate">
+              <div className="text-[10px] font-mono text-muted-foreground/70 truncate">
                 /{r.pattern}/{r.flags ?? ""}
               </div>
             </div>
@@ -120,7 +120,7 @@ export function GuardrailsPanel() {
               onClick={() => remove(r.id)}
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-gray-400 hover:text-red-400 hover:bg-red-500/20"
+              className="h-7 w-7 text-muted-foreground hover:text-red-400 hover:bg-red-500/20"
             >
               <Trash2 size={13} />
             </Button>
@@ -128,35 +128,35 @@ export function GuardrailsPanel() {
         ))}
       </div>
 
-      <div className="space-y-2 pt-2 border-t border-slate-700/40">
+      <div className="space-y-2 pt-2 border-t border-border/60">
         <div className="grid grid-cols-[1fr_60px] gap-2">
           <div className="grid gap-1">
-            <Label className="text-gray-300 text-xs">Pattern (regex)</Label>
+            <Label className="text-foreground/80 text-xs">Pattern (regex)</Label>
             <Input
               value={pattern}
               onChange={(e) => setPattern(e.target.value)}
               placeholder="\\brm\\s+-rf\\b"
-              className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-sm h-8"
+              className="bg-card/50 border-border text-foreground font-mono text-sm h-8"
             />
           </div>
           <div className="grid gap-1">
-            <Label className="text-gray-300 text-xs">Flags</Label>
+            <Label className="text-foreground/80 text-xs">Flags</Label>
             <Input
               value={flags}
               onChange={(e) => setFlags(e.target.value)}
               placeholder="i"
-              className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-sm h-8"
+              className="bg-card/50 border-border text-foreground font-mono text-sm h-8"
             />
           </div>
         </div>
         <div className="grid gap-1">
-          <Label className="text-gray-300 text-xs">Description</Label>
+          <Label className="text-foreground/80 text-xs">Description</Label>
           <div className="flex items-center gap-2">
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="What does this match?"
-              className="bg-slate-800/60 border-slate-700 text-gray-100 text-sm h-8"
+              className="bg-card/50 border-border text-foreground text-sm h-8"
             />
             <Button
               onClick={addRule}

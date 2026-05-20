@@ -46,12 +46,12 @@ function CodeBlock({
   };
 
   return (
-    <div className="my-3 rounded-md overflow-hidden border border-slate-700/50">
-      <div className="flex items-center justify-between bg-slate-950 px-3 py-1.5">
+    <div className="my-3 rounded-md overflow-hidden border border-border/80">
+      <div className="flex items-center justify-between bg-background px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono text-slate-500">{lang}</span>
+          <span className="text-[10px] font-mono text-muted-foreground/70">{lang}</span>
           {isLong && (
-            <span className="text-[10px] text-slate-600">
+            <span className="text-[10px] text-muted-foreground/60">
               {lineCount} lines
             </span>
           )}
@@ -60,7 +60,7 @@ function CodeBlock({
           {isLong && (
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="text-[10px] px-2 py-0.5 rounded transition-colors text-slate-500 hover:text-slate-300"
+              className="text-[10px] px-2 py-0.5 rounded transition-colors text-muted-foreground/70 hover:text-foreground/80"
               title={collapsed ? "Expand" : "Collapse"}
             >
               {collapsed ? "Show" : "Hide"}
@@ -71,7 +71,7 @@ function CodeBlock({
             className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded transition-colors ${
               copied
                 ? "bg-green-500/20 text-green-400"
-                : "text-slate-500 hover:text-slate-300"
+                : "text-muted-foreground/70 hover:text-foreground/80"
             }`}
             title="Copy code"
           >
@@ -94,7 +94,7 @@ function CodeBlock({
           )}
         </div>
       </div>
-      <pre className={`bg-slate-950 text-gray-100 px-3 py-3 overflow-x-auto text-xs font-mono leading-5 m-0 ${
+      <pre className={`bg-background text-foreground px-3 py-3 overflow-x-auto text-xs font-mono leading-5 m-0 ${
         collapsed ? "max-h-[300px]" : ""
       }`}>
         <code>{code}</code>
@@ -133,7 +133,7 @@ export default function AssistantMessage({
         return <CodeBlock lang={lang} code={code} onExecute={onExecute} />;
       }
       return (
-        <code className="bg-slate-900 rounded px-1 py-0.5 font-mono text-xs text-accent-300">
+        <code className="bg-card rounded px-1 py-0.5 font-mono text-xs text-accent-300">
           {children}
         </code>
       );
@@ -172,7 +172,7 @@ export default function AssistantMessage({
     },
     blockquote({ children }) {
       return (
-        <blockquote className="border-l-2 border-accent-500/50 pl-3 italic text-slate-400 my-2 text-sm">
+        <blockquote className="border-l-2 border-accent-500/50 pl-3 italic text-muted-foreground my-2 text-sm">
           {children}
         </blockquote>
       );
@@ -198,7 +198,7 @@ export default function AssistantMessage({
           <Bot size={16} className="text-accent-400" />
         </div>
 
-        <div className="bg-slate-800/60 backdrop-blur-sm border border-slate-700/40 text-gray-100 rounded-2xl rounded-bl-sm px-3 py-2.5 w-full min-w-0 max-w-full overflow-hidden">
+        <div className="bg-card/50 backdrop-blur-sm border border-border/60 text-foreground rounded-2xl rounded-bl-sm px-3 py-2.5 w-full min-w-0 max-w-full overflow-hidden">
           {isTyping ? (
             <div className="flex items-center space-x-2 py-1">
               <div className="flex space-x-1">
@@ -206,7 +206,7 @@ export default function AssistantMessage({
                 <div className="w-2 h-2 bg-accent-400 rounded-full" style={{ animation: 'bounce-delayed 1.4s infinite ease-in-out 150ms' }} />
                 <div className="w-2 h-2 bg-accent-400 rounded-full" style={{ animation: 'bounce-delayed 1.4s infinite ease-in-out 300ms' }} />
               </div>
-              <span className="text-sm text-gray-400">Thinking...</span>
+              <span className="text-sm text-muted-foreground">Thinking...</span>
             </div>
           ) : (
             <>
@@ -220,7 +220,7 @@ export default function AssistantMessage({
                     {onRetry && (
                       <button
                         onClick={onRetry}
-                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-accent-300 transition-colors ml-2"
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-accent-300 transition-colors ml-2"
                         title="Retry"
                       >
                         <RefreshCw size={13} />
@@ -241,11 +241,11 @@ export default function AssistantMessage({
               </ReactMarkdown>
 
               <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-gray-500">{timestamp}</span>
+                <span className="text-xs text-muted-foreground/70">{timestamp}</span>
                 {message && !error && (
                   <button
                     onClick={handleCopy}
-                    className="text-gray-600 hover:text-accent-400 transition-colors"
+                    className="text-muted-foreground/60 hover:text-accent-400 transition-colors"
                     title="Copy full response"
                   >
                     <Copy size={12} />

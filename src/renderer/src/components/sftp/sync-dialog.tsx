@@ -99,9 +99,9 @@ export default function SyncDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !running && onClose()}>
-      <DialogContent className="sm:max-w-[520px] bg-slate-900 border-slate-700/40 shadow-xl">
+      <DialogContent className="sm:max-w-[520px] bg-card border-border/60 shadow-xl">
         <DialogHeader>
-          <DialogTitle className="text-gray-100 flex items-center gap-2 text-sm">
+          <DialogTitle className="text-foreground flex items-center gap-2 text-sm">
             <FolderTree size={14} className="text-accent-400" />
             Sync directory
           </DialogTitle>
@@ -109,28 +109,28 @@ export default function SyncDialog({
 
         <div className="grid gap-3 py-1">
           <div className="grid gap-1.5">
-            <Label className="text-gray-300 text-sm">Remote</Label>
+            <Label className="text-foreground/80 text-sm">Remote</Label>
             <Input
               value={remoteDir}
               readOnly
-              className="bg-slate-800/60 border-slate-700 text-gray-300 font-mono text-xs"
+              className="bg-card/50 border-border text-foreground/80 font-mono text-xs"
             />
           </div>
 
           <div className="grid gap-1.5">
-            <Label className="text-gray-300 text-sm">Local</Label>
+            <Label className="text-foreground/80 text-sm">Local</Label>
             <div className="flex gap-2">
               <Input
                 value={localDir}
                 onChange={(e) => setLocalDir(e.target.value)}
                 placeholder="/path/to/local"
-                className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-xs"
+                className="bg-card/50 border-border text-foreground font-mono text-xs"
               />
               <Button
                 variant="outline"
                 onClick={pickLocal}
                 disabled={running}
-                className="border-slate-700/50 bg-slate-800/60 gap-1.5"
+                className="border-border/80 bg-card/50 gap-1.5"
               >
                 <FolderOpen size={14} />
                 Pick
@@ -139,16 +139,16 @@ export default function SyncDialog({
           </div>
 
           <div className="grid gap-1.5">
-            <Label className="text-gray-300 text-sm">Direction</Label>
+            <Label className="text-foreground/80 text-sm">Direction</Label>
             <Select
               value={direction}
               onValueChange={(v) => setDirection(v as typeof direction)}
               disabled={running}
             >
-              <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+              <SelectTrigger className="bg-card/50 border-border text-foreground">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700/50">
+              <SelectContent className="bg-card border-border/80">
                 <SelectItem value="download">
                   Remote → Local (download new/changed)
                 </SelectItem>
@@ -161,20 +161,20 @@ export default function SyncDialog({
 
           {(running || progress) && (
             <div className="grid gap-1.5">
-              <div className="flex justify-between text-xs text-gray-400">
+              <div className="flex justify-between text-xs text-muted-foreground">
                 <span>
                   {progress?.filesDone ?? 0} / {progress?.filesTotal ?? 0}
                 </span>
                 <span>{pct}%</span>
               </div>
-              <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-card overflow-hidden">
                 <div
                   className="h-full bg-accent-500 transition-all"
                   style={{ width: `${pct}%` }}
                 />
               </div>
               {progress?.current && (
-                <p className="text-[10px] text-gray-500 font-mono truncate">
+                <p className="text-[10px] text-muted-foreground/70 font-mono truncate">
                   {progress.current}
                 </p>
               )}
@@ -195,7 +195,7 @@ export default function SyncDialog({
             variant="outline"
             onClick={onClose}
             disabled={running}
-            className="border-slate-700 text-gray-300 hover:bg-slate-800"
+            className="border-border text-foreground/80 hover:bg-card"
           >
             Close
           </Button>

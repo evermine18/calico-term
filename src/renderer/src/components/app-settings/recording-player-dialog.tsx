@@ -127,9 +127,9 @@ export default function RecordingPlayerDialog({ recording, onClose }: Props) {
 
   return (
     <Dialog open={true} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[900px] bg-slate-900 border-slate-700/40 shadow-xl">
+      <DialogContent className="sm:max-w-[900px] bg-card border-border/60 shadow-xl">
         <DialogHeader>
-          <DialogTitle className="text-gray-100 text-sm flex items-center gap-2">
+          <DialogTitle className="text-foreground text-sm flex items-center gap-2">
             <Play size={14} className="text-accent-400" />
             {recording.title} · {new Date(recording.createdAt).toLocaleString()}
           </DialogTitle>
@@ -137,7 +137,7 @@ export default function RecordingPlayerDialog({ recording, onClose }: Props) {
 
         <div
           ref={containerRef}
-          className="bg-slate-950 rounded-md p-2 h-[420px] overflow-hidden"
+          className="bg-background rounded-md p-2 h-[420px] overflow-hidden"
         />
 
         <div className="flex items-center gap-2">
@@ -145,7 +145,7 @@ export default function RecordingPlayerDialog({ recording, onClose }: Props) {
             onClick={playing ? pause : start}
             variant="outline"
             size="icon"
-            className="h-8 w-8 border-slate-700/50 bg-slate-800/60"
+            className="h-8 w-8 border-border/80 bg-card/50"
           >
             {playing ? <Pause size={13} /> : <Play size={13} />}
           </Button>
@@ -153,12 +153,12 @@ export default function RecordingPlayerDialog({ recording, onClose }: Props) {
             onClick={restart}
             variant="outline"
             size="icon"
-            className="h-8 w-8 border-slate-700/50 bg-slate-800/60"
+            className="h-8 w-8 border-border/80 bg-card/50"
             title="Restart"
           >
             <RotateCcw size={13} />
           </Button>
-          <div className="flex-1 h-1.5 rounded-full bg-slate-800 overflow-hidden">
+          <div className="flex-1 h-1.5 rounded-full bg-card overflow-hidden">
             <div
               className="h-full bg-accent-500 transition-all"
               style={{ width: `${progress}%` }}
@@ -170,7 +170,7 @@ export default function RecordingPlayerDialog({ recording, onClose }: Props) {
           <Button
             variant="outline"
             onClick={onClose}
-            className="border-slate-700 text-gray-300 hover:bg-slate-800"
+            className="border-border text-foreground/80 hover:bg-card"
           >
             Close
           </Button>

@@ -113,8 +113,8 @@ export function AlertsPanel() {
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-gray-300 text-sm font-semibold">Log alerts</p>
-        <p className="text-xs text-gray-400 mt-0.5">
+        <p className="text-foreground/80 text-sm font-semibold">Log alerts</p>
+        <p className="text-xs text-muted-foreground mt-0.5">
           Regex rules matched against terminal output. Fires a native
           notification on match (rate-limited per rule).
         </p>
@@ -123,26 +123,26 @@ export function AlertsPanel() {
       <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-accent-600/40 scrollbar-track-transparent">
         {rules.length === 0 && (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Bell size={26} className="text-slate-600 mb-2" />
-            <p className="text-sm text-gray-500">No alert rules yet</p>
+            <Bell size={26} className="text-muted-foreground/60 mb-2" />
+            <p className="text-sm text-muted-foreground/70">No alert rules yet</p>
           </div>
         )}
         {rules.map((r) => (
           <div
             key={r.id}
-            className="flex items-center gap-2 p-2 rounded-md bg-slate-800/60 border border-slate-700/50"
+            className="flex items-center gap-2 p-2 rounded-md bg-card/50 border border-border/80"
           >
             <button
               onClick={() => toggle(r.id)}
-              className={`w-2 h-2 rounded-full shrink-0 ${r.enabled ? (r.severity === "critical" ? "bg-red-500" : r.severity === "warning" ? "bg-amber-400" : "bg-blue-400") : "bg-slate-600"}`}
+              className={`w-2 h-2 rounded-full shrink-0 ${r.enabled ? (r.severity === "critical" ? "bg-red-500" : r.severity === "warning" ? "bg-amber-400" : "bg-blue-400") : "bg-muted"}`}
               title={r.enabled ? "Disable" : "Enable"}
             />
             <div className="flex-1 min-w-0">
-              <div className="text-xs font-mono text-gray-200 truncate">
+              <div className="text-xs font-mono text-foreground truncate">
                 /{r.pattern}/{r.flags}
               </div>
               {r.message && (
-                <div className="text-[10px] text-gray-500 truncate">
+                <div className="text-[10px] text-muted-foreground/70 truncate">
                   {r.message}
                 </div>
               )}
@@ -151,10 +151,10 @@ export function AlertsPanel() {
               value={scopeToValue(r.scope)}
               onValueChange={(v) => setRuleScope(r.id, v)}
             >
-              <SelectTrigger className="h-6 px-1.5 text-[10px] bg-slate-900/60 border-slate-700/40 text-gray-300 w-[100px]">
+              <SelectTrigger className="h-6 px-1.5 text-[10px] bg-card/50 border-border/60 text-foreground/80 w-[100px]">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700/50">
+              <SelectContent className="bg-card border-border/80">
                 <SelectItem value={GLOBAL_SCOPE_VALUE}>Global</SelectItem>
                 {workspaces.map((w) => (
                   <SelectItem key={w.id} value={`workspace:${w.id}`}>
@@ -163,14 +163,14 @@ export function AlertsPanel() {
                 ))}
               </SelectContent>
             </Select>
-            <span className="text-[10px] uppercase tracking-wider text-gray-500">
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground/70">
               {r.severity}
             </span>
             <Button
               onClick={() => remove(r.id)}
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-gray-400 hover:text-red-400 hover:bg-red-500/20"
+              className="h-7 w-7 text-muted-foreground hover:text-red-400 hover:bg-red-500/20"
             >
               <Trash2 size={13} />
             </Button>
@@ -178,31 +178,31 @@ export function AlertsPanel() {
         ))}
       </div>
 
-      <div className="grid grid-cols-[1fr_60px_120px_auto] gap-2 items-end pt-2 border-t border-slate-700/40">
+      <div className="grid grid-cols-[1fr_60px_120px_auto] gap-2 items-end pt-2 border-t border-border/60">
         <div className="grid gap-1">
-          <Label className="text-gray-300 text-xs">Pattern</Label>
+          <Label className="text-foreground/80 text-xs">Pattern</Label>
           <Input
             placeholder="error|fatal"
             value={pattern}
             onChange={(e) => setPattern(e.target.value)}
-            className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-sm h-8"
+            className="bg-card/50 border-border text-foreground font-mono text-sm h-8"
           />
         </div>
         <div className="grid gap-1">
-          <Label className="text-gray-300 text-xs">Flags</Label>
+          <Label className="text-foreground/80 text-xs">Flags</Label>
           <Input
             value={flags}
             onChange={(e) => setFlags(e.target.value)}
-            className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-sm h-8"
+            className="bg-card/50 border-border text-foreground font-mono text-sm h-8"
           />
         </div>
         <div className="grid gap-1">
-          <Label className="text-gray-300 text-xs">Severity</Label>
+          <Label className="text-foreground/80 text-xs">Severity</Label>
           <Select value={severity} onValueChange={(v) => setSeverity(v as AlertSeverity)}>
-            <SelectTrigger className="h-8 bg-slate-800/60 border-slate-700 text-gray-100">
+            <SelectTrigger className="h-8 bg-card/50 border-border text-foreground">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-slate-700/50">
+            <SelectContent className="bg-card border-border/80">
               <SelectItem value="info">info</SelectItem>
               <SelectItem value="warning">warning</SelectItem>
               <SelectItem value="critical">critical</SelectItem>
@@ -219,12 +219,12 @@ export function AlertsPanel() {
       </div>
       <div className="grid grid-cols-[1fr_2fr] gap-2">
         <div className="grid gap-1">
-          <Label className="text-gray-300 text-xs">Scope</Label>
+          <Label className="text-foreground/80 text-xs">Scope</Label>
           <Select value={scopeValue} onValueChange={setScopeValue}>
-            <SelectTrigger className="h-8 bg-slate-800/60 border-slate-700 text-gray-100">
+            <SelectTrigger className="h-8 bg-card/50 border-border text-foreground">
               <SelectValue />
             </SelectTrigger>
-            <SelectContent className="bg-slate-900 border-slate-700/50">
+            <SelectContent className="bg-card border-border/80">
               <SelectItem value={GLOBAL_SCOPE_VALUE}>Global</SelectItem>
               {workspaces.map((w) => (
                 <SelectItem key={w.id} value={`workspace:${w.id}`}>
@@ -235,12 +235,12 @@ export function AlertsPanel() {
           </Select>
         </div>
         <div className="grid gap-1">
-          <Label className="text-gray-300 text-xs">Message (optional)</Label>
+          <Label className="text-foreground/80 text-xs">Message (optional)</Label>
           <Input
             placeholder="Friendly description"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="bg-slate-800/60 border-slate-700 text-gray-100 text-sm h-8"
+            className="bg-card/50 border-border text-foreground text-sm h-8"
           />
         </div>
       </div>

@@ -49,7 +49,7 @@ export const Markdown: React.FC<MarkdownProps> = ({
             if (!isBlock) {
               return (
                 <code
-                  className="bg-gray-100 rounded px-1 font-mono text-sm"
+                  className="bg-card rounded px-1 font-mono text-sm"
                   {...props}
                 >
                   {children}
@@ -60,7 +60,7 @@ export const Markdown: React.FC<MarkdownProps> = ({
             const lang = langMatch![1];
 
             return (
-              <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto text-sm my-4">
+              <pre className="bg-card text-foreground rounded-lg p-4 overflow-x-auto text-sm my-4">
                 <code className={`language-${lang}`} {...props}>
                   {children}
                 </code>
@@ -69,7 +69,7 @@ export const Markdown: React.FC<MarkdownProps> = ({
           },
           blockquote: ({ node, ...props }) => (
             <blockquote
-              className="border-l-4 border-gray-300 pl-4 italic text-gray-600 my-4"
+              className="border-l-4 border-gray-300 pl-4 italic text-muted-foreground/60 my-4"
               {...props}
             />
           ),

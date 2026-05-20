@@ -41,7 +41,7 @@ export function TabEditInput({
         value={title}
         onChange={(e) => onTitleChange(tabId, e.target.value)}
         onKeyDown={handleKeyDown}
-        className="bg-slate-900/60 border border-accent-500/50 rounded px-2 py-0.5 text-sm text-gray-100 focus:outline-none focus:ring-2 focus:ring-accent-500/30 focus:border-accent-500"
+        className="bg-card/50 border border-accent-500/50 rounded px-2 py-0.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent-500/30 focus:border-accent-500"
         style={{
           width: `calc(${document.getElementById(`tab-title-measure-${tabId}`)?.offsetWidth || 50
             }px + 1ch)`,
@@ -55,7 +55,7 @@ export function TabEditInput({
           e.stopPropagation();
           onFinishEdit();
         }}
-        className="w-5 h-5 rounded flex items-center justify-center text-gray-500 
+        className="w-5 h-5 rounded flex items-center justify-center text-muted-foreground/70 
                    hover:text-green-400 hover:bg-green-500/15 transition-colors duration-75"
         title="Apply title"
       >

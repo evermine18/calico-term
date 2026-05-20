@@ -26,8 +26,8 @@ export default function TransferItem({ transfer }: { transfer: SFTPTransfer }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-0.5">
-          <span className="truncate text-gray-400">{transfer.filename}</span>
-          <span className="flex-shrink-0 text-gray-600">
+          <span className="truncate text-muted-foreground">{transfer.filename}</span>
+          <span className="flex-shrink-0 text-muted-foreground/60">
             {transfer.status === "done" ? (
               <CheckCircle size={11} className="text-green-500/70" />
             ) : transfer.status === "error" ? (
@@ -40,7 +40,7 @@ export default function TransferItem({ transfer }: { transfer: SFTPTransfer }) {
           </span>
         </div>
         {transfer.status !== "done" && transfer.status !== "error" && (
-          <div className="h-0.5 bg-slate-700/60 rounded-full overflow-hidden">
+          <div className="h-0.5 bg-accent rounded-full overflow-hidden">
             <div
               className="h-full bg-accent-500/70 rounded-full transition-all duration-200"
               style={{ width: `${percent}%` }}

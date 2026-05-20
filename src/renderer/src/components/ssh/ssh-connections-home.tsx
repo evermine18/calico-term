@@ -115,18 +115,26 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
           {/* Hero icon */}
           <div className="mb-8 flex flex-col items-center gap-4 relative">
             <div
-              className="w-16 h-16 rounded-2xl bg-slate-900/80 border border-accent-500/20 flex items-center justify-center"
-              style={{ boxShadow: '0 0 30px rgba(var(--accent-rgb),0.12), inset 0 1px 0 rgba(var(--accent-rgb),0.1)' }}
+              className="w-16 h-16 rounded-2xl flex items-center justify-center accent-glow relative"
+              style={{
+                background: 'var(--accent-gradient)',
+                boxShadow: '0 8px 32px -4px rgba(var(--accent-rgb),0.45), inset 0 1px 0 rgba(255,255,255,0.2)',
+              }}
             >
-              <Terminal className="w-8 h-8 text-accent-400" style={{ filter: 'drop-shadow(0 0 8px rgba(var(--accent-rgb),0.6))' }} />
+              <Terminal className="w-8 h-8 text-white" style={{ filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.3))' }} />
             </div>
             <div className="text-center">
-              <h2 className="text-base font-semibold tracking-widest text-gray-300">
-                <span className="text-accent-400">calico</span>
-                <span className="text-slate-600 mx-1">/</span>
+              <h2 className="text-base font-semibold tracking-tight text-foreground/90">
+                <span
+                  className="bg-clip-text text-transparent"
+                  style={{ backgroundImage: 'var(--accent-gradient)' }}
+                >
+                  calico
+                </span>
+                <span className="text-muted-foreground/60 mx-1">/</span>
                 <span>term</span>
               </h2>
-              <p className="text-xs text-gray-600 mt-1 tracking-wide">
+              <p className="text-xs text-muted-foreground/60 mt-1 tracking-wide">
                 open a terminal or connect to a saved ssh server
               </p>
             </div>
@@ -135,7 +143,7 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
           {/* SSH Connections */}
           <div className="w-full max-w-2xl">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs uppercase tracking-widest text-gray-500 font-semibold">
+              <span className="text-xs uppercase tracking-widest text-muted-foreground/70 font-semibold">
                 SSH Connections
               </span>
               <button
@@ -152,14 +160,14 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
             {visibleConnections.length === 0 ? (
               <div
                 className="flex flex-col items-center justify-center gap-3 py-10 rounded-xl
-                border border-dashed border-slate-700/60 text-gray-500"
+                border border-dashed border-border text-muted-foreground/70"
               >
                 <Server size={28} className="opacity-40" />
                 <p className="text-sm">No saved connections yet</p>
                 <button
                   onClick={openAdd}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium
-                  bg-slate-800/60 border border-slate-700/50 text-gray-400
+                  bg-card/50 border border-border/80 text-muted-foreground
                   hover:bg-accent-500/10 hover:text-accent-300 hover:border-accent-500/40
                   transition-all duration-150"
                 >
@@ -185,7 +193,7 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
                 <button
                   onClick={openAdd}
                   className="flex items-center justify-center gap-2 h-10 rounded-xl
-                  border border-dashed border-slate-700/60 text-gray-600
+                  border border-dashed border-border text-muted-foreground/60
                   hover:border-accent-600/40 hover:text-accent-500/70
                   transition-all duration-150 text-sm"
                 >
@@ -197,9 +205,9 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
           </div>
 
           {/* Hint */}
-          <p className="mt-8 text-[11px] text-gray-700 tracking-wide">
+          <p className="mt-8 text-[11px] text-muted-foreground/60 tracking-wide">
             press{" "}
-            <kbd className="px-1.5 py-0.5 bg-slate-800/50 border border-slate-700/40 rounded text-accent-400/60 text-[10px]">
+            <kbd className="px-1.5 py-0.5 bg-card/50 border border-border/60 rounded text-accent-400/60 text-[10px]">
               +
             </kbd>{" "}
             in the tab bar to open a local terminal
@@ -235,12 +243,12 @@ function TagGroup({ group, isOpen, onToggle, onConnect, onEdit, onDelete }: TagG
   const hasMore = connections.length > 3;
 
   return (
-    <div className="rounded-xl border border-slate-700/50 overflow-hidden">
+    <div className="rounded-xl border border-border/80 overflow-hidden">
       {/* Accordion header */}
       <button
         onClick={onToggle}
         className="w-full flex items-center gap-3 px-4 py-2.5
-          bg-slate-800/60 hover:bg-slate-800/90 transition-colors duration-150 text-left"
+          bg-card/50 hover:bg-card/80 transition-colors duration-150 text-left"
       >
         {/* Color dot */}
         <span
@@ -267,12 +275,12 @@ function TagGroup({ group, isOpen, onToggle, onConnect, onEdit, onDelete }: TagG
 
         {/* Mini preview — only when collapsed */}
         {!isOpen && (
-          <span className="flex-1 min-w-0 text-xs text-gray-600 truncate">
+          <span className="flex-1 min-w-0 text-xs text-muted-foreground/60 truncate">
             {preview}{hasMore ? " …" : ""}
           </span>
         )}
 
-        <span className="ml-auto flex-shrink-0 text-gray-500">
+        <span className="ml-auto flex-shrink-0 text-muted-foreground/70">
           {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
       </button>
@@ -313,8 +321,8 @@ function SSHConnectionCard({ conn, showTags, onConnect, onEdit, onDelete }: Card
   return (
     <div
       className="group relative flex items-center gap-3 p-3.5 rounded-xl
-        bg-slate-800/50 border border-slate-700/50
-        hover:bg-slate-800/80 hover:border-slate-600/60
+        bg-card/50 border border-border/80
+        hover:bg-card/70 hover:border-border
         transition-all duration-150 cursor-pointer"
       onClick={() => onConnect(conn)}
     >
@@ -326,12 +334,12 @@ function SSHConnectionCard({ conn, showTags, onConnect, onEdit, onDelete }: Card
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className="text-sm font-medium text-gray-200 truncate">{conn.name}</p>
+          <p className="text-sm font-medium text-foreground truncate">{conn.name}</p>
           {conn.hasPassword && (
             <KeyRound size={10} className="text-accent-400/60 flex-shrink-0" aria-label="Password saved" />
           )}
         </div>
-        <p className="text-xs text-gray-500 font-mono truncate mt-0.5">
+        <p className="text-xs text-muted-foreground/70 font-mono truncate mt-0.5">
           {conn.username}@{conn.host}
           {conn.port !== 22 ? `:${conn.port}` : ""}
         </p>
@@ -362,14 +370,14 @@ function SSHConnectionCard({ conn, showTags, onConnect, onEdit, onDelete }: Card
         <button
           title="Edit"
           onClick={() => onEdit(conn)}
-          className="p-1.5 rounded-md text-gray-500 hover:text-accent-400 hover:bg-slate-700/60 transition-colors"
+          className="p-1.5 rounded-md text-muted-foreground/70 hover:text-accent-400 hover:bg-accent transition-colors"
         >
           <Pencil size={13} />
         </button>
         <button
           title="Delete"
           onClick={() => onDelete(conn.id)}
-          className="p-1.5 rounded-md text-gray-500 hover:text-red-400 hover:bg-slate-700/60 transition-colors"
+          className="p-1.5 rounded-md text-muted-foreground/70 hover:text-red-400 hover:bg-accent transition-colors"
         >
           <Trash2 size={13} />
         </button>

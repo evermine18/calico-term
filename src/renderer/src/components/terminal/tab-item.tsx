@@ -113,8 +113,8 @@ export function TabItem({
           backdrop-blur-md transition-all duration-100
           ${isDragged ? 'opacity-50' : ''}
           ${isActive
-            ? `bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-gray-100 ${accent.borderColor ? '' : 'border-l-cyan-400'} border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-xl shadow-accent-500/20 z-10`
-            : `bg-slate-900/60 text-gray-400 ${accent.borderColor ? '' : 'border-l-slate-700/50'} border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-accent-100 ${accent.borderColor ? '' : 'hover:border-l-cyan-400/50'} hover:shadow-lg hover:shadow-accent-500/10`
+            ? `bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-foreground ${accent.borderColor ? '' : 'border-l-cyan-400'} border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-xl shadow-accent-500/20 z-10`
+            : `bg-card/50 text-muted-foreground ${accent.borderColor ? '' : 'border-l-slate-700/50'} border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-card/60 hover:text-accent-100 ${accent.borderColor ? '' : 'hover:border-l-cyan-400/50'} hover:shadow-lg hover:shadow-accent-500/10`
           }
         `}
         onClick={onSelect}
@@ -141,7 +141,7 @@ export function TabItem({
 
         {/* Terminal / SSH Icon */}
         <div
-          className={`flex-shrink-0 transition-colors duration-100 ${isActive ? 'text-accent-400' : 'text-slate-500 group-hover:text-accent-400/70'
+          className={`flex-shrink-0 transition-colors duration-100 ${isActive ? 'text-accent-400' : 'text-muted-foreground/70 group-hover:text-accent-400/70'
             }`}
         >
           {tab.isSSH
@@ -174,7 +174,7 @@ export function TabItem({
             onContextMenu={(e) => {
               e.stopPropagation();
             }}
-            className={`w-5 h-5 rounded flex items-center justify-center text-gray-500 
+            className={`w-5 h-5 rounded flex items-center justify-center text-muted-foreground/70 
                        hover:text-red-400 hover:bg-red-500/15 transition-colors duration-75 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
               }`}
             title="Close (Ctrl+W)"

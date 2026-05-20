@@ -286,7 +286,7 @@ export default function FileBrowserPanel({
   return (
     <div
       id="sftp-panel"
-      className="absolute left-0 top-0 bottom-0 h-full bg-slate-900/95 backdrop-blur-md border-r border-slate-700/50 flex flex-col z-10 shadow-2xl"
+      className="absolute left-0 top-0 bottom-0 h-full bg-card/90 backdrop-blur-md backdrop-blur-md border-r border-border/80 flex flex-col z-10 shadow-2xl"
       style={{ width: 260 }}
     >
       {/* Resize handle (right edge) */}
@@ -296,18 +296,18 @@ export default function FileBrowserPanel({
       />
 
       {/* Panel header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/50 flex-shrink-0">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-border/80 flex-shrink-0">
         <div className="min-w-0">
           <div className="text-[11px] font-semibold text-accent-400/90 tracking-wider uppercase truncate">
             Files
           </div>
-          <div className="text-[10px] text-gray-600 truncate">
+          <div className="text-[10px] text-muted-foreground/60 truncate">
             {connection.username}@{connection.host}
           </div>
         </div>
         <button
           onClick={onClose}
-          className="flex-shrink-0 p-1 rounded text-gray-600 hover:text-gray-300 hover:bg-slate-700/50 transition-colors"
+          className="flex-shrink-0 p-1 rounded text-muted-foreground/60 hover:text-foreground/80 hover:bg-accent/70 transition-colors"
           title="Close file browser"
         >
           <X size={13} />
@@ -315,7 +315,7 @@ export default function FileBrowserPanel({
       </div>
 
       {connecting && (
-        <div className="flex-1 flex items-center justify-center gap-2 text-gray-500 text-[12px]">
+        <div className="flex-1 flex items-center justify-center gap-2 text-muted-foreground/70 text-[12px]">
           <Loader2 size={14} className="animate-spin" />
           Connecting…
         </div>
@@ -356,18 +356,18 @@ export default function FileBrowserPanel({
       {connected && (
         <>
           {/* Navigation toolbar */}
-          <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-slate-700/40 flex-shrink-0">
+          <div className="flex items-center gap-0.5 px-2 py-1.5 border-b border-border/60 flex-shrink-0">
             <button
               onClick={() => navigateTo(parentPath(currentPath))}
               disabled={currentPath === "/"}
-              className="p-1.5 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 disabled:opacity-30 disabled:cursor-default transition-colors"
+              className="p-1.5 rounded text-muted-foreground/70 hover:text-accent-300 hover:bg-accent/70 disabled:opacity-30 disabled:cursor-default transition-colors"
               title="Go up"
             >
               <ChevronUp size={13} />
             </button>
             <button
               onClick={() => navigateTo(currentPath)}
-              className="p-1.5 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+              className="p-1.5 rounded text-muted-foreground/70 hover:text-accent-300 hover:bg-accent/70 transition-colors"
               title="Refresh"
             >
               <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
@@ -375,14 +375,14 @@ export default function FileBrowserPanel({
             <div className="flex-1" />
             <button
               onClick={handleUpload}
-              className="p-1.5 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+              className="p-1.5 rounded text-muted-foreground/70 hover:text-accent-300 hover:bg-accent/70 transition-colors"
               title="Upload file"
             >
               <Upload size={13} />
             </button>
             <button
               onClick={() => setSyncPath(currentPath)}
-              className="p-1.5 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+              className="p-1.5 rounded text-muted-foreground/70 hover:text-accent-300 hover:bg-accent/70 transition-colors"
               title="Sync this directory"
             >
               <FolderTree size={13} />
@@ -392,7 +392,7 @@ export default function FileBrowserPanel({
                 setNewFolderMode(true);
                 setNewFolderName("");
               }}
-              className="p-1.5 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+              className="p-1.5 rounded text-muted-foreground/70 hover:text-accent-300 hover:bg-accent/70 transition-colors"
               title="New folder"
             >
               <FolderPlus size={13} />
@@ -403,7 +403,7 @@ export default function FileBrowserPanel({
           <div className="flex items-center gap-0.5 px-2 py-1 overflow-x-auto flex-shrink-0 scrollbar-none">
             <button
               onClick={() => navigateTo("/")}
-              className="text-[10px] text-gray-500 hover:text-accent-300 flex-shrink-0 transition-colors"
+              className="text-[10px] text-muted-foreground/70 hover:text-accent-300 flex-shrink-0 transition-colors"
             >
               /
             </button>
@@ -411,11 +411,11 @@ export default function FileBrowserPanel({
               <span key={seg.path} className="flex items-center gap-0.5">
                 <ChevronLeft
                   size={9}
-                  className="text-gray-700 rotate-180 flex-shrink-0"
+                  className="text-muted-foreground/60 rotate-180 flex-shrink-0"
                 />
                 <button
                   onClick={() => navigateTo(seg.path)}
-                  className="text-[10px] text-gray-500 hover:text-accent-300 flex-shrink-0 truncate max-w-[80px] transition-colors"
+                  className="text-[10px] text-muted-foreground/70 hover:text-accent-300 flex-shrink-0 truncate max-w-[80px] transition-colors"
                   title={seg.path}
                 >
                   {seg.label}
@@ -451,13 +451,13 @@ export default function FileBrowserPanel({
                   }}
                   onBlur={handleMkdir}
                   placeholder="New folder name"
-                  className="flex-1 bg-slate-700/60 border border-accent-500/40 rounded px-1.5 py-0.5 text-[12px] text-gray-200 outline-none"
+                  className="flex-1 bg-accent border border-accent-500/40 rounded px-1.5 py-0.5 text-[12px] text-foreground outline-none"
                 />
               </div>
             )}
 
             {entries.length === 0 && !loading && !listError && (
-              <div className="px-3 py-4 text-[11px] text-gray-600 text-center">
+              <div className="px-3 py-4 text-[11px] text-muted-foreground/60 text-center">
                 Empty directory
               </div>
             )}
@@ -489,8 +489,8 @@ export default function FileBrowserPanel({
 
           {/* Transfer queue */}
           {transfers.length > 0 && (
-            <div className="border-t border-slate-700/40 flex-shrink-0 max-h-32 overflow-y-auto">
-              <div className="px-3 py-1 text-[10px] text-gray-600 uppercase tracking-wider">
+            <div className="border-t border-border/60 flex-shrink-0 max-h-32 overflow-y-auto">
+              <div className="px-3 py-1 text-[10px] text-muted-foreground/60 uppercase tracking-wider">
                 Transfers
               </div>
               {transfers.map((t) => (

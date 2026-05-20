@@ -46,7 +46,7 @@ function ExportDropdown({
       <button
         ref={btnRef}
         onClick={toggle}
-        className="p-2 hover:bg-slate-800 text-gray-400 hover:text-slate-200 rounded-md transition-colors"
+        className="p-2 hover:bg-card text-muted-foreground hover:text-foreground rounded-md transition-colors"
         title="Export/Copy conversation"
       >
         <Layers size={18} />
@@ -55,7 +55,7 @@ function ExportDropdown({
         <div
           ref={menuRef}
           style={{ position: "fixed", top: pos.top, right: pos.right }}
-          className="bg-slate-900 border border-slate-700/50 rounded-md shadow-xl py-1 min-w-[160px] z-[9999]"
+          className="bg-card border border-border/80 rounded-md shadow-xl py-1 min-w-[160px] z-[9999]"
         >
           {onExport && (
             <button
@@ -63,7 +63,7 @@ function ExportDropdown({
                 onExport();
                 setOpen(false);
               }}
-              className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 flex items-center gap-2 transition-colors"
+              className="w-full px-3 py-2 text-xs text-left text-foreground/80 hover:bg-card flex items-center gap-2 transition-colors"
             >
               <Download size={12} />
               Export as Markdown
@@ -75,7 +75,7 @@ function ExportDropdown({
                 onCopy();
                 setOpen(false);
               }}
-              className="w-full px-3 py-2 text-xs text-left text-slate-300 hover:bg-slate-800 flex items-center gap-2 transition-colors"
+              className="w-full px-3 py-2 text-xs text-left text-foreground/80 hover:bg-card flex items-center gap-2 transition-colors"
             >
               <Copy size={12} />
               Copy Conversation
@@ -140,7 +140,7 @@ function ProviderDropdown({
         <div
           ref={menuRef}
           style={{ position: "fixed", top: pos.top, left: pos.left }}
-          className="bg-slate-900 border border-slate-700/50 rounded-md shadow-xl py-1 min-w-[130px] z-[9999]"
+          className="bg-card border border-border/80 rounded-md shadow-xl py-1 min-w-[130px] z-[9999]"
         >
           {providers.map((p) => (
             <button
@@ -149,8 +149,8 @@ function ProviderDropdown({
                 onChange(p);
                 setOpen(false);
               }}
-              className={`w-full px-3 py-1.5 text-xs text-left capitalize hover:bg-slate-800 transition-colors ${
-                current === p ? "text-accent-400" : "text-slate-300"
+              className={`w-full px-3 py-1.5 text-xs text-left capitalize hover:bg-card transition-colors ${
+                current === p ? "text-accent-400" : "text-foreground/80"
               }`}
             >
               {p}
@@ -204,7 +204,7 @@ function OverflowMenu({ items }: { items: MenuItem[] }) {
       <button
         ref={btnRef}
         onClick={toggle}
-        className="p-2 hover:bg-slate-800 text-gray-400 hover:text-slate-200 rounded-md transition-colors relative"
+        className="p-2 hover:bg-card text-muted-foreground hover:text-foreground rounded-md transition-colors relative"
         title="More actions"
       >
         <MoreVertical size={18} />
@@ -216,7 +216,7 @@ function OverflowMenu({ items }: { items: MenuItem[] }) {
         <div
           ref={menuRef}
           style={{ position: "fixed", top: pos.top, right: pos.right }}
-          className="bg-slate-900 border border-slate-700/50 rounded-md shadow-xl py-1 min-w-[180px] z-[9999]"
+          className="bg-card border border-border/80 rounded-md shadow-xl py-1 min-w-[180px] z-[9999]"
         >
           {items.map((item) => {
             const Icon = item.icon;
@@ -227,8 +227,8 @@ function OverflowMenu({ items }: { items: MenuItem[] }) {
                   item.onClick();
                   setOpen(false);
                 }}
-                className={`w-full px-3 py-2 text-xs text-left hover:bg-slate-800 flex items-center gap-2 transition-colors ${
-                  item.accent ? "text-accent-400" : "text-slate-300"
+                className={`w-full px-3 py-2 text-xs text-left hover:bg-card flex items-center gap-2 transition-colors ${
+                  item.accent ? "text-accent-400" : "text-foreground/80"
                 }`}
               >
                 <Icon size={14} />
@@ -337,8 +337,8 @@ export default function ChatHeader({
   }
 
   return (
-    <div ref={containerRef} className="border-b border-slate-700/50 bg-slate-900/95 backdrop-blur-xl">
-      <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-3 text-gray-100">
+    <div ref={containerRef} className="border-b border-border/80 bg-card/90 backdrop-blur-md backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-3 text-foreground">
         <div className="flex items-center space-x-3 min-w-0 flex-1">
           <div className="shrink-0 w-9 h-9 bg-accent-500/20 border border-accent-500/30 rounded-lg flex items-center justify-center">
             <Bot size={18} className="text-accent-400" />
@@ -351,10 +351,10 @@ export default function ChatHeader({
                   <ProviderDropdown current={aiProvider} onChange={onProviderChange} />
                 )}
                 {selectedModel && onModelChange && (
-                  <span className="text-[10px] text-slate-500">·</span>
+                  <span className="text-[10px] text-muted-foreground/70">·</span>
                 )}
                 {selectedModel && (
-                  <span className="text-[10px] text-slate-500 font-mono truncate max-w-[100px]">
+                  <span className="text-[10px] text-muted-foreground/70 font-mono truncate max-w-[100px]">
                     {selectedModel.split("/").pop()}
                   </span>
                 )}
@@ -380,7 +380,7 @@ export default function ChatHeader({
                   className={`p-2 rounded-md transition-colors relative ${
                     hasUnsavedChanges
                       ? "hover:bg-accent-500/20 text-accent-400"
-                      : "text-gray-400 hover:bg-slate-800"
+                      : "text-muted-foreground hover:bg-card"
                   }`}
                   title={hasUnsavedChanges ? "Save conversation" : "Saved"}
                 >
@@ -393,7 +393,7 @@ export default function ChatHeader({
               {onToggleConvList && (
                 <button
                   onClick={onToggleConvList}
-                  className="p-2 hover:bg-slate-800 text-gray-400 hover:text-slate-200 rounded-md transition-colors"
+                  className="p-2 hover:bg-card text-muted-foreground hover:text-foreground rounded-md transition-colors"
                   title="Browse conversations"
                 >
                   <List size={18} />
@@ -401,7 +401,7 @@ export default function ChatHeader({
               )}
               <button
                 onClick={onNewChat}
-                className="p-2 hover:bg-accent-500/20 text-gray-400 hover:text-accent-300 rounded-md transition-colors"
+                className="p-2 hover:bg-accent-500/20 text-muted-foreground hover:text-accent-300 rounded-md transition-colors"
                 title="New Chat"
               >
                 <Plus size={18} />
@@ -416,7 +416,7 @@ export default function ChatHeader({
           )}
           <button
             onClick={onClose}
-            className="p-2 hover:bg-red-500/20 text-gray-400 hover:text-red-400 rounded-md transition-colors"
+            className="p-2 hover:bg-red-500/20 text-muted-foreground hover:text-red-400 rounded-md transition-colors"
             title="Close"
           >
             <X size={18} />
@@ -426,16 +426,16 @@ export default function ChatHeader({
 
       {lastUsage && (
         <div className="flex items-center gap-2 px-4 pb-3">
-          <div className="flex items-center gap-1.5 rounded-md bg-slate-800/80 border border-slate-700/50 px-2 py-1 text-[11px] text-slate-400">
+          <div className="flex items-center gap-1.5 rounded-md bg-card/70 border border-border/80 px-2 py-1 text-[11px] text-muted-foreground">
             <ArrowUp size={10} className="text-accent-400" />
             <span>{lastUsage.prompt_tokens.toLocaleString()}</span>
           </div>
-          <div className="flex items-center gap-1.5 rounded-md bg-slate-800/80 border border-slate-700/50 px-2 py-1 text-[11px] text-slate-400">
+          <div className="flex items-center gap-1.5 rounded-md bg-card/70 border border-border/80 px-2 py-1 text-[11px] text-muted-foreground">
             <ArrowDown size={10} className="text-green-400" />
             <span>{lastUsage.completion_tokens.toLocaleString()}</span>
           </div>
-          <div className="flex items-center gap-1.5 rounded-md bg-slate-800/80 border border-slate-700/50 px-2 py-1 text-[11px] text-slate-400">
-            <Layers size={10} className="text-slate-500" />
+          <div className="flex items-center gap-1.5 rounded-md bg-card/70 border border-border/80 px-2 py-1 text-[11px] text-muted-foreground">
+            <Layers size={10} className="text-muted-foreground/70" />
             <span>{lastUsage.total_tokens.toLocaleString()} tokens</span>
           </div>
         </div>

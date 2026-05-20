@@ -60,8 +60,8 @@ export function SSHKeysPanel() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-300 text-sm font-semibold">SSH Keys</p>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-foreground/80 text-sm font-semibold">SSH Keys</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
             Generate or import private keys. Stored encrypted in the app data
             directory.
           </p>
@@ -70,7 +70,7 @@ export function SSHKeysPanel() {
           <Button
             size="sm"
             onClick={() => setMode("import")}
-            className="gap-1.5 bg-slate-800/60 border border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 text-gray-400"
+            className="gap-1.5 bg-card/50 border border-border/80 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 text-muted-foreground"
           >
             <Upload size={14} />
             Import
@@ -89,9 +89,9 @@ export function SSHKeysPanel() {
       <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-accent-600/40 scrollbar-track-transparent">
         {keys.length === 0 && (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <KeyRound size={32} className="text-slate-600 mb-3" />
-            <p className="text-sm text-gray-500">No keys yet</p>
-            <p className="text-xs text-gray-600 mt-1">
+            <KeyRound size={32} className="text-muted-foreground/60 mb-3" />
+            <p className="text-sm text-muted-foreground/70">No keys yet</p>
+            <p className="text-xs text-muted-foreground/60 mt-1">
               Generate or import a key to start authenticating.
             </p>
           </div>
@@ -99,12 +99,12 @@ export function SSHKeysPanel() {
         {keys.map((k) => (
           <div
             key={k.id}
-            className="flex items-center gap-2.5 p-2.5 rounded-md bg-slate-800/60 border border-slate-700/50"
+            className="flex items-center gap-2.5 p-2.5 rounded-md bg-card/50 border border-border/80"
           >
             <KeyRound size={14} className="text-accent-500/70 shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="text-sm text-gray-200 truncate">{k.name}</div>
-              <div className="text-xs text-gray-500 font-mono truncate">
+              <div className="text-sm text-foreground truncate">{k.name}</div>
+              <div className="text-xs text-muted-foreground/70 font-mono truncate">
                 {k.type}
                 {k.bits ? `-${k.bits}` : ""}
                 {" · "}
@@ -117,7 +117,7 @@ export function SSHKeysPanel() {
               variant="ghost"
               size="icon"
               title="Copy public key"
-              className="h-8 w-8 text-gray-400 hover:text-accent-300 hover:bg-accent-500/20"
+              className="h-8 w-8 text-muted-foreground hover:text-accent-300 hover:bg-accent-500/20"
             >
               {copiedId === k.id ? <Check size={14} /> : <Copy size={14} />}
             </Button>
@@ -126,7 +126,7 @@ export function SSHKeysPanel() {
               variant="ghost"
               size="icon"
               title="Delete key"
-              className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-red-500/20"
+              className="h-8 w-8 text-muted-foreground hover:text-red-400 hover:bg-red-500/20"
             >
               <Trash2 size={14} />
             </Button>
@@ -210,23 +210,23 @@ function KeyDialog({
 
   return (
     <Dialog open={mode !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[480px] bg-slate-900 border-slate-700/40 shadow-xl">
+      <DialogContent className="sm:max-w-[480px] bg-card border-border/60 shadow-xl">
         <DialogHeader>
-          <DialogTitle className="text-gray-100 flex items-center gap-2">
+          <DialogTitle className="text-foreground flex items-center gap-2">
             <KeyRound size={16} className="text-accent-400" />
             {mode === "generate" ? "Generate SSH Key" : "Import SSH Key"}
           </DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="grid gap-1.5">
-            <Label className="text-gray-300 text-sm">
+            <Label className="text-foreground/80 text-sm">
               Name <span className="text-red-400">*</span>
             </Label>
             <Input
               placeholder="e.g. prod-bastion"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="bg-slate-800/60 border-slate-700 text-gray-100"
+              className="bg-card/50 border-border text-foreground"
             />
           </div>
 
@@ -234,15 +234,15 @@ function KeyDialog({
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
-                  <Label className="text-gray-300 text-sm">Type</Label>
+                  <Label className="text-foreground/80 text-sm">Type</Label>
                   <Select
                     value={type}
                     onValueChange={(v) => setType(v as "ed25519" | "rsa")}
                   >
-                    <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                    <SelectTrigger className="bg-card/50 border-border text-foreground">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700/50">
+                    <SelectContent className="bg-card border-border/80">
                       <SelectItem value="ed25519">ed25519 (recommended)</SelectItem>
                       <SelectItem value="rsa">RSA</SelectItem>
                     </SelectContent>
@@ -250,15 +250,15 @@ function KeyDialog({
                 </div>
                 {type === "rsa" && (
                   <div className="grid gap-1.5">
-                    <Label className="text-gray-300 text-sm">Bits</Label>
+                    <Label className="text-foreground/80 text-sm">Bits</Label>
                     <Select
                       value={String(bits)}
                       onValueChange={(v) => setBits(parseInt(v, 10))}
                     >
-                      <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                      <SelectTrigger className="bg-card/50 border-border text-foreground">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700/50">
+                      <SelectContent className="bg-card border-border/80">
                         <SelectItem value="2048">2048</SelectItem>
                         <SelectItem value="3072">3072</SelectItem>
                         <SelectItem value="4096">4096</SelectItem>
@@ -268,15 +268,15 @@ function KeyDialog({
                 )}
               </div>
               <div className="grid gap-1.5">
-                <Label className="text-gray-300 text-sm">
+                <Label className="text-foreground/80 text-sm">
                   Comment{" "}
-                  <span className="text-gray-500 font-normal">(optional)</span>
+                  <span className="text-muted-foreground/70 font-normal">(optional)</span>
                 </Label>
                 <Input
                   placeholder="user@host"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  className="bg-slate-800/60 border-slate-700 text-gray-100"
+                  className="bg-card/50 border-border text-foreground"
                 />
               </div>
             </>
@@ -284,7 +284,7 @@ function KeyDialog({
 
           {mode === "import" && (
             <div className="grid gap-1.5">
-              <Label className="text-gray-300 text-sm">
+              <Label className="text-foreground/80 text-sm">
                 Private key (PEM){" "}
                 <span className="text-red-400">*</span>
               </Label>
@@ -293,15 +293,15 @@ function KeyDialog({
                 placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..."
                 value={privatePem}
                 onChange={(e) => setPrivatePem(e.target.value)}
-                className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-xs"
+                className="bg-card/50 border-border text-foreground font-mono text-xs"
               />
             </div>
           )}
 
           <div className="grid gap-1.5">
-            <Label className="text-gray-300 text-sm">
+            <Label className="text-foreground/80 text-sm">
               Passphrase{" "}
-              <span className="text-gray-500 font-normal">(optional)</span>
+              <span className="text-muted-foreground/70 font-normal">(optional)</span>
             </Label>
             <div className="flex items-center gap-2">
               <Input
@@ -309,13 +309,13 @@ function KeyDialog({
                 autoComplete="new-password"
                 value={passphrase}
                 onChange={(e) => setPassphrase(e.target.value)}
-                className="bg-slate-800/60 border-slate-700 text-gray-100"
+                className="bg-card/50 border-border text-foreground"
               />
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => setShowPass((v) => !v)}
-                className="bg-slate-800/60 border-slate-700/50"
+                className="bg-card/50 border-border/80"
               >
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </Button>
@@ -333,7 +333,7 @@ function KeyDialog({
             variant="outline"
             onClick={onClose}
             disabled={submitting}
-            className="border-slate-700 text-gray-300 hover:bg-slate-800"
+            className="border-border text-foreground/80 hover:bg-card"
           >
             Cancel
           </Button>

@@ -261,9 +261,9 @@ export default function SSHDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md bg-slate-900 border-slate-700 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md bg-card border-border max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-gray-100">
+          <DialogTitle className="text-foreground">
             {editConnection ? "Edit SSH Connection" : "New SSH Connection"}
           </DialogTitle>
         </DialogHeader>
@@ -272,15 +272,15 @@ export default function SSHDialog({
           {/* Import from ~/.ssh/config */}
           {!editConnection && configHosts.length > 0 && (
             <div className="grid gap-1.5">
-              <Label className="text-gray-300 text-sm flex items-center gap-1.5">
-                <Download size={12} className="text-gray-500" />
+              <Label className="text-foreground/80 text-sm flex items-center gap-1.5">
+                <Download size={12} className="text-muted-foreground/70" />
                 Import from ~/.ssh/config
               </Label>
               <Select value="" onValueChange={importFromConfig}>
-                <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                <SelectTrigger className="bg-card/50 border-border text-foreground">
                   <SelectValue placeholder="Pick a host to pre-fill the form" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700/50 max-h-60">
+                <SelectContent className="bg-card border-border/80 max-h-60">
                   {configHosts.map((h) => (
                     <SelectItem key={h.alias} value={h.alias}>
                       {h.alias} — {h.user ?? "?"}@{h.host}
@@ -294,7 +294,7 @@ export default function SSHDialog({
 
           {/* Name */}
           <div className="grid gap-1.5">
-            <Label htmlFor="ssh-name" className="text-gray-300 text-sm">
+            <Label htmlFor="ssh-name" className="text-foreground/80 text-sm">
               Name <span className="text-red-400">*</span>
             </Label>
             <Input
@@ -302,7 +302,7 @@ export default function SSHDialog({
               placeholder="My Server"
               value={form.name}
               onChange={set("name")}
-              className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+              className="bg-card/50 border-border text-foreground placeholder:text-muted-foreground/70"
             />
             {errors.name && (
               <p className="text-red-400 text-xs">{errors.name}</p>
@@ -311,7 +311,7 @@ export default function SSHDialog({
 
           {/* Host */}
           <div className="grid gap-1.5">
-            <Label htmlFor="ssh-host" className="text-gray-300 text-sm">
+            <Label htmlFor="ssh-host" className="text-foreground/80 text-sm">
               Hostname / IP <span className="text-red-400">*</span>
             </Label>
             <Input
@@ -319,7 +319,7 @@ export default function SSHDialog({
               placeholder="192.168.1.1"
               value={form.host}
               onChange={set("host")}
-              className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+              className="bg-card/50 border-border text-foreground placeholder:text-muted-foreground/70"
             />
             {errors.host && (
               <p className="text-red-400 text-xs">{errors.host}</p>
@@ -329,7 +329,7 @@ export default function SSHDialog({
           {/* Username + Port */}
           <div className="grid grid-cols-3 gap-3">
             <div className="col-span-2 grid gap-1.5">
-              <Label htmlFor="ssh-user" className="text-gray-300 text-sm">
+              <Label htmlFor="ssh-user" className="text-foreground/80 text-sm">
                 Username <span className="text-red-400">*</span>
               </Label>
               <Input
@@ -337,14 +337,14 @@ export default function SSHDialog({
                 placeholder="root"
                 value={form.username}
                 onChange={set("username")}
-                className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+                className="bg-card/50 border-border text-foreground placeholder:text-muted-foreground/70"
               />
               {errors.username && (
                 <p className="text-red-400 text-xs">{errors.username}</p>
               )}
             </div>
             <div className="grid gap-1.5">
-              <Label htmlFor="ssh-port" className="text-gray-300 text-sm">
+              <Label htmlFor="ssh-port" className="text-foreground/80 text-sm">
                 Port <span className="text-red-400">*</span>
               </Label>
               <Input
@@ -352,7 +352,7 @@ export default function SSHDialog({
                 placeholder="22"
                 value={form.port}
                 onChange={set("port")}
-                className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+                className="bg-card/50 border-border text-foreground placeholder:text-muted-foreground/70"
               />
               {errors.port && (
                 <p className="text-red-400 text-xs">{errors.port}</p>
@@ -363,10 +363,10 @@ export default function SSHDialog({
           {/* Managed key selector */}
           {keys.length > 0 && (
             <div className="grid gap-1.5">
-              <Label className="text-gray-300 text-sm flex items-center gap-1.5">
-                <KeyRound size={12} className="text-gray-500" />
+              <Label className="text-foreground/80 text-sm flex items-center gap-1.5">
+                <KeyRound size={12} className="text-muted-foreground/70" />
                 Managed Key{" "}
-                <span className="text-gray-500 font-normal">(optional)</span>
+                <span className="text-muted-foreground/70 font-normal">(optional)</span>
               </Label>
               <Select
                 value={form.identityKeyId || "none"}
@@ -377,10 +377,10 @@ export default function SSHDialog({
                   }))
                 }
               >
-                <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                <SelectTrigger className="bg-card/50 border-border text-foreground">
                   <SelectValue placeholder="None" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700/50">
+                <SelectContent className="bg-card border-border/80">
                   <SelectItem value="none">None</SelectItem>
                   {keys.map((k) => (
                     <SelectItem key={k.id} value={k.id}>
@@ -394,25 +394,25 @@ export default function SSHDialog({
 
           {/* Identity File (legacy path) */}
           <div className="grid gap-1.5">
-            <Label htmlFor="ssh-identity" className="text-gray-300 text-sm">
+            <Label htmlFor="ssh-identity" className="text-foreground/80 text-sm">
               Identity File{" "}
-              <span className="text-gray-500 font-normal">(optional)</span>
+              <span className="text-muted-foreground/70 font-normal">(optional)</span>
             </Label>
             <Input
               id="ssh-identity"
               placeholder="~/.ssh/id_rsa"
               value={form.identityFile}
               onChange={set("identityFile")}
-              className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+              className="bg-card/50 border-border text-foreground placeholder:text-muted-foreground/70"
             />
           </div>
 
           {/* Jump hosts */}
           <div className="grid gap-1.5">
-            <Label className="text-gray-300 text-sm flex items-center gap-1.5">
-              <Network size={12} className="text-gray-500" />
+            <Label className="text-foreground/80 text-sm flex items-center gap-1.5">
+              <Network size={12} className="text-muted-foreground/70" />
               Jump Hosts (ProxyJump){" "}
-              <span className="text-gray-500 font-normal">(optional)</span>
+              <span className="text-muted-foreground/70 font-normal">(optional)</span>
             </Label>
             {form.jumpHostIds.length > 0 && (
               <div className="flex flex-col gap-1">
@@ -421,16 +421,16 @@ export default function SSHDialog({
                   return (
                     <div
                       key={id}
-                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-slate-800/60 border border-slate-700/50 text-xs"
+                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-card/50 border border-border/80 text-xs"
                     >
-                      <span className="text-gray-500">{idx + 1}.</span>
-                      <span className="flex-1 text-gray-200 truncate">
+                      <span className="text-muted-foreground/70">{idx + 1}.</span>
+                      <span className="flex-1 text-foreground truncate">
                         {j ? `${j.name} (${j.username}@${j.host})` : id}
                       </span>
                       <button
                         type="button"
                         onClick={() => removeJumpHost(id)}
-                        className="text-gray-500 hover:text-red-400"
+                        className="text-muted-foreground/70 hover:text-red-400"
                       >
                         <X size={13} />
                       </button>
@@ -441,10 +441,10 @@ export default function SSHDialog({
             )}
             {availableJumpCandidates.length > 0 && (
               <Select value="" onValueChange={addJumpHost}>
-                <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                <SelectTrigger className="bg-card/50 border-border text-foreground">
                   <SelectValue placeholder="Add a jump host…" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700/50">
+                <SelectContent className="bg-card border-border/80">
                   {availableJumpCandidates.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
                       {c.name} ({c.username}@{c.host})
@@ -458,10 +458,10 @@ export default function SSHDialog({
           {/* Vault Credential Selector */}
           {vaultCredentials.length > 0 && (
             <div className="grid gap-1.5">
-              <Label className="text-gray-300 text-sm flex items-center gap-1.5">
-                <Vault size={12} className="text-gray-500" />
+              <Label className="text-foreground/80 text-sm flex items-center gap-1.5">
+                <Vault size={12} className="text-muted-foreground/70" />
                 Vault Credential{" "}
-                <span className="text-gray-500 font-normal">(optional)</span>
+                <span className="text-muted-foreground/70 font-normal">(optional)</span>
               </Label>
               <Select
                 value={form.credentialId || "none"}
@@ -477,10 +477,10 @@ export default function SSHDialog({
                   }))
                 }
               >
-                <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                <SelectTrigger className="bg-card/50 border-border text-foreground">
                   <SelectValue placeholder="None (use own password)" />
                 </SelectTrigger>
-                <SelectContent className="bg-slate-900 border-slate-700/50">
+                <SelectContent className="bg-card border-border/80">
                   <SelectItem value="none">None (use own password)</SelectItem>
                   {vaultCredentials.map((cred) => (
                     <SelectItem key={cred.id} value={cred.id}>
@@ -495,10 +495,10 @@ export default function SSHDialog({
           {/* Tags */}
           {customTags.length > 0 && (
             <div className="grid gap-1.5">
-              <Label className="text-gray-300 text-sm flex items-center gap-1.5">
-                <Tag size={12} className="text-gray-500" />
+              <Label className="text-foreground/80 text-sm flex items-center gap-1.5">
+                <Tag size={12} className="text-muted-foreground/70" />
                 Tags{" "}
-                <span className="text-gray-500 font-normal">(optional)</span>
+                <span className="text-muted-foreground/70 font-normal">(optional)</span>
               </Label>
               <div className="flex flex-wrap gap-1.5">
                 {customTags.map((tag) => {
@@ -528,12 +528,12 @@ export default function SSHDialog({
 
           {/* Password section separator */}
           <div className="flex items-center gap-2 pt-1">
-            <div className="flex-1 h-px bg-slate-700/60" />
-            <span className="flex items-center gap-1.5 text-xs text-gray-500">
+            <div className="flex-1 h-px bg-accent" />
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground/70">
               <KeyRound size={11} />
               Authentication
             </span>
-            <div className="flex-1 h-px bg-slate-700/60" />
+            <div className="flex-1 h-px bg-accent" />
           </div>
 
           {form.credentialId ? (
@@ -557,10 +557,10 @@ export default function SSHDialog({
             <>
               {/* External secret ref */}
               <div className="grid gap-1.5">
-                <Label className="text-gray-300 text-sm flex items-center gap-1.5">
-                  <Boxes size={12} className="text-gray-500" />
+                <Label className="text-foreground/80 text-sm flex items-center gap-1.5">
+                  <Boxes size={12} className="text-muted-foreground/70" />
                   External Secret{" "}
-                  <span className="text-gray-500 font-normal">(optional)</span>
+                  <span className="text-muted-foreground/70 font-normal">(optional)</span>
                 </Label>
                 <div className="grid grid-cols-[120px_1fr] gap-2">
                   <Select
@@ -575,10 +575,10 @@ export default function SSHDialog({
                       }))
                     }
                   >
-                    <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                    <SelectTrigger className="bg-card/50 border-border text-foreground">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700/50">
+                    <SelectContent className="bg-card border-border/80">
                       <SelectItem value="none">None</SelectItem>
                       <SelectItem value="op">1Password</SelectItem>
                       <SelectItem value="bw">Bitwarden</SelectItem>
@@ -601,7 +601,7 @@ export default function SSHDialog({
                     disabled={!form.passwordRefProvider}
                     value={form.passwordRefRef}
                     onChange={set("passwordRefRef")}
-                    className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-xs"
+                    className="bg-card/50 border-border text-foreground font-mono text-xs"
                   />
                 </div>
                 {form.passwordRefProvider && (
@@ -611,7 +611,7 @@ export default function SSHDialog({
                       size="sm"
                       variant="outline"
                       onClick={testSecret}
-                      className="h-7 px-2 text-xs bg-slate-800/60 border-slate-700/50"
+                      className="h-7 px-2 text-xs bg-card/50 border-border/80"
                     >
                       Test
                     </Button>
@@ -652,9 +652,9 @@ export default function SSHDialog({
                   )}
 
                   <div className="grid gap-1.5">
-                    <Label htmlFor="ssh-password" className="text-gray-300 text-sm">
+                    <Label htmlFor="ssh-password" className="text-foreground/80 text-sm">
                       Password{" "}
-                      <span className="text-gray-500 font-normal">
+                      <span className="text-muted-foreground/70 font-normal">
                         (optional)
                       </span>
                     </Label>
@@ -669,7 +669,7 @@ export default function SSHDialog({
                       }
                       value={form.password}
                       onChange={set("password")}
-                      className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+                      className="bg-card/50 border-border text-foreground placeholder:text-muted-foreground/70"
                     />
                   </div>
 
@@ -677,7 +677,7 @@ export default function SSHDialog({
                     <div className="grid gap-1.5">
                       <Label
                         htmlFor="ssh-confirm-password"
-                        className="text-gray-300 text-sm"
+                        className="text-foreground/80 text-sm"
                       >
                         Confirm Password{" "}
                         <span className="text-red-400">*</span>
@@ -689,7 +689,7 @@ export default function SSHDialog({
                         placeholder="Repeat password"
                         value={form.confirmPassword}
                         onChange={set("confirmPassword")}
-                        className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+                        className="bg-card/50 border-border text-foreground placeholder:text-muted-foreground/70"
                       />
                       {errors.confirmPassword && (
                         <p className="text-red-400 text-xs">
@@ -708,7 +708,7 @@ export default function SSHDialog({
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="border-slate-700 text-gray-300 hover:bg-slate-800"
+            className="border-border text-foreground/80 hover:bg-card"
           >
             Cancel
           </Button>

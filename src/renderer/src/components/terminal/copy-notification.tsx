@@ -73,8 +73,8 @@ const CopyNotification = ({
     >
       <div
         className={`
-        bg-slate-900/95 border border-accent-500/25 rounded-lg shadow-xl shadow-black/50 px-3 py-2
-        flex items-center gap-2 text-sm text-gray-200
+        bg-card/90 backdrop-blur-md border border-accent-500/25 rounded-lg shadow-xl shadow-black/50 px-3 py-2
+        flex items-center gap-2 text-sm text-foreground
         backdrop-blur-md
         transition-all duration-200 ease-out
         ${getAnimationClasses()}

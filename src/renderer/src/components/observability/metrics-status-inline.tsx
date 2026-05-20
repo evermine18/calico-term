@@ -33,8 +33,8 @@ export default function MetricsStatusInline({
       }
       className={`flex items-center gap-2 px-2 py-0.5 rounded transition-colors ${
         expanded
-          ? "bg-slate-800/80 text-gray-200"
-          : "hover:bg-slate-800/60 text-gray-500"
+          ? "bg-card/70 text-foreground"
+          : "hover:bg-card/50 text-muted-foreground/70"
       }`}
     >
       <Activity
@@ -43,14 +43,14 @@ export default function MetricsStatusInline({
           error
             ? "text-red-400"
             : loading
-              ? "text-gray-500 animate-pulse"
+              ? "text-muted-foreground/70 animate-pulse"
               : "text-accent-400/80"
         }
       />
       {error ? (
         <span className="text-red-400/80">metrics offline</span>
       ) : !sample ? (
-        <span className="text-gray-500">sampling…</span>
+        <span className="text-muted-foreground/70">sampling…</span>
       ) : (
         <>
           <span>
@@ -59,17 +59,17 @@ export default function MetricsStatusInline({
               {sample.cpuPct.toFixed(0)}%
             </span>
           </span>
-          <span className="text-slate-700">·</span>
+          <span className="text-border">·</span>
           <span>
             MEM{" "}
             <span className={`font-mono ${color(sample.memUsedPct)}`}>
               {sample.memUsedPct.toFixed(0)}%
             </span>
           </span>
-          <span className="text-slate-700">·</span>
+          <span className="text-border">·</span>
           <span>
             LD{" "}
-            <span className="font-mono text-gray-300">
+            <span className="font-mono text-foreground/80">
               {sample.load1.toFixed(2)}
             </span>
           </span>

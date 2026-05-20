@@ -78,7 +78,7 @@ export default function TerminalHeader({
   const isHomeActive = tabs.length === 0 || showHome;
 
   return (
-    <div className="bg-slate-900/95 backdrop-blur-md border-b border-slate-700/40 px-4 py-2.5 flex items-center gap-2 shadow-xl overflow-hidden">
+    <div className="glass border-b border-border/60 px-4 py-2.5 flex items-center gap-2 overflow-hidden relative z-20">
       {/* Home button — wrapped in pt-2.5 to match tabs-list internal offset */}
       <div className="flex items-center gap-2 pt-2.5 flex-shrink-0">
         <button
@@ -87,10 +87,10 @@ export default function TerminalHeader({
           }}
           className={`
             flex items-center justify-center w-9 h-8 rounded-lg
-            border transition-all duration-150 shadow-sm
+            border transition-[background-color,border-color,color,box-shadow] duration-150 ease-out
             ${isHomeActive
-              ? "bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-accent-300 border-l-[3px] border-l-cyan-400 border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-accent-500/20"
-              : "bg-slate-900/60 text-gray-400 border-l-[3px] border-l-slate-700/50 border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-accent-100 hover:border-l-cyan-400/50"
+              ? "bg-card/80 text-foreground border-border shadow-[0_0_0_1px_rgba(var(--accent-rgb),0.4),0_0_18px_-4px_rgba(var(--accent-rgb),0.5)]"
+              : "bg-card/30 text-muted-foreground border-border/50 hover:bg-card/70 hover:text-foreground hover:border-[rgba(var(--accent-rgb),0.4)]"
             }
             ${tabs.length === 0 ? "cursor-default" : "cursor-pointer"}
           `}
@@ -100,7 +100,7 @@ export default function TerminalHeader({
         </button>
 
         {tabs.length > 0 && (
-          <div className="w-px h-5 bg-slate-700/60" />
+          <div className="w-px h-5 bg-border/60" />
         )}
       </div>
 
@@ -111,15 +111,10 @@ export default function TerminalHeader({
         setActiveTab={setActiveTab}
       />
       {/* Action buttons group */}
-      <div className="flex items-center gap-0.5 bg-slate-800/40 border border-slate-700/40 rounded-lg p-0.5 flex-shrink-0">
+      <div className="flex items-center gap-0.5 bg-card/40 border border-border/60 rounded-lg p-0.5 flex-shrink-0 backdrop-blur-sm">
         <button
           onClick={addTab}
-          className="
-              flex items-center justify-center w-8 h-8 rounded-md
-              text-gray-500
-              hover:bg-slate-700/60 hover:text-accent-300
-              transition-all duration-150
-            "
+          className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-150"
           title="New terminal (Ctrl+Shift+T)"
         >
           <Plus size={16} />
@@ -127,12 +122,7 @@ export default function TerminalHeader({
 
         <button
           onClick={() => setHistoryDialogOpen(true)}
-          className="
-              flex items-center justify-center w-8 h-8 rounded-md
-              text-gray-500
-              hover:bg-slate-700/60 hover:text-accent-300
-              transition-all duration-150
-            "
+          className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-150"
           title="Command History"
         >
           <Clock size={16} />
@@ -141,14 +131,11 @@ export default function TerminalHeader({
         {activeTab && (
           <button
             onClick={toggleRecording}
-            className={`
-              flex items-center justify-center w-8 h-8 rounded-md
-              transition-all duration-150
-              ${recording
+            className={`flex items-center justify-center w-8 h-8 rounded-md transition-colors duration-150 ${
+              recording
                 ? "bg-red-500/20 text-red-400"
-                : "text-gray-500 hover:bg-slate-700/60 hover:text-red-400"
-              }
-            `}
+                : "text-muted-foreground hover:bg-accent hover:text-red-400"
+            }`}
             title={recording ? "Stop recording" : "Record session"}
           >
             <Circle
@@ -161,14 +148,11 @@ export default function TerminalHeader({
         {activeTabIsSSH && (
           <button
             onClick={() => setSftpOpen(!sftpOpen)}
-            className={`
-              flex items-center justify-center w-8 h-8 rounded-md
-              transition-all duration-150
-              ${sftpOpen
-                ? "bg-slate-700/60 text-accent-300"
-                : "text-gray-500 hover:bg-slate-700/60 hover:text-accent-300"
-              }
-            `}
+            className={`flex items-center justify-center w-8 h-8 rounded-md transition-colors duration-150 ${
+              sftpOpen
+                ? "bg-accent text-foreground"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            }`}
             title="File Browser (SFTP)"
           >
             <FolderOpen size={16} />
@@ -177,28 +161,18 @@ export default function TerminalHeader({
 
         <button
           onClick={() => setAiSidebarOpen(true)}
-          className="
-              flex items-center justify-center w-8 h-8 rounded-md
-              text-gray-500
-              hover:bg-slate-700/60 hover:text-accent-300
-              transition-all duration-150
-            "
+          className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-150"
           title="AI Assistant"
         >
           <Bot size={16} />
         </button>
 
-        <div className="w-px h-5 bg-slate-700/50 mx-0.5" />
+        <div className="w-px h-5 bg-border/60 mx-0.5" />
 
         {/* Settings button */}
         <SettingsDialog>
           <button
-            className="
-              flex items-center justify-center w-8 h-8 rounded-md
-              text-gray-500
-              hover:bg-slate-700/60 hover:text-gray-300
-              transition-all duration-150
-            "
+            className="flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors duration-150"
             title="Settings"
           >
             <Cog size={16} />

@@ -41,8 +41,8 @@ export function WorkspaceIdentityPanel() {
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-gray-300 text-sm font-semibold">Workspace Identity</p>
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-foreground/80 text-sm font-semibold">Workspace Identity</p>
+        <p className="text-xs text-muted-foreground mt-1">
           Controls how strongly the active workspace is signaled visually. Changes
           apply instantly.
         </p>
@@ -59,7 +59,7 @@ export function WorkspaceIdentityPanel() {
               className={`text-left p-3 rounded-lg border transition-colors ${
                 selected
                   ? "bg-accent-500/10 border-accent-500/50"
-                  : "bg-slate-800/40 border-slate-700/40 hover:bg-slate-800/70 hover:border-slate-600/60"
+                  : "bg-card/40 border-border/60 hover:bg-card/60 hover:border-border"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -67,18 +67,18 @@ export function WorkspaceIdentityPanel() {
                   className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
                     selected
                       ? "border-accent-400"
-                      : "border-slate-600"
+                      : "border-border"
                   }`}
                 >
                   {selected && (
                     <span className="w-1.5 h-1.5 rounded-full bg-accent-400" />
                   )}
                 </span>
-                <span className="text-sm font-medium text-gray-200">
+                <span className="text-sm font-medium text-foreground">
                   {opt.label}
                 </span>
               </div>
-              <p className="text-xs text-gray-400 mt-1.5 ml-5">
+              <p className="text-xs text-muted-foreground mt-1.5 ml-5">
                 {opt.description}
               </p>
             </button>
@@ -87,11 +87,11 @@ export function WorkspaceIdentityPanel() {
       </div>
 
       {activeWs && (
-        <div className="pt-3 border-t border-slate-700/40">
-          <p className="text-xs text-gray-400 mb-2">
+        <div className="pt-3 border-t border-border/60">
+          <p className="text-xs text-muted-foreground mb-2">
             Active workspace preview
           </p>
-          <div className="flex items-center gap-3 p-3 rounded-md bg-slate-800/40 border border-slate-700/40">
+          <div className="flex items-center gap-3 p-3 rounded-md bg-card/40 border border-border/60">
             <span
               className="w-2 h-2 rounded-full"
               style={{

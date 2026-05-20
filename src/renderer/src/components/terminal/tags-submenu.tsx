@@ -19,7 +19,7 @@ export function TagsSubmenu({
 }: TagsSubmenuProps) {
   return createPortal(
     <div
-      className="tags-submenu fixed bg-slate-800/98 backdrop-blur-md border border-slate-700/60 rounded-lg shadow-2xl shadow-black/40 py-1.5 min-w-[160px] max-h-[300px] overflow-y-auto"
+      className="tags-submenu fixed bg-card/98 backdrop-blur-md border border-border rounded-lg shadow-2xl shadow-black/40 py-1.5 min-w-[160px] max-h-[300px] overflow-y-auto"
       style={{
         left: submenu.x,
         top: submenu.y,
@@ -29,7 +29,7 @@ export function TagsSubmenu({
       onClick={(e) => e.stopPropagation()}
     >
       {customTags.length === 0 ? (
-        <div className="px-3 py-2 text-xs text-gray-500 text-center">
+        <div className="px-3 py-2 text-xs text-muted-foreground/70 text-center">
           No tags created yet.
           <br />
           Create them in Settings
@@ -44,7 +44,7 @@ export function TagsSubmenu({
               <button
                 key={tag.id}
                 className={`w-full px-3 py-2 text-left text-sm flex items-center gap-2 transition-colors
-                  ${isActive ? 'bg-slate-700/50' : 'hover:bg-slate-700/50'}`}
+                  ${isActive ? 'bg-accent/70' : 'hover:bg-accent/70'}`}
                 style={{
                   color: isActive ? tag.color : undefined
                 }}
@@ -54,7 +54,7 @@ export function TagsSubmenu({
                 }}
               >
                 <div
-                  className="w-3 h-3 rounded-full border border-slate-600"
+                  className="w-3 h-3 rounded-full border border-border"
                   style={{ backgroundColor: tag.color }}
                 />
                 <span className={isActive ? 'font-medium' : ''}>{tag.name}</span>

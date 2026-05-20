@@ -132,7 +132,7 @@ export default function MessageInput({
   };
 
   return (
-    <div className="p-4 border-t bg-slate-900/95 border-slate-700/50">
+    <div className="p-4 border-t bg-card/90 backdrop-blur-md border-border/80">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <Toggle
@@ -153,7 +153,7 @@ export default function MessageInput({
           {enableTerminalContext && (
             <button
               onClick={() => setShowPreview(!showPreview)}
-              className="p-1.5 hover:bg-slate-800 rounded transition-colors text-slate-400 hover:text-slate-200"
+              className="p-1.5 hover:bg-card rounded transition-colors text-muted-foreground hover:text-foreground"
               title={showPreview ? "Hide preview" : "Show preview"}
             >
               {showPreview ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -161,16 +161,16 @@ export default function MessageInput({
           )}
         </div>
         {enableTerminalContext && showPreview && (
-          <span className="text-[10px] text-slate-500">
+          <span className="text-[10px] text-muted-foreground/70">
             {terminalPreview.length} chars captured
           </span>
         )}
       </div>
 
       {enableTerminalContext && showPreview && (
-        <div className="mb-3 p-3 bg-slate-950/50 border border-slate-700/50 rounded-lg max-h-32 overflow-y-auto">
+        <div className="mb-3 p-3 bg-background/50 border border-border/80 rounded-lg max-h-32 overflow-y-auto">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wide">
+            <span className="text-[10px] font-mono text-muted-foreground/70 uppercase tracking-wide">
               <Eye size={10} className="inline mr-1" />
               Terminal Preview
             </span>
@@ -184,7 +184,7 @@ export default function MessageInput({
               Refresh
             </button>
           </div>
-          <pre className="text-[10px] font-mono text-slate-400 whitespace-pre-wrap line-clamp-6">
+          <pre className="text-[10px] font-mono text-muted-foreground whitespace-pre-wrap line-clamp-6">
             {terminalPreview || "No terminal content available"}
           </pre>
         </div>
@@ -193,9 +193,9 @@ export default function MessageInput({
       <div className="flex items-end gap-2 relative">
         {/* Slash command menu */}
         {showSlashMenu && (
-          <div className="absolute bottom-full left-0 mb-2 w-64 bg-slate-900 border border-slate-700/50 rounded-lg shadow-xl overflow-hidden z-50">
-            <div className="p-2 border-b border-slate-700/50">
-              <p className="text-[10px] text-slate-500 uppercase tracking-wide">Slash Commands</p>
+          <div className="absolute bottom-full left-0 mb-2 w-64 bg-card border border-border/80 rounded-lg shadow-xl overflow-hidden z-50">
+            <div className="p-2 border-b border-border/80">
+              <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wide">Slash Commands</p>
             </div>
             <div className="max-h-48 overflow-y-auto">
               {SLASH_COMMANDS.filter(cmd => 
@@ -210,12 +210,12 @@ export default function MessageInput({
                       setShowSlashMenu(false);
                       textareaRef.current?.focus();
                     }}
-                    className="w-full px-3 py-2.5 text-left hover:bg-slate-800 transition-colors flex items-center gap-2"
+                    className="w-full px-3 py-2.5 text-left hover:bg-card transition-colors flex items-center gap-2"
                   >
                     <Icon size={14} className="text-accent-400" />
                     <div>
-                      <p className="text-xs text-slate-200 font-mono">{cmd.command}</p>
-                      <p className="text-[10px] text-slate-500">{cmd.description}</p>
+                      <p className="text-xs text-foreground font-mono">{cmd.command}</p>
+                      <p className="text-[10px] text-muted-foreground/70">{cmd.description}</p>
                     </div>
                   </button>
                 );
@@ -227,8 +227,8 @@ export default function MessageInput({
         {/* Quick suggestions */}
         {showSuggestions && !disabled && (
           <div className="absolute bottom-full left-0 mb-2 w-full">
-            <div className="bg-slate-900/95 border border-slate-700/50 rounded-lg shadow-xl p-2">
-              <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-2">Quick Suggestions</p>
+            <div className="bg-card/90 backdrop-blur-md border border-border/80 rounded-lg shadow-xl p-2">
+              <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wide mb-2">Quick Suggestions</p>
               <div className="flex flex-col gap-1">
                 {QUICK_SUGGESTIONS.map((suggestion, idx) => (
                   <button
@@ -237,7 +237,7 @@ export default function MessageInput({
                       setInputText(suggestion);
                       setShowSuggestions(false);
                     }}
-                    className="w-full px-3 py-2 text-left text-xs text-slate-300 hover:bg-slate-800 rounded transition-colors"
+                    className="w-full px-3 py-2 text-left text-xs text-foreground/80 hover:bg-card rounded transition-colors"
                   >
                     {suggestion}
                   </button>
@@ -257,7 +257,7 @@ export default function MessageInput({
           placeholder="Type your message… (Try /explain, /debug, etc.)"
           disabled={disabled}
           rows={1}
-          className="flex-1 resize-none rounded-lg bg-slate-950 border border-slate-700/50 px-4 py-3 text-sm text-gray-100 placeholder-gray-500 focus:border-accent-500/50 focus:outline-none focus:ring-2 focus:ring-accent-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all overflow-hidden"
+          className="flex-1 resize-none rounded-lg bg-background border border-border/80 px-4 py-3 text-sm text-foreground placeholder-gray-500 focus:border-accent-500/50 focus:outline-none focus:ring-2 focus:ring-accent-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all overflow-hidden"
           style={{ minHeight: "44px", maxHeight: "120px" }}
         />
         {disabled ? (
@@ -272,7 +272,7 @@ export default function MessageInput({
           <button
             onClick={handleSubmit}
             disabled={!inputText.trim()}
-            className="shrink-0 w-9 h-9 mb-1 bg-accent-500/20 hover:bg-accent-500/30 disabled:bg-transparent disabled:cursor-not-allowed text-accent-400 disabled:text-gray-600 border border-accent-500/30 disabled:border-transparent rounded-md flex items-center justify-center transition-all"
+            className="shrink-0 w-9 h-9 mb-1 bg-accent-500/20 hover:bg-accent-500/30 disabled:bg-transparent disabled:cursor-not-allowed text-accent-400 disabled:text-muted-foreground/60 border border-accent-500/30 disabled:border-transparent rounded-md flex items-center justify-center transition-all"
           >
             <Send size={16} />
           </button>
@@ -284,30 +284,30 @@ export default function MessageInput({
         <button
           onMouseEnter={() => setShowShortcuts(true)}
           onMouseLeave={() => setShowShortcuts(false)}
-          className="text-[10px] text-slate-600 hover:text-slate-400 transition-colors flex items-center gap-1"
+          className="text-[10px] text-muted-foreground/60 hover:text-muted-foreground transition-colors flex items-center gap-1"
         >
           <Keyboard size={10} />
           Shortcuts
         </button>
         {showShortcuts && (
-          <div className="absolute bottom-full left-0 mb-2 bg-slate-900 border border-slate-700/50 rounded-md shadow-lg p-3 min-w-[200px] z-50">
-            <p className="text-[10px] text-slate-500 uppercase tracking-wide mb-2">Keyboard Shortcuts</p>
+          <div className="absolute bottom-full left-0 mb-2 bg-card border border-border/80 rounded-md shadow-lg p-3 min-w-[200px] z-50">
+            <p className="text-[10px] text-muted-foreground/70 uppercase tracking-wide mb-2">Keyboard Shortcuts</p>
             <div className="space-y-1.5">
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400">Send message</span>
-                <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-[10px] font-mono text-slate-300">Enter</kbd>
+                <span className="text-muted-foreground">Send message</span>
+                <kbd className="px-1.5 py-0.5 bg-card rounded text-[10px] font-mono text-foreground/80">Enter</kbd>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400">New line</span>
-                <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-[10px] font-mono text-slate-300">Shift+Enter</kbd>
+                <span className="text-muted-foreground">New line</span>
+                <kbd className="px-1.5 py-0.5 bg-card rounded text-[10px] font-mono text-foreground/80">Shift+Enter</kbd>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400">Auto-complete command</span>
-                <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-[10px] font-mono text-slate-300">Tab</kbd>
+                <span className="text-muted-foreground">Auto-complete command</span>
+                <kbd className="px-1.5 py-0.5 bg-card rounded text-[10px] font-mono text-foreground/80">Tab</kbd>
               </div>
               <div className="flex justify-between text-xs">
-                <span className="text-slate-400">Cancel editing</span>
-                <kbd className="px-1.5 py-0.5 bg-slate-800 rounded text-[10px] font-mono text-slate-300">Esc</kbd>
+                <span className="text-muted-foreground">Cancel editing</span>
+                <kbd className="px-1.5 py-0.5 bg-card rounded text-[10px] font-mono text-foreground/80">Esc</kbd>
               </div>
             </div>
           </div>

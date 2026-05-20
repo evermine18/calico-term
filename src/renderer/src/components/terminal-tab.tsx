@@ -357,7 +357,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         <button
           onClick={handleScrollToBottom}
           title="Ir al final"
-          className="absolute bottom-3 right-3 z-20 w-7 h-7 flex items-center justify-center rounded-full bg-slate-800/90 border border-slate-600/60 text-cyan-400 hover:bg-slate-700/90 hover:border-cyan-500/50 shadow-lg transition-all duration-150"
+          className="absolute bottom-3 right-3 z-20 w-7 h-7 flex items-center justify-center rounded-full bg-card/80 border border-border text-cyan-400 hover:bg-secondary/90 hover:border-cyan-500/50 shadow-lg transition-all duration-150"
           style={{ boxShadow: "0 0 8px rgba(6,182,212,0.2)" }}
         >
           <ArrowDown size={13} />

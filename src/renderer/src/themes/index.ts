@@ -16,8 +16,8 @@ export interface Theme {
     400: string;
     500: string;
     600: string;
-    rgb: string;    // "r, g, b" — for rgba() usage
-    oklch: string;  // full oklch(...) value — for shadcn --primary / --ring
+    rgb: string;
+    oklch: string;
   };
 }
 
@@ -25,7 +25,7 @@ export const themes: Theme[] = [
   {
     id: 'cyber-teal',
     name: 'Cyber Teal',
-    description: 'Classic hacker terminal',
+    description: 'Classic hacker cyan — default',
     colors: {
       100: '#cffafe',
       300: '#67e8f9',
@@ -37,65 +37,9 @@ export const themes: Theme[] = [
     },
   },
   {
-    id: 'neon-purple',
-    name: 'Neon Purple',
-    description: 'Synthwave vibes',
-    colors: {
-      100: '#ede9fe',
-      300: '#c4b5fd',
-      400: '#a78bfa',
-      500: '#8b5cf6',
-      600: '#7c3aed',
-      rgb: '139, 92, 246',
-      oklch: 'oklch(0.65 0.25 280)',
-    },
-  },
-  {
-    id: 'amber-glow',
-    name: 'Amber Glow',
-    description: 'Warm retro terminal',
-    colors: {
-      100: '#fef3c7',
-      300: '#fcd34d',
-      400: '#fbbf24',
-      500: '#f59e0b',
-      600: '#d97706',
-      rgb: '245, 158, 11',
-      oklch: 'oklch(0.78 0.18 80)',
-    },
-  },
-  {
-    id: 'emerald',
-    name: 'Emerald',
-    description: 'Matrix-inspired green',
-    colors: {
-      100: '#d1fae5',
-      300: '#6ee7b7',
-      400: '#34d399',
-      500: '#10b981',
-      600: '#059669',
-      rgb: '16, 185, 129',
-      oklch: 'oklch(0.70 0.17 162)',
-    },
-  },
-  {
-    id: 'rose',
-    name: 'Rose',
-    description: 'Bold and vivid pink',
-    colors: {
-      100: '#ffe4e6',
-      300: '#fda4af',
-      400: '#fb7185',
-      500: '#f43f5e',
-      600: '#e11d48',
-      rgb: '244, 63, 94',
-      oklch: 'oklch(0.65 0.25 15)',
-    },
-  },
-  {
     id: 'frost-blue',
-    name: 'Frost Blue',
-    description: 'Cool and crisp blue',
+    name: 'Electric Blue',
+    description: 'Crisp, technical',
     colors: {
       100: '#dbeafe',
       300: '#93c5fd',
@@ -103,7 +47,63 @@ export const themes: Theme[] = [
       500: '#3b82f6',
       600: '#2563eb',
       rgb: '59, 130, 246',
-      oklch: 'oklch(0.68 0.18 240)',
+      oklch: 'oklch(0.66 0.20 245)',
+    },
+  },
+  {
+    id: 'neon-purple',
+    name: 'Electric Violet',
+    description: 'Bold synth',
+    colors: {
+      100: '#ede9fe',
+      300: '#c4b5fd',
+      400: '#a78bfa',
+      500: '#8b5cf6',
+      600: '#7c3aed',
+      rgb: '139, 92, 246',
+      oklch: 'oklch(0.62 0.24 290)',
+    },
+  },
+  {
+    id: 'emerald',
+    name: 'Emerald',
+    description: 'Fresh signal green',
+    colors: {
+      100: '#d1fae5',
+      300: '#6ee7b7',
+      400: '#34d399',
+      500: '#10b981',
+      600: '#059669',
+      rgb: '16, 185, 129',
+      oklch: 'oklch(0.72 0.18 160)',
+    },
+  },
+  {
+    id: 'amber-glow',
+    name: 'Amber Glow',
+    description: 'Warm hi-vis',
+    colors: {
+      100: '#fef3c7',
+      300: '#fcd34d',
+      400: '#fbbf24',
+      500: '#f59e0b',
+      600: '#d97706',
+      rgb: '245, 158, 11',
+      oklch: 'oklch(0.76 0.17 70)',
+    },
+  },
+  {
+    id: 'rose',
+    name: 'Rose',
+    description: 'Vivid coral',
+    colors: {
+      100: '#ffe4e6',
+      300: '#fda4af',
+      400: '#fb7185',
+      500: '#f43f5e',
+      600: '#e11d48',
+      rgb: '244, 63, 94',
+      oklch: 'oklch(0.66 0.23 12)',
     },
   },
 ];

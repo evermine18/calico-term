@@ -102,9 +102,9 @@ export default function TailViewerDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[900px] max-h-[85vh] bg-slate-900 border-slate-700/40 shadow-xl flex flex-col">
+      <DialogContent className="sm:max-w-[900px] max-h-[85vh] bg-card border-border/60 shadow-xl flex flex-col">
         <DialogHeader>
-          <DialogTitle className="text-gray-100 flex items-center gap-2 text-sm">
+          <DialogTitle className="text-foreground flex items-center gap-2 text-sm">
             <Eye size={14} className="text-accent-400" />
             <span className="font-mono truncate">tail -F {remotePath}</span>
           </DialogTitle>
@@ -115,13 +115,13 @@ export default function TailViewerDialog({
             placeholder="Filter (regex)…"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-xs h-8"
+            className="bg-card/50 border-border text-foreground font-mono text-xs h-8"
           />
           <Button
             onClick={() => setPaused((p) => !p)}
             variant="outline"
             size="icon"
-            className="h-8 w-8 border-slate-700/50 bg-slate-800/60"
+            className="h-8 w-8 border-border/80 bg-card/50"
             title={paused ? "Resume" : "Pause"}
           >
             {paused ? <Play size={13} /> : <Pause size={13} />}
@@ -130,7 +130,7 @@ export default function TailViewerDialog({
             onClick={() => setLines([])}
             variant="outline"
             size="icon"
-            className="h-8 w-8 border-slate-700/50 bg-slate-800/60"
+            className="h-8 w-8 border-border/80 bg-card/50"
             title="Clear"
           >
             <Trash2 size={13} />
@@ -145,10 +145,10 @@ export default function TailViewerDialog({
               el.scrollHeight - el.clientHeight - el.scrollTop < 20;
             setAutoScroll(atBottom);
           }}
-          className="flex-1 min-h-[400px] max-h-[60vh] overflow-y-auto bg-slate-950 border border-slate-700/50 rounded-md p-2 font-mono text-[11px] text-gray-300"
+          className="flex-1 min-h-[400px] max-h-[60vh] overflow-y-auto bg-background border border-border/80 rounded-md p-2 font-mono text-[11px] text-foreground/80"
         >
           {visibleLines.length === 0 ? (
-            <div className="text-gray-600 italic p-2">
+            <div className="text-muted-foreground/60 italic p-2">
               {filter ? "No lines matching filter" : "Waiting for output…"}
             </div>
           ) : (
@@ -168,14 +168,14 @@ export default function TailViewerDialog({
         )}
 
         <DialogFooter>
-          <span className="text-xs text-gray-500 mr-auto">
+          <span className="text-xs text-muted-foreground/70 mr-auto">
             {visibleLines.length} / {lines.length} lines
             {paused && " · paused"}
           </span>
           <Button
             variant="outline"
             onClick={onClose}
-            className="border-slate-700 text-gray-300 hover:bg-slate-800"
+            className="border-border text-foreground/80 hover:bg-card"
           >
             Close
           </Button>
