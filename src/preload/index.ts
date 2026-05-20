@@ -40,6 +40,52 @@ const api = {
     writeText: (text: string) => clipboard.writeText(text),
     readText: () => clipboard.readText(),
   },
+  sshKeys: {
+    list: () => ipcRenderer.invoke("ssh-key-list"),
+    generate: (opts: {
+      name: string;
+      type: "ed25519" | "rsa";
+      bits?: number;
+      passphrase?: string;
+      comment?: string;
+    }) => ipcRenderer.invoke("ssh-key-generate", opts),
+    importKey: (opts: {
+      name: string;
+      privatePem: string;
+      passphrase?: string;
+    }) => ipcRenderer.invoke("ssh-key-import", opts),
+    exportPublic: (id: string) =>
+      ipcRenderer.invoke("ssh-key-export-public", id),
+    delete: (id: string) => ipcRenderer.invoke("ssh-key-delete", id),
+    setPassphrase: (id: string, passphrase: string) =>
+      ipcRenderer.invoke("ssh-key-set-passphrase", id, passphrase),
+  },
+  sshConfig: {
+    list: () => ipcRenderer.invoke("ssh-config-list"),
+  },
+  envVault: {
+    listScopes: () => ipcRenderer.invoke("env-vault-list-scopes"),
+    list: (scopeId: string) => ipcRenderer.invoke("env-vault-list", scopeId),
+    listKeys: (scopeId: string) =>
+      ipcRenderer.invoke("env-vault-list-keys", scopeId),
+    set: (scopeId: string, key: string, value: string) =>
+      ipcRenderer.invoke("env-vault-set", scopeId, key, value),
+    delete: (scopeId: string, key: string) =>
+      ipcRenderer.invoke("env-vault-delete", scopeId, key),
+    clearScope: (scopeId: string) =>
+      ipcRenderer.invoke("env-vault-clear-scope", scopeId),
+    resolve: (scopeIds: string[]) =>
+      ipcRenderer.invoke("env-vault-resolve", scopeIds),
+  },
+  secrets: {
+    test: (provider: "op" | "bw" | "vault" | "aws", ref: string) =>
+      ipcRenderer.invoke("secret-resolve", provider, ref),
+    primeForSSHSession: (
+      connId: string,
+      provider: "op" | "bw" | "vault" | "aws",
+      ref: string,
+    ) => ipcRenderer.invoke("ssh-session-prime-secret", connId, provider, ref),
+  },
   windowControls: {
     minimize: () => ipcRenderer.send("win-minimize"),
     maximize: () => ipcRenderer.send("win-maximize"),

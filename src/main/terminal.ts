@@ -3,6 +3,8 @@ import { ipcMain, safeStorage, app } from "electron";
 import os from "os";
 import fs from "fs";
 import path from "path";
+import { resolveEnv } from "./env-vault";
+import { resolveSecret, SecretProvider } from "./secret-providers";
 
 let terminals: Record<string, any> = {};
 
@@ -61,6 +63,8 @@ export function removePassword(connId: string): void {
 const sshPasswordSessions: Record<string, string> = {};
 // Tracks tabs that already injected the password (avoid re-injection on secondary prompts)
 const sshPasswordInjected = new Set<string>();
+// Out-of-band password overrides (for secret-ref auth) keyed by connId
+const oneShotPasswords = new Map<string, string>();
 
 /**
  * Detect the user's default shell on macOS
@@ -97,9 +101,12 @@ function getInitialCwd(): string {
 }
 
 /**
- * Prepare environment variables for the terminal
+ * Prepare environment variables for the terminal.
+ * `extra` is overlaid on top of the base process env.
  */
-function prepareEnvironment(): Record<string, string> {
+function prepareEnvironment(
+  extra?: Record<string, string>,
+): Record<string, string> {
   const env = { ...process.env } as Record<string, string>;
 
   // Ensure TERM is set correctly
@@ -132,6 +139,12 @@ function prepareEnvironment(): Record<string, string> {
       }
     }
     env.PATH = pathArray.join(":");
+  }
+
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) {
+      env[k] = v;
+    }
   }
 
   return env;
@@ -167,7 +180,15 @@ export function setupTerminal() {
   // Creating a PTY process for the terminal
   ipcMain.on(
     "terminal-create",
-    (_event, tabId: string, opts?: { shell?: string; cwd?: string }) => {
+    (
+      _event,
+      tabId: string,
+      opts?: {
+        shell?: string;
+        cwd?: string;
+        envScopes?: string[];
+      },
+    ) => {
       // If it already exists, ignore
       if (terminals[tabId]) {
         console.log(`terminal-create: ${tabId} already exists, skipping`);
@@ -181,7 +202,10 @@ export function setupTerminal() {
       const cwd =
         opts?.cwd && opts.cwd.trim() ? opts.cwd.trim() : getInitialCwd();
       const args = getShellArgs(shell);
-      const env = prepareEnvironment();
+      const extraEnv = opts?.envScopes?.length
+        ? resolveEnv(opts.envScopes)
+        : resolveEnv(["global"]);
+      const env = prepareEnvironment(extraEnv);
 
       console.log(`Creating terminal ${tabId} with shell: ${shell} in ${cwd}`);
 
@@ -209,7 +233,9 @@ export function setupTerminal() {
               /passphrase for key/i.test(data)
             ) {
               const connId = sshPasswordSessions[tabId];
-              const pwd = retrievePassword(connId);
+              const pwd =
+                oneShotPasswords.get(connId) ?? retrievePassword(connId);
+              oneShotPasswords.delete(connId);
               if (pwd) {
                 sshPasswordInjected.add(tabId);
                 // Small delay so the prompt is fully rendered before sending
@@ -289,6 +315,28 @@ export function setupTerminal() {
     sshPasswordSessions[tabId] = connId;
     sshPasswordInjected.delete(tabId); // allow fresh injection
   });
+
+  // Resolve a secret reference and arm it as a one-shot password for the next
+  // SSH prompt on `connId`. Returns true if a value was successfully fetched.
+  ipcMain.handle(
+    "ssh-session-prime-secret",
+    async (
+      _event,
+      connId: string,
+      provider: SecretProvider,
+      ref: string,
+    ): Promise<boolean> => {
+      try {
+        const value = await resolveSecret(provider, ref);
+        if (!value) return false;
+        oneShotPasswords.set(connId, value);
+        return true;
+      } catch (err) {
+        console.error(`Failed to resolve secret for ${connId}:`, err);
+        return false;
+      }
+    },
+  );
 
   // Securely store a password for an SSH connection (encrypted via safeStorage)
   ipcMain.handle(

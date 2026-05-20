@@ -25,6 +25,11 @@ type CommandHistoryEntry = {
   pinned?: boolean;
 };
 
+type SSHSecretRefEntry = {
+  provider: "op" | "bw" | "vault" | "aws";
+  ref: string;
+};
+
 type SSHConnectionEntry = {
   id: string;
   name: string;
@@ -32,8 +37,11 @@ type SSHConnectionEntry = {
   port: number;
   username: string;
   identityFile?: string;
+  identityKeyId?: string;
+  jumpHostIds?: string[];
   hasPassword?: boolean;
   credentialId?: string;
+  passwordRef?: SSHSecretRefEntry;
   tags?: string[];
 };
 

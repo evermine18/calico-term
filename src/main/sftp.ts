@@ -1,7 +1,9 @@
-import { Client, SFTPWrapper } from "ssh2";
+import { Client, ConnectConfig, SFTPWrapper } from "ssh2";
 import fs from "fs";
 import { BrowserWindow, dialog, ipcMain } from "electron";
 import { retrievePassword } from "./terminal";
+import { getKey, getKeyPassphrase } from "./ssh-keys";
+import { resolveSecret, SecretProvider } from "./secret-providers";
 
 export type SFTPFileEntry = {
   filename: string;
@@ -17,18 +19,24 @@ export type SFTPFileEntry = {
   isSymlink: boolean;
 };
 
-type SSHConnectionInfo = {
-  id: string;
+type SSHHopInfo = {
   host: string;
   port: number;
   username: string;
   identityFile?: string;
+  identityKeyId?: string;
+};
+
+type SSHConnectionInfo = SSHHopInfo & {
+  id: string;
   hasPassword?: boolean;
   credentialId?: string;
+  passwordRef?: { provider: SecretProvider; ref: string };
+  jumpHosts?: SSHHopInfo[];
 };
 
 type SFTPSession = {
-  client: Client;
+  clients: Client[]; // first is target, rest are jump hops in reverse order
   sftp: SFTPWrapper;
 };
 
@@ -51,62 +59,124 @@ function getSession(sessionId: string): SFTPSession {
   return session;
 }
 
-function connectSFTP(
+function buildAuthConfig(hop: SSHHopInfo, password?: string): ConnectConfig {
+  const cfg: ConnectConfig = {
+    host: hop.host,
+    port: hop.port,
+    username: hop.username,
+    readyTimeout: 10_000,
+    hostVerifier: () => true,
+  };
+
+  // Prefer managed key from the internal store, fall back to identityFile path.
+  if (hop.identityKeyId) {
+    const meta = getKey(hop.identityKeyId);
+    if (meta) {
+      try {
+        cfg.privateKey = fs.readFileSync(meta.privatePath);
+        const passphrase = getKeyPassphrase(hop.identityKeyId);
+        if (passphrase) cfg.passphrase = passphrase;
+      } catch {
+        /* fall through */
+      }
+    }
+  } else if (hop.identityFile) {
+    try {
+      cfg.privateKey = fs.readFileSync(hop.identityFile);
+    } catch {
+      /* fall through */
+    }
+  }
+
+  if (password) cfg.password = password;
+  return cfg;
+}
+
+function connectHop(cfg: ConnectConfig): Promise<Client> {
+  return new Promise((resolve, reject) => {
+    const client = new Client();
+    client.on("ready", () => resolve(client));
+    client.on("error", reject);
+    client.connect(cfg);
+  });
+}
+
+function forwardOut(
+  via: Client,
+  dstHost: string,
+  dstPort: number,
+): Promise<NodeJS.ReadableStream & NodeJS.WritableStream> {
+  return new Promise((resolve, reject) => {
+    via.forwardOut("127.0.0.1", 0, dstHost, dstPort, (err, stream) => {
+      if (err) return reject(err);
+      resolve(stream as unknown as NodeJS.ReadableStream &
+        NodeJS.WritableStream);
+    });
+  });
+}
+
+async function connectSFTP(
   sessionId: string,
   conn: SSHConnectionInfo,
 ): Promise<void> {
   disconnectSFTP(sessionId);
 
-  const password = conn.credentialId
-    ? retrievePassword("vault-" + conn.credentialId)
-    : retrievePassword(conn.id);
-
-  return new Promise((resolve, reject) => {
-    const client = new Client();
-
-    client.on("ready", () => {
-      client.sftp((err, sftp) => {
-        if (err) {
-          client.end();
-          reject(err);
-          return;
-        }
-        sessions.set(sessionId, { client, sftp });
-        resolve();
-      });
-    });
-
-    client.on("error", (err) => reject(err));
-
-    const config: Parameters<Client["connect"]>[0] = {
-      host: conn.host,
-      port: conn.port,
-      username: conn.username,
-      readyTimeout: 10000,
-      hostVerifier: () => true,
-    };
-
-    if (conn.identityFile) {
-      try {
-        (config as any).privateKey = fs.readFileSync(conn.identityFile);
-      } catch {
-        // fall through to password auth
-      }
+  // Resolve target password from (in priority): vault credential, external secret ref, stored password.
+  let password: string | undefined;
+  if (conn.credentialId) {
+    password = retrievePassword("vault-" + conn.credentialId) ?? undefined;
+  } else if (conn.passwordRef) {
+    try {
+      password = await resolveSecret(
+        conn.passwordRef.provider,
+        conn.passwordRef.ref,
+      );
+    } catch {
+      /* fall through to stored or key-based auth */
     }
-    if (password) {
-      config.password = password;
-    }
+  }
+  if (!password) {
+    password = retrievePassword(conn.id) ?? undefined;
+  }
 
-    client.connect(config);
+  // Chain through jump hops, if any.
+  const clients: Client[] = [];
+  let sock: (NodeJS.ReadableStream & NodeJS.WritableStream) | undefined;
+  for (const hop of conn.jumpHosts ?? []) {
+    const hopCfg = buildAuthConfig(hop);
+    if (sock) (hopCfg as ConnectConfig).sock = sock as any;
+    const hopClient = await connectHop(hopCfg);
+    clients.push(hopClient);
+    // Next hop tunnels to the next host:port through this client
+    const nextTarget = conn.jumpHosts?.[clients.length];
+    const target = nextTarget
+      ? { host: nextTarget.host, port: nextTarget.port }
+      : { host: conn.host, port: conn.port };
+    sock = await forwardOut(hopClient, target.host, target.port);
+  }
+
+  const targetCfg = buildAuthConfig(conn, password);
+  if (sock) (targetCfg as ConnectConfig).sock = sock as any;
+  const targetClient = await connectHop(targetCfg);
+  clients.unshift(targetClient);
+
+  const sftp = await new Promise<SFTPWrapper>((resolve, reject) => {
+    targetClient.sftp((err, s) => (err ? reject(err) : resolve(s)));
   });
+
+  sessions.set(sessionId, { clients, sftp });
 }
 
 function disconnectSFTP(sessionId: string): void {
   const session = sessions.get(sessionId);
   if (session) {
-    try {
-      session.client.end();
-    } catch {}
+    for (const c of session.clients) {
+      try {
+        c.end();
+      } catch {
+        /* ignore */
+      }
+    }
     sessions.delete(sessionId);
   }
 }
@@ -196,7 +266,9 @@ function uploadFile(
     let total = 0;
     try {
       total = fs.statSync(localPath).size;
-    } catch {}
+    } catch {
+      /* ignore */
+    }
     let transferred = 0;
     const filename = localPath.split("/").pop() ?? localPath;
 

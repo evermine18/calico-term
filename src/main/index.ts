@@ -12,6 +12,10 @@ import {
 import { getModels, sendChat } from "./chat-api";
 import { setupUpdater } from "./updater";
 import { setupSFTPHandlers } from "./sftp";
+import { setupSSHKeysHandlers } from "./ssh-keys";
+import { setupSSHConfigHandlers } from "./ssh-config";
+import { setupEnvVaultHandlers } from "./env-vault";
+import { setupSecretProviderHandlers } from "./secret-providers";
 
 // --- AI streaming controllers ---
 const streamControllers = new Map<string, AbortController>();
@@ -224,6 +228,10 @@ app.whenReady().then(() => {
   });
   setupTerminal();
   setupSFTPHandlers();
+  setupSSHKeysHandlers();
+  setupSSHConfigHandlers();
+  setupEnvVaultHandlers();
+  setupSecretProviderHandlers();
   ipcMain.on("app-close", () => {
     console.log("App close requested");
     app.quit();

@@ -197,9 +197,12 @@ function AppContent(): React.JSX.Element {
         {(tabs.length === 0 || showHome) && (
           <div className="absolute inset-0 bg-slate-950 z-10">
             <SSHConnectionsHome
-              onConnect={(conn) => {
+              onConnect={async (conn) => {
                 const id = crypto.randomUUID();
-                const command = buildSSHCommand(conn);
+                const jumpChain = (conn.jumpHostIds ?? [])
+                  .map((jid) => sshConnections.find((c) => c.id === jid))
+                  .filter((c): c is SSHConnectionEntry => !!c);
+                const command = buildSSHCommand(conn, jumpChain);
                 const newTab: TerminalTab = {
                   id,
                   title: conn.name,
@@ -211,13 +214,26 @@ function AppContent(): React.JSX.Element {
                   connId: conn.id,
                 };
                 // Register password-injection session BEFORE the terminal mounts.
-                // If the connection uses a vault credential, inject via vault key.
                 if (conn.credentialId) {
                   window.electron.ipcRenderer.send(
                     "ssh-session-init",
                     id,
                     "vault-" + conn.credentialId,
                   );
+                } else if (conn.passwordRef) {
+                  // Resolve secret just-in-time; primes a one-shot password for this connId.
+                  const ok = await window.api.secrets.primeForSSHSession(
+                    conn.id,
+                    conn.passwordRef.provider,
+                    conn.passwordRef.ref,
+                  );
+                  if (ok) {
+                    window.electron.ipcRenderer.send(
+                      "ssh-session-init",
+                      id,
+                      conn.id,
+                    );
+                  }
                 } else if (conn.hasPassword) {
                   window.electron.ipcRenderer.send(
                     "ssh-session-init",

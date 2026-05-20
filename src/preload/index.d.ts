@@ -14,6 +14,30 @@ interface DownloadProgress {
 }
 
 declare global {
+  type SecretProvider = "op" | "bw" | "vault" | "aws";
+
+  interface SSHKeyMetadata {
+    id: string;
+    name: string;
+    type: "ed25519" | "rsa";
+    bits?: number;
+    publicKey: string;
+    fingerprint: string;
+    hasPassphrase: boolean;
+    createdAt: number;
+    privatePath: string;
+    publicPath: string;
+  }
+
+  interface SSHConfigHost {
+    alias: string;
+    host: string;
+    port: number;
+    user?: string;
+    identityFile?: string;
+    proxyJump?: string;
+  }
+
   interface Window {
     electron: ElectronAPI;
     platform: {
@@ -78,6 +102,49 @@ declare global {
       clipboard: {
         writeText: (text: string) => void;
         readText: () => string;
+      };
+      sshKeys: {
+        list: () => Promise<SSHKeyMetadata[]>;
+        generate: (opts: {
+          name: string;
+          type: "ed25519" | "rsa";
+          bits?: number;
+          passphrase?: string;
+          comment?: string;
+        }) => Promise<SSHKeyMetadata>;
+        importKey: (opts: {
+          name: string;
+          privatePem: string;
+          passphrase?: string;
+        }) => Promise<SSHKeyMetadata>;
+        exportPublic: (id: string) => Promise<string | null>;
+        delete: (id: string) => Promise<void>;
+        setPassphrase: (id: string, passphrase: string) => Promise<void>;
+      };
+      sshConfig: {
+        list: () => Promise<SSHConfigHost[]>;
+      };
+      envVault: {
+        listScopes: () => Promise<string[]>;
+        list: (
+          scopeId: string,
+        ) => Promise<{ key: string; value: string }[]>;
+        listKeys: (scopeId: string) => Promise<string[]>;
+        set: (scopeId: string, key: string, value: string) => Promise<void>;
+        delete: (scopeId: string, key: string) => Promise<void>;
+        clearScope: (scopeId: string) => Promise<void>;
+        resolve: (scopeIds: string[]) => Promise<Record<string, string>>;
+      };
+      secrets: {
+        test: (
+          provider: SecretProvider,
+          ref: string,
+        ) => Promise<{ ok: boolean; hasValue?: boolean; error?: string }>;
+        primeForSSHSession: (
+          connId: string,
+          provider: SecretProvider,
+          ref: string,
+        ) => Promise<boolean>;
       };
       updater: {
         check: () => Promise<unknown>;

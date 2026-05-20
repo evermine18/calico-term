@@ -46,8 +46,11 @@ import {
   Terminal as TerminalIcon,
   Settings2,
   Keyboard, Info, Download, RefreshCw, RotateCcw,
+  Variable,
 } from "lucide-react";
 import { ThemePicker } from "./theme-picker";
+import { SSHKeysPanel } from "./ssh-keys-panel";
+import { EnvVaultPanel } from "./env-vault-panel";
 import type { ThemeId } from "@renderer/themes";
 
 interface TagItem {
@@ -454,6 +457,14 @@ export default function SettingsDialog({ children }) {
               <TabsTrigger value="vault" className="flex items-center gap-1.5">
                 <ShieldCheck size={14} />
                 Vault
+              </TabsTrigger>
+              <TabsTrigger value="keys" className="flex items-center gap-1.5">
+                <KeyRound size={14} />
+                Keys
+              </TabsTrigger>
+              <TabsTrigger value="env" className="flex items-center gap-1.5">
+                <Variable size={14} />
+                Env
               </TabsTrigger>
               <TabsTrigger value="about" className="flex items-center gap-1.5">
                 <Info size={14} />
@@ -1421,6 +1432,16 @@ export default function SettingsDialog({ children }) {
                 </div>
               </div>
             </TabsContent>
+            {/* SSH Keys Tab */}
+            <TabsContent value="keys" className="flex-1 overflow-y-auto px-1 mt-4">
+              <SSHKeysPanel />
+            </TabsContent>
+
+            {/* Env Vault Tab */}
+            <TabsContent value="env" className="flex-1 overflow-y-auto px-1 mt-4">
+              <EnvVaultPanel />
+            </TabsContent>
+
             {/* About Tab */}
             <TabsContent value="about" className="flex-1 overflow-y-auto px-1 mt-4">
               <div className="space-y-6">
