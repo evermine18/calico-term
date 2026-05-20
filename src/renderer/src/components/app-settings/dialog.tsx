@@ -79,6 +79,57 @@ const EMPTY_VAULT_FORM: VaultFormData = {
   password: "",
 };
 
+type SettingsTabItem = {
+  value: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number }>;
+};
+
+type SettingsGroup = {
+  label: string;
+  items: SettingsTabItem[];
+};
+
+const SETTINGS_GROUPS: SettingsGroup[] = [
+  {
+    label: "General",
+    items: [
+      { value: "general", label: "General", icon: Settings2 },
+      { value: "terminal", label: "Terminal", icon: TerminalIcon },
+      { value: "appearance", label: "Appearance", icon: Palette },
+    ],
+  },
+  {
+    label: "AI",
+    items: [{ value: "ai", label: "AI", icon: Bot }],
+  },
+  {
+    label: "Security",
+    items: [
+      { value: "vault", label: "Vault", icon: ShieldCheck },
+      { value: "keys", label: "Keys", icon: KeyRound },
+      { value: "env", label: "Env", icon: Variable },
+      { value: "guardrails", label: "Guardrails", icon: ShieldAlert },
+    ],
+  },
+  {
+    label: "Observability",
+    items: [
+      { value: "recordings", label: "Recordings", icon: Circle },
+      { value: "alerts", label: "Alerts", icon: Bell },
+      { value: "audit", label: "Audit", icon: FileSignature },
+    ],
+  },
+  {
+    label: "Workspaces",
+    items: [{ value: "workspaces", label: "Workspaces", icon: Layers }],
+  },
+  {
+    label: "About",
+    items: [{ value: "about", label: "About", icon: Info }],
+  },
+];
+
 function formatShortcut(s: ShortcutDef): string {
   const parts: string[] = [];
   if (s.ctrl) parts.push("Ctrl");
@@ -413,7 +464,7 @@ export default function SettingsDialog({ children }) {
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger>{children}</DialogTrigger>
-        <DialogContent className="sm:max-w-[650px] max-h-[85vh] overflow-hidden bg-slate-900 border-slate-700/40 shadow-xl flex flex-col">
+        <DialogContent className="sm:max-w-[900px] max-h-[85vh] overflow-hidden bg-slate-900 border-slate-700/40 shadow-xl flex flex-col">
           <DialogHeader className="border-b border-slate-700/40 pb-4 shrink-0">
             <DialogTitle className="text-gray-100 flex items-center gap-2">
               <div className="w-8 h-8 bg-accent-500/20 border border-accent-500/30 rounded-lg flex items-center justify-center">
@@ -433,70 +484,39 @@ export default function SettingsDialog({ children }) {
             </DialogTitle>
           </DialogHeader>
 
-          <Tabs defaultValue="general" className="flex flex-col flex-1 min-h-0">
-            <TabsList className="shrink-0 w-full justify-start bg-slate-800/40 border border-slate-700/40 rounded-lg p-1 flex-wrap gap-0.5">
-              <TabsTrigger
-                value="general"
-                className="flex items-center gap-1.5"
-              >
-                <Settings2 size={14} />
-                General
-              </TabsTrigger>
-              <TabsTrigger
-                value="terminal"
-                className="flex items-center gap-1.5"
-              >
-                <TerminalIcon size={14} />
-                Terminal
-              </TabsTrigger>
-              <TabsTrigger
-                value="appearance"
-                className="flex items-center gap-1.5"
-              >
-                <Palette size={14} />
-                Appearance
-              </TabsTrigger>
-              <TabsTrigger value="ai" className="flex items-center gap-1.5">
-                <Bot size={14} />
-                AI
-              </TabsTrigger>
-              <TabsTrigger value="vault" className="flex items-center gap-1.5">
-                <ShieldCheck size={14} />
-                Vault
-              </TabsTrigger>
-              <TabsTrigger value="keys" className="flex items-center gap-1.5">
-                <KeyRound size={14} />
-                Keys
-              </TabsTrigger>
-              <TabsTrigger value="env" className="flex items-center gap-1.5">
-                <Variable size={14} />
-                Env
-              </TabsTrigger>
-              <TabsTrigger value="recordings" className="flex items-center gap-1.5">
-                <Circle size={14} />
-                Recordings
-              </TabsTrigger>
-              <TabsTrigger value="alerts" className="flex items-center gap-1.5">
-                <Bell size={14} />
-                Alerts
-              </TabsTrigger>
-              <TabsTrigger value="audit" className="flex items-center gap-1.5">
-                <FileSignature size={14} />
-                Audit
-              </TabsTrigger>
-              <TabsTrigger value="workspaces" className="flex items-center gap-1.5">
-                <Layers size={14} />
-                Workspaces
-              </TabsTrigger>
-              <TabsTrigger value="guardrails" className="flex items-center gap-1.5">
-                <ShieldAlert size={14} />
-                Guardrails
-              </TabsTrigger>
-              <TabsTrigger value="about" className="flex items-center gap-1.5">
-                <Info size={14} />
-                About
-              </TabsTrigger>
+          <Tabs
+            defaultValue="general"
+            orientation="vertical"
+            className="flex flex-row flex-1 min-h-0 gap-4"
+          >
+            <TabsList className="shrink-0 w-48 flex-col items-stretch justify-start bg-slate-800/40 border border-slate-700/40 rounded-lg p-2 gap-0.5 self-stretch min-h-0 overflow-y-auto scrollbar-hover-only">
+              {SETTINGS_GROUPS.map((group, groupIdx) => {
+                const showHeader = group.items.length > 1;
+                return (
+                  <div key={group.label} className="flex flex-col gap-0.5">
+                    {showHeader && (
+                      <div
+                        className={`px-2 pb-1 text-[10px] uppercase tracking-wider text-gray-500 ${groupIdx === 0 ? "pt-1" : "pt-3"}`}
+                      >
+                        {group.label}
+                      </div>
+                    )}
+                    {group.items.map(({ value, label, icon: Icon }) => (
+                      <TabsTrigger
+                        key={value}
+                        value={value}
+                        className="w-full justify-start gap-2 px-2.5"
+                      >
+                        <Icon size={14} />
+                        {label}
+                      </TabsTrigger>
+                    ))}
+                  </div>
+                );
+              })}
             </TabsList>
+
+            <div className="flex-1 min-w-0 min-h-0 flex flex-col">
 
             {/* Appearance Tab */}
             <TabsContent
@@ -1597,6 +1617,7 @@ export default function SettingsDialog({ children }) {
                 </div>
               </div>
             </TabsContent>
+            </div>
           </Tabs>
 
           <DialogFooter className="border-t border-slate-700/40 pt-4 gap-2 shrink-0">

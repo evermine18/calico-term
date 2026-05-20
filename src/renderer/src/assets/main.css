@@ -85,6 +85,16 @@ button, .hover-element {
   transition-duration: 75ms;
 }
 
+/* Cursor pointer global para botones interactivos */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+[role="tab"]:not([aria-disabled="true"]),
+[role="menuitem"]:not([aria-disabled="true"]),
+[role="option"]:not([aria-disabled="true"]),
+a[href] {
+  cursor: pointer;
+}
+
 /* Evitar transiciones en elementos específicos */
 input, textarea, .terminal, .xterm, [role="tab"], .tab-container {
   transition: none !important;
