@@ -5,6 +5,7 @@ import { BrowserWindow, dialog, ipcMain } from "electron";
 import { retrievePassword } from "./terminal";
 import { getKey, getKeyPassphrase } from "./ssh-keys";
 import { resolveSecret, SecretProvider } from "./secret-providers";
+import { resolveSSHConnection } from "./ssh-config";
 
 export type SFTPFileEntry = {
   filename: string;
@@ -142,6 +143,10 @@ async function connectSFTP(
   conn: SSHConnectionInfo,
 ): Promise<void> {
   disconnectSFTP(sessionId);
+
+  // Substitute Hostname/Port/User/IdentityFile from ~/.ssh/config when the
+  // target (or any jump host) is given as an alias rather than a real host.
+  conn = resolveSSHConnection(conn);
 
   // Resolve target password from (in priority): vault credential, external secret ref, stored password.
   let password: string | undefined;

@@ -106,6 +106,51 @@ export function readSSHConfig(filePath?: string): SSHConfigHost[] {
   }
 }
 
+type ResolvableHop = {
+  host: string;
+  port: number;
+  username: string;
+  identityFile?: string;
+  identityKeyId?: string;
+};
+
+/**
+ * If `hop.host` matches an alias in ~/.ssh/config, substitute Hostname/Port/
+ * User/IdentityFile from the config so the ssh2 library (which does NOT read
+ * ssh_config) can resolve and authenticate the same way OpenSSH would. Values
+ * already set on the hop take precedence over the config, except for the
+ * alias itself — that's always swapped to the real Hostname.
+ */
+export function resolveHop<T extends ResolvableHop>(
+  hop: T,
+  configs?: SSHConfigHost[],
+): T {
+  const hosts = configs ?? readSSHConfig();
+  const match = hosts.find((h) => h.alias === hop.host);
+  if (!match || !match.host || match.host === hop.host) return hop;
+  return {
+    ...hop,
+    host: match.host,
+    port: hop.port && hop.port !== 22 ? hop.port : match.port,
+    username: hop.username || match.user || hop.username,
+    identityFile:
+      hop.identityFile ?? (hop.identityKeyId ? undefined : match.identityFile),
+  };
+}
+
+type ResolvableConn = ResolvableHop & {
+  jumpHosts?: ResolvableHop[];
+};
+
+/** Resolve the target hop and every jump host against ~/.ssh/config. */
+export function resolveSSHConnection<T extends ResolvableConn>(conn: T): T {
+  const configs = readSSHConfig();
+  if (configs.length === 0) return conn;
+  const resolved = resolveHop(conn, configs);
+  const jumps = conn.jumpHosts?.map((h) => resolveHop(h, configs));
+  return { ...resolved, jumpHosts: jumps };
+}
+
 export function setupSSHConfigHandlers(): void {
   ipcMain.handle("ssh-config-list", () => readSSHConfig());
 }

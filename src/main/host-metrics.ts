@@ -8,6 +8,7 @@ import {
 } from "./sftp";
 import { retrievePassword } from "./terminal";
 import { resolveSecret } from "./secret-providers";
+import { resolveSSHConnection } from "./ssh-config";
 
 export type HostSample = {
   ts: number;
@@ -186,7 +187,10 @@ export async function startMetrics(
   intervalMs: number = 2000,
 ): Promise<void> {
   stopMetrics(sessionId);
-  const clients = await establishClients(conn);
+  // Substitute Hostname/Port/User/IdentityFile from ~/.ssh/config when the
+  // target (or any jump host) is given as an alias rather than a real host.
+  const resolved = resolveSSHConnection(conn);
+  const clients = await establishClients(resolved);
   const timer = setInterval(() => tick(sessionId), Math.max(500, intervalMs));
   polls.set(sessionId, { sessionId, intervalMs, timer, clients });
   tick(sessionId);
