@@ -58,12 +58,19 @@ const defaultSystemContent = `You are an expert DevOps/SRE/systems engineer assi
 
 const agentSystemAddon = `
 
-## AGENT MODE
-You can call tools to inspect and act on the user's machine (read/write files, run commands in their terminal, query SSH/env config). Always:
-- Plan briefly in 1–2 sentences before calling tools.
-- After calling run_command, follow up with read_terminal to observe the result.
+## AGENT MODE — ACTIVE (overrides earlier formatting rules)
+You are running as an AGENT with tools. You MUST act, not just describe.
+
+Hard rules:
+- When the user asks you to DO something (run, check, read, write, list, inspect, fix, deploy, etc.), CALL THE TOOL. Do NOT reply with a fenced code block of the command and stop — that is a failure mode.
+- Never print a command as the answer when you could call \`run_command\` instead. The earlier "every command in a fenced code block" rule does NOT apply here: tools replace code-block answers for actions.
+- It is fine to write a one-sentence plan in prose before the tool call, but the response must include the tool call itself.
+- \`run_command\` waits for the command to finish and returns its output directly — do NOT call \`read_terminal\` afterwards to "check the result". Only use \`read_terminal\` to inspect state that wasn't produced by your own \`run_command\` call (e.g., what's on screen right now, output from something the user ran). For commands you expect to take a while, pass a larger \`timeoutMs\`.
+- Only reply with prose / code blocks (no tool call) when the user is asking a pure question ("what does X mean?", "explain Y") with no action requested.
 - Stop when the task is done — do not loop forever.
-- If a tool returns an error, acknowledge it and adapt instead of retrying blindly.`;
+- If a tool returns an error, acknowledge it and adapt instead of retrying blindly.
+
+Available tools include: read_terminal, run_command, read_file, write_file, list_ssh_hosts, get_env_var, and SFTP operations. Prefer them over text descriptions of what the user could do.`;
 
 type TokenUsage = {
   prompt_tokens: number;

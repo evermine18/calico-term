@@ -54,6 +54,101 @@ function summarizeArgs(name: string, args: unknown): string {
   return "";
 }
 
+// Human-friendly preview of what's about to happen, rendered above the
+// Approve/Deny buttons. Returns null when there's nothing useful to add
+// beyond the header summary.
+function ActionPreview({ name, args }: { name: string; args: unknown }) {
+  const a = (args && typeof args === "object" ? args : {}) as Record<
+    string,
+    unknown
+  >;
+
+  if (name === "run_command") {
+    const cmd = String(a.command ?? "");
+    return (
+      <div>
+        <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+          will run in your active terminal
+        </div>
+        <div className="flex items-start gap-2 bg-black/60 rounded px-2.5 py-2 border border-slate-800">
+          <span className="text-green-400 font-mono text-xs select-none">$</span>
+          <code className="text-xs font-mono text-slate-100 whitespace-pre-wrap break-all flex-1">
+            {cmd}
+          </code>
+        </div>
+      </div>
+    );
+  }
+
+  if (name === "write_file") {
+    const path = String(a.path ?? "");
+    const content = String(a.content ?? "");
+    const lines = content.split("\n").length;
+    const bytes = content.length;
+    const preview =
+      content.length > 600 ? content.slice(0, 600) + "\n…" : content;
+    return (
+      <div>
+        <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+          will write file
+        </div>
+        <div className="bg-slate-950 rounded px-2.5 py-2 border border-slate-800 space-y-1.5">
+          <div className="flex items-center gap-2 text-xs font-mono text-amber-300">
+            <FilePlus size={11} className="flex-shrink-0" />
+            <span className="break-all">{path}</span>
+          </div>
+          <div className="text-[10px] text-slate-500">
+            {lines} line{lines === 1 ? "" : "s"} · {bytes} byte
+            {bytes === 1 ? "" : "s"}
+          </div>
+          {preview && (
+            <pre className="text-[11px] font-mono text-slate-300 bg-black/40 rounded px-2 py-1 overflow-x-auto max-h-32">
+              {preview}
+            </pre>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (name === "read_file") {
+    return (
+      <div>
+        <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+          will read file
+        </div>
+        <div className="flex items-center gap-2 bg-slate-950 rounded px-2.5 py-2 border border-slate-800 text-xs font-mono text-slate-200">
+          <FileText size={11} className="text-accent-400 flex-shrink-0" />
+          <span className="break-all">{String(a.path ?? "")}</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (name === "sftp_write" || name === "sftp_read" || name === "sftp_list") {
+    const path = String(a.remotePath ?? a.dirPath ?? "");
+    const verb =
+      name === "sftp_write"
+        ? "will write remote file"
+        : name === "sftp_read"
+          ? "will read remote file"
+          : "will list remote directory";
+    return (
+      <div>
+        <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+          {verb}
+        </div>
+        <div className="flex items-center gap-2 bg-slate-950 rounded px-2.5 py-2 border border-slate-800 text-xs font-mono text-slate-200">
+          <Server size={11} className="text-accent-400 flex-shrink-0" />
+          <span className="break-all">{path}</span>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+}
+
 interface ToolCallCardProps {
   call: ToolCall;
   onApprove?: (callId: string, name: string, always: boolean) => void;
@@ -68,6 +163,7 @@ export default function ToolCallCard({
   const awaitingApproval =
     call.status === "awaiting_approval" && !!onApprove && !!onDeny;
   const [expanded, setExpanded] = useState(awaitingApproval);
+  const [showRaw, setShowRaw] = useState(false);
   const Icon = TOOL_ICONS[call.name] ?? Wrench;
   const label = TOOL_LABELS[call.name] ?? call.name;
   const summary = summarizeArgs(call.name, call.args);
@@ -152,13 +248,19 @@ export default function ToolCallCard({
       </button>
       {isExpanded && (
         <div className="px-2.5 pb-2 pt-1 space-y-2 border-t border-slate-800">
+          <ActionPreview name={call.name} args={call.args} />
           <div>
-            <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
-              arguments
-            </div>
-            <pre className="text-xs font-mono bg-slate-950 text-slate-300 rounded px-2 py-1 overflow-x-auto max-h-32">
-              {JSON.stringify(call.args, null, 2)}
-            </pre>
+            <button
+              onClick={() => setShowRaw((v) => !v)}
+              className="text-[10px] uppercase tracking-wide text-slate-500 hover:text-slate-300 transition-colors"
+            >
+              {showRaw ? "hide" : "show"} raw arguments
+            </button>
+            {showRaw && (
+              <pre className="mt-1 text-xs font-mono bg-slate-950 text-slate-300 rounded px-2 py-1 overflow-x-auto max-h-32">
+                {JSON.stringify(call.args, null, 2)}
+              </pre>
+            )}
           </div>
           {awaitingApproval && (
             <div className="flex flex-wrap items-center gap-1.5 pt-1">

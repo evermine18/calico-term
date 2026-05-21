@@ -49,7 +49,7 @@ export const AGENT_TOOLS: ToolSpec[] = [
   {
     name: "run_command",
     description:
-      "Send a shell command to the user's active terminal. The command is written to the PTY followed by Enter. Output is NOT returned by this tool — call read_terminal afterwards (you may need to wait briefly) to see the result. Dangerous commands trigger a user confirmation dialog via the existing guardrails.",
+      "Run a shell command in the user's active terminal and wait for it to finish. The command is written to the PTY followed by Enter; this tool then waits for terminal output to stop changing (quiescence) and returns the captured output directly. You do NOT need to call read_terminal afterwards. For long-running commands, raise timeoutMs (max 120000). Interactive commands (vim, ssh password prompts, etc.) are not supported by this tool — they will hit the timeout.",
     riskLevel: "risky",
     inputSchema: {
       type: "object",
@@ -57,6 +57,11 @@ export const AGENT_TOOLS: ToolSpec[] = [
         command: {
           type: "string",
           description: "Exact command to run. No leading $ or prompt.",
+        },
+        timeoutMs: {
+          type: "number",
+          description:
+            "Optional max wait in ms before giving up (default 20000, max 120000). Use a higher value for commands you expect to take a while (builds, installs, deploys).",
         },
       },
       required: ["command"],
@@ -186,9 +191,57 @@ export async function executeTool(
         if (!term) return { content: "No active terminal", isError: true };
         const cmd = String(args?.command ?? "");
         if (!cmd) return { content: "Empty command", isError: true };
+        const requested = Number(args?.timeoutMs);
+        const timeoutMs = Math.min(
+          120000,
+          Math.max(2000, Number.isFinite(requested) && requested > 0 ? requested : 20000),
+        );
+        const before = term.getAllBufferText();
+        const beforeLen = before.length;
         term.sendInput(cmd + "\r");
+
+        // Wait for output quiescence: idle window of ~900ms with no buffer
+        // growth, after at least 400ms have elapsed since send. Bail out on
+        // hard timeout. Polling every 150ms is cheap (xterm buffer reads are
+        // synchronous string concatenations).
+        const start = Date.now();
+        const idleWindowMs = 900;
+        const minWaitMs = 400;
+        let lastLen = beforeLen;
+        let lastChange = Date.now();
+        let timedOut = false;
+        while (true) {
+          await new Promise((r) => setTimeout(r, 150));
+          const now = Date.now();
+          const cur = term.getAllBufferText();
+          if (cur.length !== lastLen) {
+            lastLen = cur.length;
+            lastChange = now;
+          }
+          const elapsed = now - start;
+          if (elapsed >= minWaitMs && now - lastChange >= idleWindowMs) break;
+          if (elapsed >= timeoutMs) {
+            timedOut = true;
+            break;
+          }
+        }
+
+        const after = term.getAllBufferText();
+        // Compute delta. The buffer is a rolling window so the safest delta
+        // is "everything past the prior length" when the buffer grew, or
+        // a tail slice if it rolled.
+        let output: string;
+        if (after.length >= beforeLen && after.startsWith(before.slice(0, Math.min(before.length, 2000)))) {
+          output = after.slice(beforeLen);
+        } else {
+          // Buffer rolled — return a reasonable tail.
+          output = after.slice(-32000);
+        }
+        const note = timedOut
+          ? `\n\n[run_command: hit ${timeoutMs}ms timeout — output above may be partial. Retry with a larger timeoutMs if the command is still running.]`
+          : "";
         return {
-          content: `Command sent: ${cmd}\nNote: output is not returned synchronously. Call read_terminal to inspect the result.`,
+          content: truncate((output || "(no new output)") + note),
           isError: false,
         };
       }
