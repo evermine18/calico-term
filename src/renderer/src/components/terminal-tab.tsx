@@ -17,6 +17,7 @@ interface TerminalPanelProps {
   tabTitle?: string;
   initialCommand?: string;
   onActivity?: () => void;
+  envScopes?: string[];
 }
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({
@@ -25,6 +26,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   tabTitle = "Terminal",
   initialCommand,
   onActivity,
+  envScopes,
 }) => {
   const { setActive } = useTerminalContext();
   const {
@@ -250,6 +252,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     window.electron.ipcRenderer.send("terminal-create", tabId, {
       shell: defaultShell || undefined,
       cwd: defaultCwd || undefined,
+      envScopes: envScopes && envScopes.length ? envScopes : undefined,
     });
 
     if (initialCommand) {

@@ -10,7 +10,14 @@ const DEFAULT_SHORTCUTS: AppShortcuts = {
   prevTab: { key: "Tab", ctrl: true, shift: true, alt: false },
   toggleSidebar: { key: "a", ctrl: true, shift: true, alt: false },
   openHistory: { key: "h", ctrl: true, shift: false, alt: false },
+  openWorkspaceSwitcher: { key: "k", ctrl: true, shift: false, alt: false },
+  openSnippetPalette: { key: "j", ctrl: true, shift: false, alt: false },
 };
+
+function mergeShortcuts(stored: Partial<AppShortcuts> | null): AppShortcuts {
+  // Forward-compat: fill any missing shortcut with the default.
+  return { ...DEFAULT_SHORTCUTS, ...(stored ?? {}) };
+}
 
 export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const [theme, setThemeState] = useState<ThemeId>(() => {
@@ -181,7 +188,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     const s = localStorage.getItem("shortcuts");
     if (s) {
       try {
-        return JSON.parse(s);
+        return mergeShortcuts(JSON.parse(s));
       } catch {
         /* ignore */
       }
@@ -224,6 +231,18 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   const addSSHConnection = (conn: SSHConnectionEntry) => {
     setSSHConnections((prev) => [...prev, conn]);
+    setWorkspacesState((prev) =>
+      prev.map((w) =>
+        w.id === activeWorkspaceId
+          ? {
+              ...w,
+              sshConnectionIds: w.sshConnectionIds.includes(conn.id)
+                ? w.sshConnectionIds
+                : [...w.sshConnectionIds, conn.id],
+            }
+          : w,
+      ),
+    );
   };
 
   const updateSSHConnection = (conn: SSHConnectionEntry) => {
@@ -232,6 +251,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
 
   const deleteSSHConnection = (id: string) => {
     setSSHConnections((prev) => prev.filter((c) => c.id !== id));
+    setWorkspacesState((prev) =>
+      prev.map((w) => ({
+        ...w,
+        sshConnectionIds: w.sshConnectionIds.filter((c) => c !== id),
+      })),
+    );
   };
 
   const [vaultCredentials, setVaultCredentials] = useState<VaultCredential[]>(
@@ -265,6 +290,136 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   const deleteVaultCredential = (id: string) => {
     setVaultCredentials((prev) => prev.filter((c) => c.id !== id));
   };
+  // --- Workspaces (phase 4) ---
+  const [workspaces, setWorkspacesState] = useState<WorkspaceEntry[]>(() => {
+    const stored = localStorage.getItem("workspaces");
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {
+        /* ignore */
+      }
+    }
+    // Migration: build default "Personal" workspace adopting any existing connections.
+    let connIds: string[] = [];
+    const sshRaw = localStorage.getItem("sshConnections");
+    if (sshRaw) {
+      try {
+        const arr = JSON.parse(sshRaw);
+        if (Array.isArray(arr)) connIds = arr.map((c: any) => c.id);
+      } catch {
+        /* ignore */
+      }
+    }
+    return [
+      {
+        id: "ws-personal",
+        name: "Personal",
+        color: "#06b6d4",
+        environment: "other",
+        sshConnectionIds: connIds,
+      },
+    ];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("workspaces", JSON.stringify(workspaces));
+  }, [workspaces]);
+
+  const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string>(() => {
+    const stored = localStorage.getItem("activeWorkspaceId");
+    return stored || "ws-personal";
+  });
+
+  const setActiveWorkspaceId = (id: string) => {
+    localStorage.setItem("activeWorkspaceId", id);
+    setActiveWorkspaceIdState(id);
+  };
+
+  const addWorkspace = (ws: WorkspaceEntry) => {
+    setWorkspacesState((prev) => [...prev, ws]);
+  };
+
+  const updateWorkspace = (ws: WorkspaceEntry) => {
+    setWorkspacesState((prev) => prev.map((w) => (w.id === ws.id ? ws : w)));
+  };
+
+  const deleteWorkspace = (id: string) => {
+    if (id === "ws-personal") return; // keep the default
+    setWorkspacesState((prev) => prev.filter((w) => w.id !== id));
+    if (activeWorkspaceId === id) setActiveWorkspaceId("ws-personal");
+  };
+
+  const assignConnectionToWorkspace = (
+    connId: string,
+    workspaceId: string,
+    mode: "toggle" | "add" | "remove" | "exclusive" = "toggle",
+  ) => {
+    setWorkspacesState((prev) =>
+      prev.map((w) => {
+        if (mode === "exclusive") {
+          // Old behaviour: connection only lives in target workspace.
+          return {
+            ...w,
+            sshConnectionIds:
+              w.id === workspaceId
+                ? w.sshConnectionIds.includes(connId)
+                  ? w.sshConnectionIds
+                  : [...w.sshConnectionIds, connId]
+                : w.sshConnectionIds.filter((c) => c !== connId),
+          };
+        }
+        if (w.id !== workspaceId) return w;
+        const has = w.sshConnectionIds.includes(connId);
+        if (mode === "add") {
+          return has
+            ? w
+            : { ...w, sshConnectionIds: [...w.sshConnectionIds, connId] };
+        }
+        if (mode === "remove") {
+          return has
+            ? {
+                ...w,
+                sshConnectionIds: w.sshConnectionIds.filter((c) => c !== connId),
+              }
+            : w;
+        }
+        // toggle (default): add if missing, remove if present, only on target ws.
+        return {
+          ...w,
+          sshConnectionIds: has
+            ? w.sshConnectionIds.filter((c) => c !== connId)
+            : [...w.sshConnectionIds, connId],
+        };
+      }),
+    );
+  };
+
+  // Workspace identity visual feedback intensity
+  const [workspaceIdentity, setWorkspaceIdentityState] =
+    useState<WorkspaceIdentityMode>(() => {
+      const stored = localStorage.getItem("workspaceIdentity");
+      const valid: WorkspaceIdentityMode[] = [
+        "off",
+        "subtle",
+        "strong",
+        "prod-only",
+      ];
+      return valid.includes(stored as WorkspaceIdentityMode)
+        ? (stored as WorkspaceIdentityMode)
+        : "subtle";
+    });
+
+  const setWorkspaceIdentity = (mode: WorkspaceIdentityMode) => {
+    localStorage.setItem("workspaceIdentity", mode);
+    setWorkspaceIdentityState(mode);
+  };
+
+  // Switcher / palette open state (controlled by keyboard shortcuts)
+  const [workspaceSwitcherOpen, setWorkspaceSwitcherOpen] = useState(false);
+  const [snippetPaletteOpen, setSnippetPaletteOpen] = useState(false);
+
   const [commandHistory, setCommandHistory] = useState<CommandHistoryEntry[]>(
     () => {
       const stored = localStorage.getItem("commandHistory");
@@ -356,6 +511,13 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       tabTitle,
       pinned: false,
     };
+
+    // Mirror to the persistent audit log (sanitized, append-only on disk).
+    window.api.audit.append({
+      ts: Date.now(),
+      command: trimmed,
+      tabId,
+    });
 
     setCommandHistory((prev) => {
       // Limit to 500 most recent commands
@@ -453,6 +615,19 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       addVaultCredential,
       updateVaultCredential,
       deleteVaultCredential,
+      workspaces,
+      activeWorkspaceId,
+      setActiveWorkspaceId,
+      addWorkspace,
+      updateWorkspace,
+      deleteWorkspace,
+      assignConnectionToWorkspace,
+      workspaceIdentity,
+      setWorkspaceIdentity,
+      workspaceSwitcherOpen,
+      setWorkspaceSwitcherOpen,
+      snippetPaletteOpen,
+      setSnippetPaletteOpen,
     }),
     [
       theme,
@@ -478,6 +653,11 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       aiTemperature,
       aiMaxTokens,
       shortcuts,
+      workspaces,
+      activeWorkspaceId,
+      workspaceIdentity,
+      workspaceSwitcherOpen,
+      snippetPaletteOpen,
     ],
   );
 

@@ -14,6 +14,86 @@ interface DownloadProgress {
 }
 
 declare global {
+  type SecretProvider = "op" | "bw" | "vault" | "aws";
+
+  interface SSHKeyMetadata {
+    id: string;
+    name: string;
+    type: "ed25519" | "rsa";
+    bits?: number;
+    publicKey: string;
+    fingerprint: string;
+    hasPassphrase: boolean;
+    createdAt: number;
+    privatePath: string;
+    publicPath: string;
+  }
+
+  interface SSHConfigHost {
+    alias: string;
+    host: string;
+    port: number;
+    user?: string;
+    identityFile?: string;
+    proxyJump?: string;
+  }
+
+  interface RecordingMeta {
+    id: string;
+    tabId: string;
+    title: string;
+    createdAt: number;
+    durationMs: number;
+    cols: number;
+    rows: number;
+    bytes: number;
+    path: string;
+  }
+
+  interface AuditEntry {
+    ts: number;
+    command: string;
+    hostId?: string;
+    workspaceId?: string;
+    cwd?: string;
+    exitCode?: number;
+    tabId?: string;
+  }
+
+  interface HostSample {
+    ts: number;
+    cpuPct: number;
+    memUsedPct: number;
+    memTotalKb: number;
+    memFreeKb: number;
+    load1: number;
+    load5: number;
+    load15: number;
+    diskRootPct: number;
+  }
+
+  type AlertSeverity = "info" | "warning" | "critical";
+
+  type AlertScope = "global" | { workspaceId: string };
+
+  interface AlertRule {
+    id: string;
+    pattern: string;
+    flags: string;
+    severity: AlertSeverity;
+    message?: string;
+    enabled: boolean;
+    scope?: AlertScope;
+  }
+
+  interface GuardrailRule {
+    id: string;
+    pattern: string;
+    flags?: string;
+    description: string;
+    enabled: boolean;
+  }
+
   interface Window {
     electron: ElectronAPI;
     platform: {
@@ -74,10 +154,85 @@ declare global {
             total: number;
           }) => void,
         ) => () => void;
+        readText: (sessionId: string, remotePath: string) => Promise<string>;
+        writeText: (
+          sessionId: string,
+          remotePath: string,
+          content: string,
+        ) => Promise<void>;
+        tailStart: (
+          sessionId: string,
+          remotePath: string,
+          lines?: number,
+        ) => Promise<string>;
+        tailStop: (tailId: string) => void;
+        onTailData: (
+          cb: (data: { tailId: string; data: string; isErr: boolean }) => void,
+        ) => () => void;
+        onTailEnd: (cb: (data: { tailId: string }) => void) => () => void;
+        syncDir: (
+          sessionId: string,
+          remoteDir: string,
+          localDir: string,
+          direction: "download" | "upload",
+        ) => Promise<{ syncId: string; filesTransferred: number }>;
+        onSyncProgress: (
+          cb: (data: {
+            sessionId: string;
+            syncId: string;
+            current: string;
+            filesDone: number;
+            filesTotal: number;
+          }) => void,
+        ) => () => void;
+        pickLocalDir: () => Promise<string | null>;
       };
       clipboard: {
         writeText: (text: string) => void;
         readText: () => string;
+      };
+      sshKeys: {
+        list: () => Promise<SSHKeyMetadata[]>;
+        generate: (opts: {
+          name: string;
+          type: "ed25519" | "rsa";
+          bits?: number;
+          passphrase?: string;
+          comment?: string;
+        }) => Promise<SSHKeyMetadata>;
+        importKey: (opts: {
+          name: string;
+          privatePem: string;
+          passphrase?: string;
+        }) => Promise<SSHKeyMetadata>;
+        exportPublic: (id: string) => Promise<string | null>;
+        delete: (id: string) => Promise<void>;
+        setPassphrase: (id: string, passphrase: string) => Promise<void>;
+      };
+      sshConfig: {
+        list: () => Promise<SSHConfigHost[]>;
+      };
+      envVault: {
+        listScopes: () => Promise<string[]>;
+        list: (
+          scopeId: string,
+        ) => Promise<{ key: string; value: string }[]>;
+        listKeys: (scopeId: string) => Promise<string[]>;
+        set: (scopeId: string, key: string, value: string) => Promise<void>;
+        delete: (scopeId: string, key: string) => Promise<void>;
+        clearScope: (scopeId: string) => Promise<void>;
+        resolve: (scopeIds: string[]) => Promise<Record<string, string>>;
+      };
+      secrets: {
+        test: (
+          provider: SecretProvider,
+          ref: string,
+        ) => Promise<{ ok: boolean; hasValue?: boolean; error?: string }>;
+        primeForSSHSession: (
+          connId: string,
+          provider: SecretProvider,
+          ref: string,
+        ) => Promise<boolean>;
       };
       updater: {
         check: () => Promise<unknown>;
@@ -89,6 +244,109 @@ declare global {
         onUpdateDownloaded: (cb: (info: UpdateInfo) => void) => void;
         onError: (cb: (message: string) => void) => void;
         removeAllListeners: () => void;
+      };
+      recording: {
+        start: (
+          tabId: string,
+          title: string,
+          cols: number,
+          rows: number,
+        ) => Promise<RecordingMeta>;
+        stop: (tabId: string) => Promise<RecordingMeta | null>;
+        isActive: (tabId: string) => Promise<boolean>;
+        list: () => Promise<RecordingMeta[]>;
+        load: (id: string) => Promise<string | null>;
+        delete: (id: string) => Promise<boolean>;
+        exportPath: (id: string) => Promise<string | null>;
+      };
+      audit: {
+        append: (entry: AuditEntry) => void;
+        list: (limit?: number) => Promise<AuditEntry[]>;
+        clear: () => Promise<boolean>;
+        publicKey: () => Promise<string>;
+        exportSigned: () => Promise<{
+          ok: boolean;
+          path?: string;
+          error?: string;
+          canceled?: boolean;
+        }>;
+      };
+      metrics: {
+        start: (
+          sessionId: string,
+          conn: {
+            id: string;
+            host: string;
+            port: number;
+            username: string;
+            identityFile?: string;
+            identityKeyId?: string;
+            hasPassword?: boolean;
+            credentialId?: string;
+            passwordRef?: { provider: SecretProvider; ref: string };
+            jumpHosts?: {
+              host: string;
+              port: number;
+              username: string;
+              identityFile?: string;
+              identityKeyId?: string;
+            }[];
+          },
+          intervalMs?: number,
+        ) => Promise<{ ok: boolean; error?: string }>;
+        stop: (sessionId: string) => void;
+        onSample: (
+          cb: (data: { sessionId: string; sample: HostSample }) => void,
+        ) => () => void;
+        onError: (
+          cb: (data: { sessionId: string; error: string }) => void,
+        ) => () => void;
+      };
+      alerts: {
+        setRules: (rules: AlertRule[]) => void;
+        setWorkspaceMap: (map: Record<string, string[]>) => void;
+        setTabConn: (tabId: string, connId: string | null) => void;
+        onMatch: (
+          cb: (data: {
+            ruleId: string;
+            tabId: string;
+            severity: AlertSeverity;
+            message: string;
+            ts: number;
+          }) => void,
+        ) => () => void;
+      };
+      guardrails: {
+        list: () => Promise<GuardrailRule[]>;
+        set: (rules: GuardrailRule[]) => Promise<void>;
+        resetDefaults: () => Promise<GuardrailRule[]>;
+        setProdTabs: (tabIds: string[]) => void;
+        setTabConn: (tabId: string, connId: string | null) => void;
+        resolve: (tabId: string, confirmed: boolean) => void;
+        onPrompt: (
+          cb: (data: {
+            tabId: string;
+            command: string;
+            ruleId: string;
+            description: string;
+          }) => void,
+        ) => () => void;
+      };
+      workspaces: {
+        exportFile: (payload: {
+          defaultName: string;
+          body: string;
+          signaturePayload: string;
+        }) => Promise<{ ok: boolean; path?: string }>;
+        importFile: () => Promise<{ ok: boolean; content?: string }>;
+        verify: (payload: {
+          signaturePayload: string;
+          signature: string;
+          publicKey: string;
+        }) => Promise<boolean>;
+      };
+      ssh: {
+        onDisconnected: (cb: (tabId: string) => void) => () => void;
       };
       windowControls: {
         minimize: () => void;

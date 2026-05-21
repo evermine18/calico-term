@@ -9,10 +9,27 @@ import { TerminalProvider } from "./contexts/terminal-context";
 import CommandHistoryDialog from "./components/command-history/dialog";
 import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
 import FileBrowserPanel from "./components/sftp/file-browser-panel";
+import MetricsPanel from "./components/observability/metrics-panel";
+import MetricsStatusInline from "./components/observability/metrics-status-inline";
+import { useMetrics } from "./components/observability/use-metrics";
+import { WorkspaceSwitcher } from "./components/workspaces/workspace-switcher";
+import { WorkspaceChip } from "./components/workspaces/workspace-chip";
+import { SnippetPalette } from "./components/workspaces/snippet-palette";
+import WhatsNewDialog from "./components/whats-new/whats-new-dialog";
+import { APP_VERSION, WHATS_NEW_STORAGE_KEY } from "./lib/whats-new-data";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
-import { Minus, Square, TerminalSquare, X } from "lucide-react";
-import { closeTab } from "./lib/tab-operations";
+import { Minus, Square, TerminalSquare, X, ShieldAlert, PlugZap } from "lucide-react";
+import { closeTab, armSSHSession } from "./lib/tab-operations";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "./components/ui/dialog";
+import { Button } from "./components/ui/button";
+import { Input } from "./components/ui/input";
 
 function matchShortcut(e: KeyboardEvent, s: ShortcutDef): boolean {
   return (
@@ -23,18 +40,110 @@ function matchShortcut(e: KeyboardEvent, s: ShortcutDef): boolean {
   );
 }
 
+function buildEnvScopes(
+  activeWorkspaceId: string,
+  connId: string | undefined,
+  workspaces: WorkspaceEntry[],
+): string[] {
+  const scopes = ["global", `workspace:${activeWorkspaceId}`];
+  if (connId) {
+    // If the connection lives in workspaces other than the active one,
+    // include those scopes too so per-workspace env still applies.
+    for (const w of workspaces) {
+      if (w.id === activeWorkspaceId) continue;
+      if (w.sshConnectionIds.includes(connId)) {
+        scopes.push(`workspace:${w.id}`);
+      }
+    }
+    scopes.push(`host:${connId}`);
+  }
+  return scopes;
+}
+
 function AppContent(): React.JSX.Element {
   const [tabs, setTabs] = useState<TerminalTab[]>([]);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [showHome, setShowHome] = useState(false);
   const [sftpOpen, setSftpOpen] = useState(false);
-  const { setHistoryDialogOpen, shortcuts, aiSidebarOpen, setAiSidebarOpen, sshConnections } =
-    useAppContext();
+  const [metricsOpen, setMetricsOpen] = useState(false);
+  const {
+    setHistoryDialogOpen,
+    shortcuts,
+    aiSidebarOpen,
+    setAiSidebarOpen,
+    sshConnections,
+    workspaces,
+    activeWorkspaceId,
+    setWorkspaceSwitcherOpen,
+    setSnippetPaletteOpen,
+  } = useAppContext();
+  const [guardrailPrompt, setGuardrailPrompt] = useState<{
+    tabId: string;
+    command: string;
+    description: string;
+  } | null>(null);
+  const [guardrailConfirm, setGuardrailConfirm] = useState("");
+  const [disconnectedTabs, setDisconnectedTabs] = useState<Set<string>>(
+    new Set(),
+  );
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+
+  // Show the What's New dialog once per release. We compare the persisted
+  // "last seen version" against APP_VERSION; if they differ (or it's missing)
+  // we open the dialog and mark it as seen on close.
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem(WHATS_NEW_STORAGE_KEY);
+      if (seen !== APP_VERSION) setWhatsNewOpen(true);
+    } catch {
+      // localStorage may be unavailable (e.g. file:// edge cases) — fail open.
+    }
+  }, []);
+
+  const handleWhatsNewClose = (): void => {
+    setWhatsNewOpen(false);
+    try {
+      localStorage.setItem(WHATS_NEW_STORAGE_KEY, APP_VERSION);
+    } catch {
+      // ignore — worst case the dialog reappears on next launch.
+    }
+  };
 
   const activeTabObj = tabs.find((t) => t.id === activeTab) ?? null;
   const activeSSHConn = activeTabObj?.isSSH && activeTabObj.connId
     ? sshConnections.find((c) => c.id === activeTabObj.connId) ?? null
     : null;
+
+  // Build metrics-connection info from the active SSH connection (independent
+  // of SFTP). null when no SSH tab is active so the polling stops.
+  const metricsConn = activeSSHConn
+    ? {
+        id: activeSSHConn.id,
+        host: activeSSHConn.host,
+        port: activeSSHConn.port,
+        username: activeSSHConn.username,
+        identityFile: activeSSHConn.identityFile,
+        identityKeyId: activeSSHConn.identityKeyId,
+        hasPassword: activeSSHConn.hasPassword,
+        credentialId: activeSSHConn.credentialId,
+        passwordRef: activeSSHConn.passwordRef,
+        jumpHosts: (activeSSHConn.jumpHostIds ?? [])
+          .map((jid) => sshConnections.find((c) => c.id === jid))
+          .filter((c): c is SSHConnectionEntry => !!c)
+          .map((j) => ({
+            host: j.host,
+            port: j.port,
+            username: j.username,
+            identityFile: j.identityFile,
+            identityKeyId: j.identityKeyId,
+          })),
+      }
+    : null;
+
+  const metricsSessionId = activeSSHConn && activeTabObj
+    ? `metrics-${activeTabObj.id}`
+    : null;
+  const metrics = useMetrics(metricsSessionId, metricsConn);
 
   // Wrap setActiveTab so any tab click also dismisses the home overlay and clears activity
   const handleSetActiveTab = (id: string) => {
@@ -82,6 +191,12 @@ function AppContent(): React.JSX.Element {
         e.preventDefault();
         const idx = tabs.findIndex((t) => t.id === activeTab);
         handleSetActiveTab(tabs[(idx - 1 + tabs.length) % tabs.length].id);
+      } else if (matchShortcut(e, shortcuts.openWorkspaceSwitcher)) {
+        e.preventDefault();
+        setWorkspaceSwitcherOpen(true);
+      } else if (matchShortcut(e, shortcuts.openSnippetPalette)) {
+        e.preventDefault();
+        setSnippetPaletteOpen(true);
       }
     };
 
@@ -94,7 +209,89 @@ function AppContent(): React.JSX.Element {
     activeTab,
     setHistoryDialogOpen,
     setAiSidebarOpen,
+    setWorkspaceSwitcherOpen,
+    setSnippetPaletteOpen,
   ]);
+
+  // Sync workspace ↔ main: alert rule scoping and prod guardrails need to
+  // know which connections live in which workspace, and which tabs are
+  // currently associated with a prod-owned connection.
+  useEffect(() => {
+    const map: Record<string, string[]> = {};
+    for (const w of workspaces) map[w.id] = [...w.sshConnectionIds];
+    window.api.alerts.setWorkspaceMap(map);
+  }, [workspaces]);
+
+  // Push the set of prod-owning tabIds whenever tabs or workspaces change.
+  useEffect(() => {
+    const prodConnIds = new Set<string>();
+    for (const w of workspaces) {
+      if (w.environment === "prod") {
+        for (const cid of w.sshConnectionIds) prodConnIds.add(cid);
+      }
+    }
+    const prodTabIds: string[] = [];
+    for (const t of tabs) {
+      if (t.connId && prodConnIds.has(t.connId)) prodTabIds.push(t.id);
+    }
+    window.api.guardrails.setProdTabs(prodTabIds);
+  }, [tabs, workspaces]);
+
+  // Listen for guardrail prompts from main.
+  useEffect(() => {
+    const off = window.api.guardrails.onPrompt((data) => {
+      setGuardrailPrompt({
+        tabId: data.tabId,
+        command: data.command,
+        description: data.description,
+      });
+      setGuardrailConfirm("");
+    });
+    return off;
+  }, []);
+
+  // Listen for SSH session drops from main and flag the tab so the status bar
+  // can offer a Reconnect action.
+  useEffect(() => {
+    const off = window.api.ssh.onDisconnected((tabId) => {
+      setDisconnectedTabs((prev) => {
+        const next = new Set(prev);
+        next.add(tabId);
+        return next;
+      });
+    });
+    return off;
+  }, []);
+
+  // Prune disconnected-flag entries for tabs that no longer exist.
+  useEffect(() => {
+    setDisconnectedTabs((prev) => {
+      const tabIds = new Set(tabs.map((t) => t.id));
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (tabIds.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [tabs]);
+
+  const reconnectSSHTab = async (tab: TerminalTab) => {
+    if (!tab.connId || !tab.initialCommand) return;
+    const conn = sshConnections.find((c) => c.id === tab.connId);
+    if (!conn) return;
+    await armSSHSession(tab.id, conn);
+    window.electron.ipcRenderer.send("terminal-input", {
+      tabId: tab.id,
+      data: tab.initialCommand + "\r",
+    });
+    setDisconnectedTabs((prev) => {
+      const next = new Set(prev);
+      next.delete(tab.id);
+      return next;
+    });
+  };
 
   return (
     <div
@@ -119,8 +316,8 @@ function AppContent(): React.JSX.Element {
             </span>
           </div>
           <div className="flex items-center gap-2 text-gray-400 text-xs">
-            <span className="px-2 py-0.5 bg-slate-800/50 rounded border border-slate-700/40 text-accent-400/70 text-[10px] tracking-wider">
-              {tabs.length} tab{tabs.length !== 1 ? "s" : ""}
+            <span className="selectable-section">
+              <WorkspaceSwitcher />
             </span>
           </div>
         </div>
@@ -172,34 +369,64 @@ function AppContent(): React.JSX.Element {
             onClose={() => setSftpOpen(false)}
           />
         )}
+        {metricsOpen && activeSSHConn && (
+          <MetricsPanel
+            samples={metrics.samples}
+            error={metrics.error}
+            onClose={() => setMetricsOpen(false)}
+          />
+        )}
         <AISidebarChat />
         <CommandHistoryDialog />
         {/* Terminals — always mounted to preserve PTY state */}
-        {tabs.map((tab) => (
-          <div
-            key={tab.id}
-            className={`absolute inset-0 transition-all duration-300 ${!showHome && activeTab === tab.id
+        {tabs.map((tab) => {
+          const tabEnvScopes = buildEnvScopes(
+            activeWorkspaceId,
+            tab.connId,
+            workspaces,
+          );
+          return (
+            <div
+              key={tab.id}
+              className={`absolute inset-0 transition-all duration-300 ${!showHome && activeTab === tab.id
                 ? "opacity-100 scale-100"
                 : "opacity-0 scale-95 pointer-events-none"
-              }`}
-          >
-            <TerminalPanel
-              tabId={tab.id}
-              active={!showHome && activeTab === tab.id}
-              tabTitle={tab.title}
-              initialCommand={tab.initialCommand}
-              onActivity={() => handleTabActivity(tab.id)}
-            />
-          </div>
-        ))}
+                }`}
+            >
+              <TerminalPanel
+                tabId={tab.id}
+                active={!showHome && activeTab === tab.id}
+                tabTitle={tab.title}
+                initialCommand={tab.initialCommand}
+                onActivity={() => handleTabActivity(tab.id)}
+                envScopes={tabEnvScopes}
+              />
+            </div>
+          );
+        })}
 
         {/* Home overlay — shown when no tabs, or user toggled home */}
         {(tabs.length === 0 || showHome) && (
           <div className="absolute inset-0 bg-slate-950 z-10">
             <SSHConnectionsHome
-              onConnect={(conn) => {
+              onConnect={async (conn) => {
+                // Prod confirmation: any workspace marked `prod` that owns this connection
+                const inProd = workspaces.some(
+                  (w) =>
+                    w.environment === "prod" &&
+                    w.sshConnectionIds.includes(conn.id),
+                );
+                if (inProd) {
+                  const ok = window.confirm(
+                    `⚠ Production environment\n\nYou are about to connect to "${conn.name}" which belongs to a PROD workspace. Continue?`,
+                  );
+                  if (!ok) return;
+                }
                 const id = crypto.randomUUID();
-                const command = buildSSHCommand(conn);
+                const jumpChain = (conn.jumpHostIds ?? [])
+                  .map((jid) => sshConnections.find((c) => c.id === jid))
+                  .filter((c): c is SSHConnectionEntry => !!c);
+                const command = buildSSHCommand(conn, jumpChain);
                 const newTab: TerminalTab = {
                   id,
                   title: conn.name,
@@ -210,21 +437,9 @@ function AppContent(): React.JSX.Element {
                   isSSH: true,
                   connId: conn.id,
                 };
-                // Register password-injection session BEFORE the terminal mounts.
-                // If the connection uses a vault credential, inject via vault key.
-                if (conn.credentialId) {
-                  window.electron.ipcRenderer.send(
-                    "ssh-session-init",
-                    id,
-                    "vault-" + conn.credentialId,
-                  );
-                } else if (conn.hasPassword) {
-                  window.electron.ipcRenderer.send(
-                    "ssh-session-init",
-                    id,
-                    conn.id,
-                  );
-                }
+                // Register password-injection session BEFORE the terminal mounts
+                // and wire alert/guardrail scoping + SSH-disconnect detection.
+                await armSSHSession(id, conn);
                 setTabs((prev) => [...prev, newTab]);
                 handleSetActiveTab(id);
               }}
@@ -233,23 +448,120 @@ function AppContent(): React.JSX.Element {
         )}
       </div>
 
+      {/* Snippet palette (cmdk dialog) */}
+      <SnippetPalette />
+
+      {/* What's New — gated by APP_VERSION via localStorage */}
+      <WhatsNewDialog open={whatsNewOpen} onClose={handleWhatsNewClose} />
+
+      {/* Prod guardrail confirmation */}
+      <Dialog
+        open={!!guardrailPrompt}
+        onOpenChange={(o) => {
+          if (!o && guardrailPrompt) {
+            window.api.guardrails.resolve(guardrailPrompt.tabId, false);
+            setGuardrailPrompt(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[460px] bg-slate-900 border-red-500/40">
+          <DialogHeader>
+            <DialogTitle className="text-red-300 flex items-center gap-2">
+              <ShieldAlert size={16} />
+              Production guardrail
+            </DialogTitle>
+          </DialogHeader>
+          {guardrailPrompt && (
+            <div className="space-y-3 py-1">
+              <p className="text-sm text-gray-300">
+                The command you are about to execute matched:
+              </p>
+              <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1.5">
+                {guardrailPrompt.description}
+              </div>
+              <pre className="text-xs font-mono text-gray-100 bg-slate-800/80 border border-slate-700/40 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
+                {guardrailPrompt.command || "(empty)"}
+              </pre>
+              <p className="text-xs text-gray-400">
+                This tab belongs to a workspace marked <span className="text-red-400 font-bold">PROD</span>. Type{" "}
+                <span className="font-mono text-red-300">yes</span> below to confirm.
+              </p>
+              <Input
+                autoFocus
+                value={guardrailConfirm}
+                onChange={(e) => setGuardrailConfirm(e.target.value)}
+                placeholder="yes"
+                className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono"
+              />
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                if (guardrailPrompt) {
+                  window.api.guardrails.resolve(guardrailPrompt.tabId, false);
+                }
+                setGuardrailPrompt(null);
+              }}
+              className="border-slate-700/50 text-gray-300"
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={guardrailConfirm.trim().toLowerCase() !== "yes"}
+              onClick={() => {
+                if (guardrailPrompt) {
+                  window.api.guardrails.resolve(guardrailPrompt.tabId, true);
+                }
+                setGuardrailPrompt(null);
+              }}
+              className="bg-red-600/90 hover:bg-red-600 text-white"
+            >
+              Execute
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Status Bar */}
       <div className="bg-slate-900/90 backdrop-blur-md border-t border-slate-700/30 px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-500 tracking-wide">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5">
-            <div
-              className="w-1.5 h-1.5 rounded-full bg-accent-400"
-              style={{ boxShadow: "0 0 4px rgba(var(--accent-rgb),0.8)" }}
-            ></div>
-            <span className="text-accent-400/80 font-medium uppercase tracking-widest text-[10px]">
-              ready
-            </span>
-          </span>
+          <WorkspaceChip />
           {activeTab && (
             <span className="text-gray-600 truncate max-w-[200px]">
               {tabs.find((t) => t.id === activeTab)?.title}
             </span>
           )}
+          {activeSSHConn && (
+            <>
+              <span className="text-slate-700">·</span>
+              <MetricsStatusInline
+                sample={metrics.latest}
+                error={metrics.error}
+                loading={metrics.loading}
+                expanded={metricsOpen}
+                onClick={() => setMetricsOpen((v) => !v)}
+              />
+            </>
+          )}
+          {activeTabObj?.isSSH &&
+            activeTabObj.connId &&
+            disconnectedTabs.has(activeTabObj.id) && (
+              <>
+                <span className="text-slate-700">·</span>
+                <button
+                  onClick={() => void reconnectSSHTab(activeTabObj)}
+                  title="La sesión SSH se ha cerrado. Click para reconectar."
+                  className="flex items-center gap-1 px-2 py-0.5 rounded text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:text-amber-200 transition-colors"
+                >
+                  <PlugZap size={11} />
+                  <span>Reconectar</span>
+                </button>
+              </>
+            )}
         </div>
         <div className="flex items-center gap-3 text-gray-600">
           <span>UTF-8</span>

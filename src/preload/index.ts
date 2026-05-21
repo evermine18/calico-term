@@ -35,10 +35,199 @@ const api = {
       ipcRenderer.on("sftp-progress", wrapped);
       return () => ipcRenderer.removeListener("sftp-progress", wrapped);
     },
+    readText: (sessionId: string, remotePath: string) =>
+      ipcRenderer.invoke("sftp-read-text", sessionId, remotePath),
+    writeText: (sessionId: string, remotePath: string, content: string) =>
+      ipcRenderer.invoke("sftp-write-text", sessionId, remotePath, content),
+    tailStart: (sessionId: string, remotePath: string, lines?: number) =>
+      ipcRenderer.invoke("sftp-tail-start", sessionId, remotePath, lines ?? 200),
+    tailStop: (tailId: string) =>
+      ipcRenderer.send("sftp-tail-stop", tailId),
+    onTailData: (
+      cb: (data: { tailId: string; data: string; isErr: boolean }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("sftp-tail-data", wrapped);
+      return () => ipcRenderer.removeListener("sftp-tail-data", wrapped);
+    },
+    onTailEnd: (cb: (data: { tailId: string }) => void): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("sftp-tail-end", wrapped);
+      return () => ipcRenderer.removeListener("sftp-tail-end", wrapped);
+    },
+    syncDir: (
+      sessionId: string,
+      remoteDir: string,
+      localDir: string,
+      direction: "download" | "upload",
+    ) => ipcRenderer.invoke("sftp-sync-dir", sessionId, remoteDir, localDir, direction),
+    onSyncProgress: (
+      cb: (data: {
+        sessionId: string;
+        syncId: string;
+        current: string;
+        filesDone: number;
+        filesTotal: number;
+      }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("sftp-sync-progress", wrapped);
+      return () => ipcRenderer.removeListener("sftp-sync-progress", wrapped);
+    },
+    pickLocalDir: () => ipcRenderer.invoke("sftp-pick-local-dir"),
   },
   clipboard: {
     writeText: (text: string) => clipboard.writeText(text),
     readText: () => clipboard.readText(),
+  },
+  sshKeys: {
+    list: () => ipcRenderer.invoke("ssh-key-list"),
+    generate: (opts: {
+      name: string;
+      type: "ed25519" | "rsa";
+      bits?: number;
+      passphrase?: string;
+      comment?: string;
+    }) => ipcRenderer.invoke("ssh-key-generate", opts),
+    importKey: (opts: {
+      name: string;
+      privatePem: string;
+      passphrase?: string;
+    }) => ipcRenderer.invoke("ssh-key-import", opts),
+    exportPublic: (id: string) =>
+      ipcRenderer.invoke("ssh-key-export-public", id),
+    delete: (id: string) => ipcRenderer.invoke("ssh-key-delete", id),
+    setPassphrase: (id: string, passphrase: string) =>
+      ipcRenderer.invoke("ssh-key-set-passphrase", id, passphrase),
+  },
+  sshConfig: {
+    list: () => ipcRenderer.invoke("ssh-config-list"),
+  },
+  envVault: {
+    listScopes: () => ipcRenderer.invoke("env-vault-list-scopes"),
+    list: (scopeId: string) => ipcRenderer.invoke("env-vault-list", scopeId),
+    listKeys: (scopeId: string) =>
+      ipcRenderer.invoke("env-vault-list-keys", scopeId),
+    set: (scopeId: string, key: string, value: string) =>
+      ipcRenderer.invoke("env-vault-set", scopeId, key, value),
+    delete: (scopeId: string, key: string) =>
+      ipcRenderer.invoke("env-vault-delete", scopeId, key),
+    clearScope: (scopeId: string) =>
+      ipcRenderer.invoke("env-vault-clear-scope", scopeId),
+    resolve: (scopeIds: string[]) =>
+      ipcRenderer.invoke("env-vault-resolve", scopeIds),
+  },
+  secrets: {
+    test: (provider: "op" | "bw" | "vault" | "aws", ref: string) =>
+      ipcRenderer.invoke("secret-resolve", provider, ref),
+    primeForSSHSession: (
+      connId: string,
+      provider: "op" | "bw" | "vault" | "aws",
+      ref: string,
+    ) => ipcRenderer.invoke("ssh-session-prime-secret", connId, provider, ref),
+  },
+  recording: {
+    start: (tabId: string, title: string, cols: number, rows: number) =>
+      ipcRenderer.invoke("recording-start", tabId, title, cols, rows),
+    stop: (tabId: string) => ipcRenderer.invoke("recording-stop", tabId),
+    isActive: (tabId: string) => ipcRenderer.invoke("recording-is-active", tabId),
+    list: () => ipcRenderer.invoke("recording-list"),
+    load: (id: string) => ipcRenderer.invoke("recording-load", id),
+    delete: (id: string) => ipcRenderer.invoke("recording-delete", id),
+    exportPath: (id: string) =>
+      ipcRenderer.invoke("recording-export-path", id),
+  },
+  audit: {
+    append: (entry: AuditEntry) => ipcRenderer.send("audit-append", entry),
+    list: (limit?: number) => ipcRenderer.invoke("audit-list", limit),
+    clear: () => ipcRenderer.invoke("audit-clear"),
+    publicKey: () => ipcRenderer.invoke("audit-public-key"),
+    exportSigned: () => ipcRenderer.invoke("audit-export-signed"),
+  },
+  metrics: {
+    start: (sessionId: string, conn: unknown, intervalMs?: number) =>
+      ipcRenderer.invoke("metrics-start", sessionId, conn, intervalMs ?? 2000),
+    stop: (sessionId: string) => ipcRenderer.send("metrics-stop", sessionId),
+    onSample: (
+      cb: (data: { sessionId: string; sample: HostSample }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("metrics-sample", wrapped);
+      return () => ipcRenderer.removeListener("metrics-sample", wrapped);
+    },
+    onError: (
+      cb: (data: { sessionId: string; error: string }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("metrics-error", wrapped);
+      return () => ipcRenderer.removeListener("metrics-error", wrapped);
+    },
+  },
+  alerts: {
+    setRules: (rules: AlertRule[]) =>
+      ipcRenderer.send("alert-rules-set", rules),
+    setWorkspaceMap: (map: Record<string, string[]>) =>
+      ipcRenderer.send("alert-workspace-map-set", map),
+    setTabConn: (tabId: string, connId: string | null) =>
+      ipcRenderer.send("alert-tab-conn-set", tabId, connId),
+    onMatch: (
+      cb: (data: {
+        ruleId: string;
+        tabId: string;
+        severity: "info" | "warning" | "critical";
+        message: string;
+        ts: number;
+      }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("alert-match", wrapped);
+      return () => ipcRenderer.removeListener("alert-match", wrapped);
+    },
+  },
+  guardrails: {
+    list: () => ipcRenderer.invoke("guardrails-list"),
+    set: (rules: GuardrailRuleEntry[]) =>
+      ipcRenderer.invoke("guardrails-set", rules),
+    resetDefaults: () => ipcRenderer.invoke("guardrails-reset-defaults"),
+    setProdTabs: (tabIds: string[]) =>
+      ipcRenderer.send("guardrails-set-prod-tabs", tabIds),
+    setTabConn: (tabId: string, connId: string | null) =>
+      ipcRenderer.send("terminal-set-conn", tabId, connId),
+    resolve: (tabId: string, confirmed: boolean) =>
+      ipcRenderer.send("terminal-guardrail-resolve", tabId, confirmed),
+    onPrompt: (
+      cb: (data: {
+        tabId: string;
+        command: string;
+        ruleId: string;
+        description: string;
+      }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("terminal-guardrail-prompt", wrapped);
+      return () =>
+        ipcRenderer.removeListener("terminal-guardrail-prompt", wrapped);
+    },
+  },
+  workspaces: {
+    exportFile: (payload: {
+      defaultName: string;
+      body: string;
+      signaturePayload: string;
+    }) => ipcRenderer.invoke("workspace-export", payload),
+    importFile: () => ipcRenderer.invoke("workspace-import"),
+    verify: (payload: {
+      signaturePayload: string;
+      signature: string;
+      publicKey: string;
+    }) => ipcRenderer.invoke("workspace-verify", payload),
+  },
+  ssh: {
+    onDisconnected: (cb: (tabId: string) => void): (() => void) => {
+      const wrapped = (_e: unknown, tabId: string) => cb(tabId);
+      ipcRenderer.on("ssh-disconnected", wrapped);
+      return () => ipcRenderer.removeListener("ssh-disconnected", wrapped);
+    },
   },
   windowControls: {
     minimize: () => ipcRenderer.send("win-minimize"),
@@ -75,6 +264,46 @@ interface UpdateInfo {
   version: string;
   releaseDate?: string;
   releaseName?: string;
+}
+
+interface AuditEntry {
+  ts: number;
+  command: string;
+  hostId?: string;
+  workspaceId?: string;
+  cwd?: string;
+  exitCode?: number;
+  tabId?: string;
+}
+
+interface HostSample {
+  ts: number;
+  cpuPct: number;
+  memUsedPct: number;
+  memTotalKb: number;
+  memFreeKb: number;
+  load1: number;
+  load5: number;
+  load15: number;
+  diskRootPct: number;
+}
+
+interface AlertRule {
+  id: string;
+  pattern: string;
+  flags: string;
+  severity: "info" | "warning" | "critical";
+  message?: string;
+  enabled: boolean;
+  scope?: "global" | { workspaceId: string };
+}
+
+interface GuardrailRuleEntry {
+  id: string;
+  pattern: string;
+  flags?: string;
+  description: string;
+  enabled: boolean;
 }
 
 interface DownloadProgress {

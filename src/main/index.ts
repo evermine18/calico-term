@@ -1,5 +1,7 @@
 import { app, shell, BrowserWindow, ipcMain, Menu } from "electron";
-import { join } from "path";
+import { join, isAbsolute, resolve as resolvePath, dirname } from "path";
+import { promises as fsp } from "fs";
+import { homedir } from "os";
 import { electronApp, optimizer, is } from "@electron-toolkit/utils";
 import icon from "../../resources/icon.png?asset";
 import {
@@ -12,6 +14,16 @@ import {
 import { getModels, sendChat } from "./chat-api";
 import { setupUpdater } from "./updater";
 import { setupSFTPHandlers } from "./sftp";
+import { setupSSHKeysHandlers } from "./ssh-keys";
+import { setupSSHConfigHandlers } from "./ssh-config";
+import { setupEnvVaultHandlers } from "./env-vault";
+import { setupSecretProviderHandlers } from "./secret-providers";
+import { setupRecordingHandlers } from "./recording";
+import { setupAuditHandlers } from "./audit";
+import { setupHostMetricsHandlers } from "./host-metrics";
+import { setupAlertHandlers } from "./alerts";
+import { setupWorkspaceHandlers } from "./workspaces";
+import { setupGuardrailHandlers } from "./guardrails";
 
 // --- AI streaming controllers ---
 const streamControllers = new Map<string, AbortController>();
@@ -156,6 +168,15 @@ app.whenReady().then(() => {
         | "anthropic"
         | "ollama"
         | "openai-compatible" = "openai",
+      tools?: Array<{
+        name: string;
+        description: string;
+        inputSchema: {
+          type: "object";
+          properties: Record<string, unknown>;
+          required?: string[];
+        };
+      }>,
     ) => {
       const controller = new AbortController();
       streamControllers.set(streamId, controller);
@@ -163,7 +184,7 @@ app.whenReady().then(() => {
       const apiKey = retrievePassword("ai-apikey") ?? "";
 
       try {
-        const usage = await sendChat(
+        const result = await sendChat(
           basepath,
           apiKey,
           selectedModel,
@@ -175,14 +196,21 @@ app.whenReady().then(() => {
           temperature,
           maxTokens,
           provider,
+          tools,
+          (call) => event.sender.send("ai-stream-tool-call", streamId, call),
         );
-        event.sender.send("ai-stream-done", streamId, usage ?? null);
+        event.sender.send(
+          "ai-stream-done",
+          streamId,
+          result.usage ?? null,
+          result.stopReason,
+        );
       } catch (error: any) {
         if (error?.name !== "AbortError") {
           const msg = error?.message ?? String(error);
           event.sender.send("ai-stream-error", streamId, msg);
         } else {
-          event.sender.send("ai-stream-done", streamId);
+          event.sender.send("ai-stream-done", streamId, null, "aborted");
         }
       } finally {
         streamControllers.delete(streamId);
@@ -194,6 +222,49 @@ app.whenReady().then(() => {
     streamControllers.get(streamId)?.abort();
     streamControllers.delete(streamId);
   });
+
+  // --- Agent filesystem tools (renderer cannot touch fs directly) ---
+  const FS_MAX_READ = 256 * 1024;
+  function resolveAgentPath(input: string): string {
+    const raw = String(input ?? "");
+    if (!raw) throw new Error("Empty path");
+    const expanded =
+      raw.startsWith("~/") || raw === "~"
+        ? join(homedir(), raw.slice(1))
+        : raw;
+    return isAbsolute(expanded) ? expanded : resolvePath(homedir(), expanded);
+  }
+
+  ipcMain.handle("agent-fs-read", async (_event, path: string) => {
+    try {
+      const full = resolveAgentPath(path);
+      const stat = await fsp.stat(full);
+      if (!stat.isFile()) return { error: `Not a file: ${full}` };
+      const buf = await fsp.readFile(full);
+      const truncated = buf.length > FS_MAX_READ;
+      const slice = truncated ? buf.subarray(0, FS_MAX_READ) : buf;
+      let content = slice.toString("utf-8");
+      if (truncated)
+        content += `\n…[truncated, ${buf.length - FS_MAX_READ} more bytes]`;
+      return { path: full, content, size: buf.length, truncated };
+    } catch (e: any) {
+      return { error: e?.message ?? String(e) };
+    }
+  });
+
+  ipcMain.handle(
+    "agent-fs-write",
+    async (_event, path: string, content: string) => {
+      try {
+        const full = resolveAgentPath(path);
+        await fsp.mkdir(dirname(full), { recursive: true });
+        await fsp.writeFile(full, String(content ?? ""), "utf-8");
+        return { path: full };
+      } catch (e: any) {
+        return { error: e?.message ?? String(e) };
+      }
+    },
+  );
 
   ipcMain.handle(
     "get-ai-models",
@@ -224,6 +295,16 @@ app.whenReady().then(() => {
   });
   setupTerminal();
   setupSFTPHandlers();
+  setupSSHKeysHandlers();
+  setupSSHConfigHandlers();
+  setupEnvVaultHandlers();
+  setupSecretProviderHandlers();
+  setupRecordingHandlers();
+  setupAuditHandlers();
+  setupHostMetricsHandlers();
+  setupAlertHandlers();
+  setupWorkspaceHandlers();
+  setupGuardrailHandlers();
   ipcMain.on("app-close", () => {
     console.log("App close requested");
     app.quit();

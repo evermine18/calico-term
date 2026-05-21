@@ -41,7 +41,17 @@ function buildGroups(
 }
 
 export default function SSHConnectionsHome({ onConnect }: Props) {
-  const { sshConnections, deleteSSHConnection } = useAppContext();
+  const {
+    sshConnections,
+    deleteSSHConnection,
+    workspaces,
+    activeWorkspaceId,
+  } = useAppContext();
+  const activeWs =
+    workspaces.find((w) => w.id === activeWorkspaceId) ?? workspaces[0] ?? null;
+  const visibleConnections = activeWs
+    ? sshConnections.filter((c) => activeWs.sshConnectionIds.includes(c.id))
+    : sshConnections;
   const allTags = useTags();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editConn, setEditConn] = useState<SSHConnectionEntry | null>(null);
@@ -83,7 +93,7 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
 
   const isGroupOpen = (groupId: string) => openGroups[groupId] ?? true;
 
-  const groups = buildGroups(sshConnections, allTags);
+  const groups = buildGroups(visibleConnections, allTags);
 
   return (
     <>
@@ -139,7 +149,7 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
               </button>
             </div>
 
-            {sshConnections.length === 0 ? (
+            {visibleConnections.length === 0 ? (
               <div
                 className="flex flex-col items-center justify-center gap-3 py-10 rounded-xl
                 border border-dashed border-slate-700/60 text-gray-500"

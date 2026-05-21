@@ -6,12 +6,31 @@ export interface Conversation {
   messages: ChatMessage[];
 }
 
+export type ToolCallStatus =
+  | "pending"
+  | "awaiting_approval"
+  | "approved"
+  | "denied"
+  | "running"
+  | "done"
+  | "error";
+
+export interface ToolCall {
+  id: string;
+  name: string;
+  args: unknown;
+  result?: string;
+  status: ToolCallStatus;
+  isError?: boolean;
+}
+
 export type ChatMessage = {
   id: number;
   type: "user" | "assistant";
   error: boolean;
   content: string;
   timestamp: string;
+  toolCalls?: ToolCall[];
 };
 
 export function loadConversations(): Conversation[] {

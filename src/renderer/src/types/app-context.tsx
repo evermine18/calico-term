@@ -14,6 +14,8 @@ type AppShortcuts = {
   prevTab: ShortcutDef;
   toggleSidebar: ShortcutDef;
   openHistory: ShortcutDef;
+  openWorkspaceSwitcher: ShortcutDef;
+  openSnippetPalette: ShortcutDef;
 };
 
 type CommandHistoryEntry = {
@@ -25,6 +27,11 @@ type CommandHistoryEntry = {
   pinned?: boolean;
 };
 
+type SSHSecretRefEntry = {
+  provider: "op" | "bw" | "vault" | "aws";
+  ref: string;
+};
+
 type SSHConnectionEntry = {
   id: string;
   name: string;
@@ -32,8 +39,11 @@ type SSHConnectionEntry = {
   port: number;
   username: string;
   identityFile?: string;
+  identityKeyId?: string;
+  jumpHostIds?: string[];
   hasPassword?: boolean;
   credentialId?: string;
+  passwordRef?: SSHSecretRefEntry;
   tags?: string[];
 };
 
@@ -42,6 +52,28 @@ type VaultCredential = {
   name: string;
   username: string;
   hasPassword: boolean;
+};
+
+type WorkspaceEnvironmentEntry = "dev" | "staging" | "prod" | "other";
+
+type WorkspaceSnippetEntry = {
+  id: string;
+  name: string;
+  command: string;
+  description?: string;
+};
+
+type WorkspaceIdentityMode = "off" | "subtle" | "strong" | "prod-only";
+
+type WorkspaceEntry = {
+  id: string;
+  name: string;
+  color: string;
+  environment?: WorkspaceEnvironmentEntry;
+  sshConnectionIds: string[];
+  envVarKeys?: string[];
+  alertRuleIds?: string[];
+  snippets?: WorkspaceSnippetEntry[];
 };
 
 type AppContextType = {
@@ -106,4 +138,25 @@ type AppContextType = {
   addVaultCredential: (cred: VaultCredential) => void;
   updateVaultCredential: (cred: VaultCredential) => void;
   deleteVaultCredential: (id: string) => void;
+  // Workspaces (phase 4)
+  workspaces: WorkspaceEntry[];
+  activeWorkspaceId: string;
+  setActiveWorkspaceId: (id: string) => void;
+  addWorkspace: (ws: WorkspaceEntry) => void;
+  updateWorkspace: (ws: WorkspaceEntry) => void;
+  deleteWorkspace: (id: string) => void;
+  assignConnectionToWorkspace: (
+    connId: string,
+    workspaceId: string,
+    mode?: "toggle" | "add" | "remove" | "exclusive",
+  ) => void;
+  // Workspace identity visual feedback intensity
+  workspaceIdentity: WorkspaceIdentityMode;
+  setWorkspaceIdentity: (mode: WorkspaceIdentityMode) => void;
+  // Workspace switcher control (used by keyboard shortcut)
+  workspaceSwitcherOpen: boolean;
+  setWorkspaceSwitcherOpen: (open: boolean) => void;
+  // Snippet palette control
+  snippetPaletteOpen: boolean;
+  setSnippetPaletteOpen: (open: boolean) => void;
 };

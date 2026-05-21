@@ -3,6 +3,11 @@ import { ipcMain, safeStorage, app } from "electron";
 import os from "os";
 import fs from "fs";
 import path from "path";
+import { resolveEnv } from "./env-vault";
+import { resolveSecret, SecretProvider } from "./secret-providers";
+import { recordOutput } from "./recording";
+import { checkData, clearTabBuffer, setTabConn } from "./alerts";
+import { matchGuardrail, isProdTab } from "./guardrails";
 
 let terminals: Record<string, any> = {};
 
@@ -56,11 +61,35 @@ export function removePassword(connId: string): void {
   saveEncryptedPasswords(store);
 }
 
+// --- Guardrail input buffering ---
+// For prod tabs we accumulate the typed line (per tab) so that, on Enter, we
+// can match against a dangerous-command list before forwarding \r to the PTY.
+const guardrailLineBuf: Record<string, string> = {};
+// When a guardrail prompt is awaiting user confirmation, the input handler
+// short-circuits all further keystrokes for that tab.
+const guardrailPending = new Set<string>();
+
 // --- SSH session password-injection state ---
 // Maps tabId -> connId for terminals awaiting a password prompt
 const sshPasswordSessions: Record<string, string> = {};
 // Tracks tabs that already injected the password (avoid re-injection on secondary prompts)
 const sshPasswordInjected = new Set<string>();
+// Out-of-band password overrides (for secret-ref auth) keyed by connId
+const oneShotPasswords = new Map<string, string>();
+
+// Tabs currently considered SSH-active. Used to gate disconnect-pattern
+// detection so we don't fire `ssh-disconnected` on plain local shells.
+const sshActiveTabs = new Set<string>();
+
+// Common patterns that indicate the remote SSH session has ended.
+const sshDisconnectPatterns: RegExp[] = [
+  /Connection to [^\s]+ closed/i,
+  /Connection (?:reset|closed) by [^\s]+/i,
+  /Connection timed out/i,
+  /client_loop: send disconnect/i,
+  /Write failed: Broken pipe/i,
+  /ssh_exchange_identification: (?:Connection closed|read: Connection reset)/i,
+];
 
 /**
  * Detect the user's default shell on macOS
@@ -97,9 +126,12 @@ function getInitialCwd(): string {
 }
 
 /**
- * Prepare environment variables for the terminal
+ * Prepare environment variables for the terminal.
+ * `extra` is overlaid on top of the base process env.
  */
-function prepareEnvironment(): Record<string, string> {
+function prepareEnvironment(
+  extra?: Record<string, string>,
+): Record<string, string> {
   const env = { ...process.env } as Record<string, string>;
 
   // Ensure TERM is set correctly
@@ -132,6 +164,12 @@ function prepareEnvironment(): Record<string, string> {
       }
     }
     env.PATH = pathArray.join(":");
+  }
+
+  if (extra) {
+    for (const [k, v] of Object.entries(extra)) {
+      env[k] = v;
+    }
   }
 
   return env;
@@ -167,7 +205,15 @@ export function setupTerminal() {
   // Creating a PTY process for the terminal
   ipcMain.on(
     "terminal-create",
-    (_event, tabId: string, opts?: { shell?: string; cwd?: string }) => {
+    (
+      _event,
+      tabId: string,
+      opts?: {
+        shell?: string;
+        cwd?: string;
+        envScopes?: string[];
+      },
+    ) => {
       // If it already exists, ignore
       if (terminals[tabId]) {
         console.log(`terminal-create: ${tabId} already exists, skipping`);
@@ -181,7 +227,10 @@ export function setupTerminal() {
       const cwd =
         opts?.cwd && opts.cwd.trim() ? opts.cwd.trim() : getInitialCwd();
       const args = getShellArgs(shell);
-      const env = prepareEnvironment();
+      const extraEnv = opts?.envScopes?.length
+        ? resolveEnv(opts.envScopes)
+        : resolveEnv(["global"]);
+      const env = prepareEnvironment(extraEnv);
 
       console.log(`Creating terminal ${tabId} with shell: ${shell} in ${cwd}`);
 
@@ -200,6 +249,24 @@ export function setupTerminal() {
           for (const w of require("electron").BrowserWindow.getAllWindows()) {
             w.webContents.send("terminal-output", tabId, data);
           }
+          recordOutput(tabId, data);
+          checkData(tabId, data);
+
+          // Detect remote SSH session closure and notify the renderer so it
+          // can offer a reconnect action. We only run this when the tab is
+          // marked SSH-active to avoid false positives in local shells.
+          if (sshActiveTabs.has(tabId)) {
+            for (const pat of sshDisconnectPatterns) {
+              if (pat.test(data)) {
+                sshActiveTabs.delete(tabId);
+                sshPasswordInjected.delete(tabId);
+                for (const w of require("electron").BrowserWindow.getAllWindows()) {
+                  w.webContents.send("ssh-disconnected", tabId);
+                }
+                break;
+              }
+            }
+          }
 
           // Auto-inject SSH password when the remote prompts for it
           if (sshPasswordSessions[tabId] && !sshPasswordInjected.has(tabId)) {
@@ -209,7 +276,9 @@ export function setupTerminal() {
               /passphrase for key/i.test(data)
             ) {
               const connId = sshPasswordSessions[tabId];
-              const pwd = retrievePassword(connId);
+              const pwd =
+                oneShotPasswords.get(connId) ?? retrievePassword(connId);
+              oneShotPasswords.delete(connId);
               if (pwd) {
                 sshPasswordInjected.add(tabId);
                 // Small delay so the prompt is fully rendered before sending
@@ -249,6 +318,11 @@ export function setupTerminal() {
           delete terminals[tabId];
           delete sshPasswordSessions[tabId];
           sshPasswordInjected.delete(tabId);
+          sshActiveTabs.delete(tabId);
+          delete guardrailLineBuf[tabId];
+          guardrailPending.delete(tabId);
+          setTabConn(tabId, null);
+          clearTabBuffer(tabId);
           // Notify the renderer that the terminal was closed
           for (const w of require("electron").BrowserWindow.getAllWindows()) {
             w.webContents.send("terminal-closed", tabId, exitCode);
@@ -265,8 +339,77 @@ export function setupTerminal() {
   );
 
   ipcMain.on("terminal-input", (_event, { tabId, data }) => {
-    terminals[tabId]?.write(data);
+    const pty = terminals[tabId];
+    if (!pty) return;
+
+    // While a guardrail modal is open for this tab, swallow all input until
+    // the renderer resolves it.
+    if (guardrailPending.has(tabId)) return;
+
+    if (!isProdTab(tabId)) {
+      pty.write(data);
+      return;
+    }
+
+    // Prod tab: walk through each byte tracking the in-progress command line.
+    let line = guardrailLineBuf[tabId] ?? "";
+    for (let i = 0; i < data.length; i++) {
+      const ch = data[i];
+      if (ch === "\r" || ch === "\n") {
+        const matched = matchGuardrail(line);
+        if (matched) {
+          // Hold the rest of the data (including the \r) — emit a prompt.
+          guardrailPending.add(tabId);
+          guardrailLineBuf[tabId] = line;
+          for (const w of require("electron").BrowserWindow.getAllWindows()) {
+            w.webContents.send("terminal-guardrail-prompt", {
+              tabId,
+              command: line,
+              ruleId: matched.id,
+              description: matched.description,
+            });
+          }
+          return;
+        }
+        pty.write(ch);
+        line = "";
+      } else if (ch === "\x7f" || ch === "\b") {
+        pty.write(ch);
+        line = line.slice(0, -1);
+      } else if (ch === "\x03" || ch === "\x15") {
+        // Ctrl-C / Ctrl-U cancels the current line
+        pty.write(ch);
+        line = "";
+      } else if (ch >= " ") {
+        pty.write(ch);
+        line += ch;
+      } else {
+        // Other control codes: pass through, don't try to track.
+        pty.write(ch);
+      }
+    }
+    guardrailLineBuf[tabId] = line;
   });
+
+  ipcMain.on(
+    "terminal-guardrail-resolve",
+    (_event, tabId: string, confirmed: boolean) => {
+      const pty = terminals[tabId];
+      guardrailPending.delete(tabId);
+      const heldLine = guardrailLineBuf[tabId] ?? "";
+      guardrailLineBuf[tabId] = "";
+      if (!pty) return;
+      if (confirmed) {
+        // Send \r to execute the command that's already on the prompt.
+        pty.write("\r");
+      } else {
+        // Cancel: clear the current line in the remote shell so the user
+        // doesn't accidentally execute it later by pressing Enter.
+        pty.write("\x15");
+      }
+      void heldLine; // currently unused, retained for potential audit hook
+    },
+  );
 
   ipcMain.on("terminal-resize", (_event, { tabId, cols, rows }) => {
     terminals[tabId]?.resize(cols, rows);
@@ -282,6 +425,10 @@ export function setupTerminal() {
     delete terminals[tabId];
     delete sshPasswordSessions[tabId];
     sshPasswordInjected.delete(tabId);
+    sshActiveTabs.delete(tabId);
+    delete guardrailLineBuf[tabId];
+    guardrailPending.delete(tabId);
+    setTabConn(tabId, null);
   });
 
   // Associate a terminal with an SSH connection so the password is auto-injected
@@ -289,6 +436,40 @@ export function setupTerminal() {
     sshPasswordSessions[tabId] = connId;
     sshPasswordInjected.delete(tabId); // allow fresh injection
   });
+
+  // Register the SSH connection a tab is tied to (regardless of password use).
+  // Drives alert-rule scoping and prod-guardrail evaluation by host. Also
+  // arms SSH-disconnect detection for the tab.
+  ipcMain.on(
+    "terminal-set-conn",
+    (_event, tabId: string, connId: string | null) => {
+      setTabConn(tabId, connId);
+      if (connId) sshActiveTabs.add(tabId);
+      else sshActiveTabs.delete(tabId);
+    },
+  );
+
+  // Resolve a secret reference and arm it as a one-shot password for the next
+  // SSH prompt on `connId`. Returns true if a value was successfully fetched.
+  ipcMain.handle(
+    "ssh-session-prime-secret",
+    async (
+      _event,
+      connId: string,
+      provider: SecretProvider,
+      ref: string,
+    ): Promise<boolean> => {
+      try {
+        const value = await resolveSecret(provider, ref);
+        if (!value) return false;
+        oneShotPasswords.set(connId, value);
+        return true;
+      } catch (err) {
+        console.error(`Failed to resolve secret for ${connId}:`, err);
+        return false;
+      }
+    },
+  );
 
   // Securely store a password for an SSH connection (encrypted via safeStorage)
   ipcMain.handle(

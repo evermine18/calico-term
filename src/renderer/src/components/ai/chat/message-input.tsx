@@ -1,6 +1,6 @@
 import { Label } from "@renderer/components/ui/label";
 import { Toggle } from "@renderer/components/ui/toggle";
-import { Send, Terminal, X, Eye, ChevronDown, ChevronUp, CircleHelp, Wrench, FileText, History, BookOpen, Keyboard, TerminalSquare } from "lucide-react";
+import { Send, Terminal, X, Eye, ChevronDown, ChevronUp, CircleHelp, Wrench, FileText, History, BookOpen, Keyboard, TerminalSquare, Bot, MessageSquare } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTerminalContext } from "@renderer/contexts/terminal-context";
 
@@ -26,6 +26,10 @@ interface MessageInputProps {
   enableTerminalContext: boolean;
   setEnableTerminalContext: (enabled: boolean) => void;
   disabled?: boolean;
+  agentMode: boolean;
+  setAgentMode: (v: boolean) => void;
+  agentModeSupported: boolean;
+  effectiveAgentMode: boolean;
 }
 
 export default function MessageInput({
@@ -34,6 +38,10 @@ export default function MessageInput({
   enableTerminalContext,
   setEnableTerminalContext,
   disabled,
+  agentMode,
+  setAgentMode,
+  agentModeSupported,
+  effectiveAgentMode,
 }: MessageInputProps) {
   const [inputText, setInputText] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -133,8 +141,8 @@ export default function MessageInput({
 
   return (
     <div className="p-4 border-t bg-slate-900/95 border-slate-700/50">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between mb-2 gap-2">
+        <div className="flex items-center gap-2 min-w-0">
           <Toggle
             aria-label="Toggle terminal context"
             pressed={enableTerminalContext}
@@ -142,13 +150,10 @@ export default function MessageInput({
               setEnableTerminalContext(pressed);
               if (pressed) setShowPreview(false);
             }}
-            className="data-[state=on]:bg-accent-500/20 data-[state=on]:text-accent-400 data-[state=on]:border-accent-500/40 relative"
+            className="data-[state=on]:bg-accent-500/20 data-[state=on]:text-accent-400 data-[state=on]:border-accent-500/40"
           >
             <Terminal className="h-3.5 w-3.5" />
             <Label className="ml-2 cursor-pointer">Terminal Context</Label>
-            {enableTerminalContext && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 bg-accent-400 rounded-full animate-pulse" />
-            )}
           </Toggle>
           {enableTerminalContext && (
             <button
@@ -160,11 +165,39 @@ export default function MessageInput({
             </button>
           )}
         </div>
-        {enableTerminalContext && showPreview && (
-          <span className="text-[10px] text-slate-500">
-            {terminalPreview.length} chars captured
-          </span>
-        )}
+        <div
+          className="inline-flex h-9 rounded-md border border-slate-700/60 overflow-hidden shrink-0"
+          title={
+            agentModeSupported
+              ? "Switch between plain chat and autonomous agent mode"
+              : "This model does not support tool calling — agent mode disabled"
+          }
+        >
+          <button
+            onClick={() => setAgentMode(false)}
+            disabled={disabled}
+            className={`px-3 text-sm font-medium leading-none inline-flex items-center gap-2 transition-colors ${
+              !agentMode
+                ? "bg-accent-500/20 text-accent-300"
+                : "text-slate-400 hover:bg-slate-800"
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
+          >
+            <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+            <span>Chat</span>
+          </button>
+          <button
+            onClick={() => agentModeSupported && setAgentMode(true)}
+            disabled={!agentModeSupported || disabled}
+            className={`px-3 text-sm font-medium leading-none inline-flex items-center gap-2 transition-colors ${
+              effectiveAgentMode
+                ? "bg-accent-500/20 text-accent-300"
+                : "text-slate-400 hover:bg-slate-800"
+            } disabled:opacity-40 disabled:cursor-not-allowed`}
+          >
+            <Bot className="h-3.5 w-3.5 shrink-0" />
+            <span>Agent</span>
+          </button>
+        </div>
       </div>
 
       {enableTerminalContext && showPreview && (
@@ -172,7 +205,7 @@ export default function MessageInput({
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-mono text-slate-500 uppercase tracking-wide">
               <Eye size={10} className="inline mr-1" />
-              Terminal Preview
+              Terminal Preview · {terminalPreview.length} chars
             </span>
             <button
               onClick={() => {

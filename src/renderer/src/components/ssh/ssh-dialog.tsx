@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +18,19 @@ import { Label } from "@renderer/components/ui/label";
 import { Button } from "@renderer/components/ui/button";
 import { useAppContext } from "@renderer/contexts/app-context";
 import { useTags } from "@renderer/hooks/useTags";
-import { KeyRound, ShieldAlert, Tag, Check, Vault } from "lucide-react";
+import {
+  KeyRound,
+  ShieldAlert,
+  Tag,
+  Check,
+  Vault,
+  Network,
+  X,
+  Download,
+  Boxes,
+} from "lucide-react";
+
+type SecretProviderId = "op" | "bw" | "vault" | "aws";
 
 type SSHFormData = {
   name: string;
@@ -26,10 +38,14 @@ type SSHFormData = {
   port: string;
   username: string;
   identityFile: string;
+  identityKeyId: string;
   password: string;
   confirmPassword: string;
   credentialId: string;
   tags: string[];
+  jumpHostIds: string[];
+  passwordRefProvider: "" | SecretProviderId;
+  passwordRefRef: string;
 };
 
 const EMPTY_FORM: SSHFormData = {
@@ -38,10 +54,14 @@ const EMPTY_FORM: SSHFormData = {
   port: "22",
   username: "",
   identityFile: "",
+  identityKeyId: "",
   password: "",
   confirmPassword: "",
   credentialId: "",
   tags: [],
+  jumpHostIds: [],
+  passwordRefProvider: "",
+  passwordRefRef: "",
 };
 
 type Props = {
@@ -50,11 +70,32 @@ type Props = {
   editConnection?: SSHConnectionEntry | null;
 };
 
-export default function SSHDialog({ open, onOpenChange, editConnection }: Props) {
-  const { addSSHConnection, updateSSHConnection, vaultCredentials } = useAppContext();
+export default function SSHDialog({
+  open,
+  onOpenChange,
+  editConnection,
+}: Props) {
+  const {
+    addSSHConnection,
+    updateSSHConnection,
+    vaultCredentials,
+    sshConnections,
+  } = useAppContext();
   const customTags = useTags();
   const [form, setForm] = useState<SSHFormData>(EMPTY_FORM);
   const [errors, setErrors] = useState<Partial<SSHFormData>>({});
+  const [keys, setKeys] = useState<SSHKeyMetadata[]>([]);
+  const [configHosts, setConfigHosts] = useState<SSHConfigHost[]>([]);
+  const [secretTestState, setSecretTestState] = useState<
+    "idle" | "ok" | "error"
+  >("idle");
+  const [secretTestMessage, setSecretTestMessage] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    window.api.sshKeys.list().then(setKeys).catch(() => setKeys([]));
+    window.api.sshConfig.list().then(setConfigHosts).catch(() => setConfigHosts([]));
+  }, [open]);
 
   useEffect(() => {
     if (open) {
@@ -65,15 +106,20 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
           port: String(editConnection.port),
           username: editConnection.username,
           identityFile: editConnection.identityFile ?? "",
+          identityKeyId: editConnection.identityKeyId ?? "",
           password: "",
           confirmPassword: "",
           credentialId: editConnection.credentialId ?? "",
           tags: editConnection.tags ?? [],
+          jumpHostIds: editConnection.jumpHostIds ?? [],
+          passwordRefProvider: editConnection.passwordRef?.provider ?? "",
+          passwordRefRef: editConnection.passwordRef?.ref ?? "",
         });
       } else {
         setForm(EMPTY_FORM);
       }
       setErrors({});
+      setSecretTestState("idle");
     }
   }, [open, editConnection]);
 
@@ -87,6 +133,8 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
       errs.port = "Must be 1-65535";
     if (form.password && form.password !== form.confirmPassword)
       errs.confirmPassword = "Passwords do not match";
+    if (form.passwordRefProvider && !form.passwordRefRef.trim())
+      errs.passwordRefRef = "Required";
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -97,12 +145,15 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
     const isEdit = !!editConnection;
     const connId = isEdit ? editConnection!.id : crypto.randomUUID();
     const usingVault = !!form.credentialId;
+    const usingSecretRef = !!form.passwordRefProvider;
 
     let hasPassword: boolean;
-    if (usingVault) {
-      hasPassword = false; // vault handles the password
+    if (usingVault || usingSecretRef) {
+      hasPassword = false;
     } else if (isEdit) {
-      hasPassword = form.password ? true : (editConnection!.hasPassword ?? false);
+      hasPassword = form.password
+        ? true
+        : (editConnection!.hasPassword ?? false);
     } else {
       hasPassword = !!form.password;
     }
@@ -114,9 +165,17 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
       port: parseInt(form.port, 10),
       username: form.username.trim(),
       identityFile: form.identityFile.trim() || undefined,
+      identityKeyId: form.identityKeyId || undefined,
       hasPassword,
       credentialId: form.credentialId || undefined,
+      passwordRef: usingSecretRef
+        ? {
+            provider: form.passwordRefProvider as SecretProviderId,
+            ref: form.passwordRefRef.trim(),
+          }
+        : undefined,
       tags: form.tags,
+      jumpHostIds: form.jumpHostIds.length > 0 ? form.jumpHostIds : undefined,
     };
 
     if (isEdit) {
@@ -125,14 +184,18 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
       addSSHConnection(conn);
     }
 
-    if (!usingVault && form.password) {
-      await window.electron.ipcRenderer.invoke("ssh-password-set", connId, form.password);
+    if (!usingVault && !usingSecretRef && form.password) {
+      await window.electron.ipcRenderer.invoke(
+        "ssh-password-set",
+        connId,
+        form.password,
+      );
     }
 
     onOpenChange(false);
   };
 
-  const set = (field: keyof Omit<SSHFormData, "tags">) =>
+  const set = (field: keyof Omit<SSHFormData, "tags" | "jumpHostIds">) =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
       if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -147,6 +210,55 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
     }));
   };
 
+  const addJumpHost = (id: string) => {
+    if (!id || form.jumpHostIds.includes(id) || id === editConnection?.id)
+      return;
+    setForm((prev) => ({
+      ...prev,
+      jumpHostIds: [...prev.jumpHostIds, id],
+    }));
+  };
+
+  const removeJumpHost = (id: string) => {
+    setForm((prev) => ({
+      ...prev,
+      jumpHostIds: prev.jumpHostIds.filter((j) => j !== id),
+    }));
+  };
+
+  const importFromConfig = (alias: string) => {
+    const h = configHosts.find((c) => c.alias === alias);
+    if (!h) return;
+    setForm((prev) => ({
+      ...prev,
+      name: prev.name || h.alias,
+      host: h.host,
+      port: String(h.port),
+      username: h.user ?? prev.username,
+      identityFile: h.identityFile ?? prev.identityFile,
+    }));
+  };
+
+  const testSecret = async () => {
+    if (!form.passwordRefProvider || !form.passwordRefRef.trim()) return;
+    setSecretTestState("idle");
+    const res = await window.api.secrets.test(
+      form.passwordRefProvider as SecretProviderId,
+      form.passwordRefRef.trim(),
+    );
+    if (res.ok && res.hasValue) {
+      setSecretTestState("ok");
+      setSecretTestMessage("Secret resolved successfully");
+    } else {
+      setSecretTestState("error");
+      setSecretTestMessage(res.error ?? "Resolved an empty value");
+    }
+  };
+
+  const availableJumpCandidates = sshConnections.filter(
+    (c) => c.id !== editConnection?.id && !form.jumpHostIds.includes(c.id),
+  );
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md bg-slate-900 border-slate-700 max-h-[90vh] overflow-y-auto">
@@ -157,6 +269,29 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
         </DialogHeader>
 
         <div className="grid gap-4 py-2">
+          {/* Import from ~/.ssh/config */}
+          {!editConnection && configHosts.length > 0 && (
+            <div className="grid gap-1.5">
+              <Label className="text-gray-300 text-sm flex items-center gap-1.5">
+                <Download size={12} className="text-gray-500" />
+                Import from ~/.ssh/config
+              </Label>
+              <Select value="" onValueChange={importFromConfig}>
+                <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                  <SelectValue placeholder="Pick a host to pre-fill the form" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700/50 max-h-60">
+                  {configHosts.map((h) => (
+                    <SelectItem key={h.alias} value={h.alias}>
+                      {h.alias} — {h.user ?? "?"}@{h.host}
+                      {h.port !== 22 ? `:${h.port}` : ""}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Name */}
           <div className="grid gap-1.5">
             <Label htmlFor="ssh-name" className="text-gray-300 text-sm">
@@ -169,7 +304,9 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
               onChange={set("name")}
               className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
             />
-            {errors.name && <p className="text-red-400 text-xs">{errors.name}</p>}
+            {errors.name && (
+              <p className="text-red-400 text-xs">{errors.name}</p>
+            )}
           </div>
 
           {/* Host */}
@@ -184,7 +321,9 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
               onChange={set("host")}
               className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
             />
-            {errors.host && <p className="text-red-400 text-xs">{errors.host}</p>}
+            {errors.host && (
+              <p className="text-red-400 text-xs">{errors.host}</p>
+            )}
           </div>
 
           {/* Username + Port */}
@@ -215,11 +354,45 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
                 onChange={set("port")}
                 className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
               />
-              {errors.port && <p className="text-red-400 text-xs">{errors.port}</p>}
+              {errors.port && (
+                <p className="text-red-400 text-xs">{errors.port}</p>
+              )}
             </div>
           </div>
 
-          {/* Identity File */}
+          {/* Managed key selector */}
+          {keys.length > 0 && (
+            <div className="grid gap-1.5">
+              <Label className="text-gray-300 text-sm flex items-center gap-1.5">
+                <KeyRound size={12} className="text-gray-500" />
+                Managed Key{" "}
+                <span className="text-gray-500 font-normal">(optional)</span>
+              </Label>
+              <Select
+                value={form.identityKeyId || "none"}
+                onValueChange={(val) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    identityKeyId: val === "none" ? "" : val,
+                  }))
+                }
+              >
+                <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700/50">
+                  <SelectItem value="none">None</SelectItem>
+                  {keys.map((k) => (
+                    <SelectItem key={k.id} value={k.id}>
+                      {k.name} ({k.type})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {/* Identity File (legacy path) */}
           <div className="grid gap-1.5">
             <Label htmlFor="ssh-identity" className="text-gray-300 text-sm">
               Identity File{" "}
@@ -232,6 +405,54 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
               onChange={set("identityFile")}
               className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
             />
+          </div>
+
+          {/* Jump hosts */}
+          <div className="grid gap-1.5">
+            <Label className="text-gray-300 text-sm flex items-center gap-1.5">
+              <Network size={12} className="text-gray-500" />
+              Jump Hosts (ProxyJump){" "}
+              <span className="text-gray-500 font-normal">(optional)</span>
+            </Label>
+            {form.jumpHostIds.length > 0 && (
+              <div className="flex flex-col gap-1">
+                {form.jumpHostIds.map((id, idx) => {
+                  const j = sshConnections.find((c) => c.id === id);
+                  return (
+                    <div
+                      key={id}
+                      className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-slate-800/60 border border-slate-700/50 text-xs"
+                    >
+                      <span className="text-gray-500">{idx + 1}.</span>
+                      <span className="flex-1 text-gray-200 truncate">
+                        {j ? `${j.name} (${j.username}@${j.host})` : id}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => removeJumpHost(id)}
+                        className="text-gray-500 hover:text-red-400"
+                      >
+                        <X size={13} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {availableJumpCandidates.length > 0 && (
+              <Select value="" onValueChange={addJumpHost}>
+                <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                  <SelectValue placeholder="Add a jump host…" />
+                </SelectTrigger>
+                <SelectContent className="bg-slate-900 border-slate-700/50">
+                  {availableJumpCandidates.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.name} ({c.username}@{c.host})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Vault Credential Selector */}
@@ -248,9 +469,11 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
                   setForm((prev) => ({
                     ...prev,
                     credentialId: val === "none" ? "" : val,
-                    username: val !== "none"
-                      ? (vaultCredentials.find((c) => c.id === val)?.username ?? prev.username)
-                      : prev.username,
+                    username:
+                      val !== "none"
+                        ? (vaultCredentials.find((c) => c.id === val)
+                            ?.username ?? prev.username)
+                        : prev.username,
                   }))
                 }
               >
@@ -258,11 +481,9 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
                   <SelectValue placeholder="None (use own password)" />
                 </SelectTrigger>
                 <SelectContent className="bg-slate-900 border-slate-700/50">
-                  <SelectItem value="none" className="text-gray-400 focus:bg-accent-500/20 focus:text-accent-100">
-                    None (use own password)
-                  </SelectItem>
+                  <SelectItem value="none">None (use own password)</SelectItem>
                   {vaultCredentials.map((cred) => (
-                    <SelectItem key={cred.id} value={cred.id} className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100">
+                    <SelectItem key={cred.id} value={cred.id}>
                       {cred.name} ({cred.username})
                     </SelectItem>
                   ))}
@@ -289,7 +510,9 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
                       onClick={() => toggleTag(tag.id)}
                       className="flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-150 border"
                       style={{
-                        backgroundColor: selected ? `${tag.color}22` : "transparent",
+                        backgroundColor: selected
+                          ? `${tag.color}22`
+                          : "transparent",
                         color: selected ? tag.color : "#6b7280",
                         borderColor: selected ? `${tag.color}60` : "#374151",
                       }}
@@ -308,72 +531,174 @@ export default function SSHDialog({ open, onOpenChange, editConnection }: Props)
             <div className="flex-1 h-px bg-slate-700/60" />
             <span className="flex items-center gap-1.5 text-xs text-gray-500">
               <KeyRound size={11} />
-              Password Authentication
+              Authentication
             </span>
             <div className="flex-1 h-px bg-slate-700/60" />
           </div>
 
           {form.credentialId ? (
             <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-accent-500/8 border border-accent-500/20 text-xs text-accent-400/80">
-              <Vault size={13} className="mt-0.5 flex-shrink-0 text-accent-400/70" />
+              <Vault
+                size={13}
+                className="mt-0.5 flex-shrink-0 text-accent-400/70"
+              />
               <span>
-                Using vault credential <span className="font-semibold">{vaultCredentials.find((c) => c.id === form.credentialId)?.name}</span>.
-                Manage the password from Settings → Credential Vault.
+                Using vault credential{" "}
+                <span className="font-semibold">
+                  {
+                    vaultCredentials.find((c) => c.id === form.credentialId)
+                      ?.name
+                  }
+                </span>
+                . Manage the password from Settings → Credential Vault.
               </span>
             </div>
           ) : (
             <>
-              {/* Security recommendation */}
-              <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg bg-amber-500/8 border border-amber-500/20 text-xs text-amber-400/80">
-                <ShieldAlert size={13} className="mt-0.5 flex-shrink-0 text-amber-400/70" />
-                <span>
-                  Prefer <span className="font-semibold">SSH keys</span> over passwords.
-                  Use the Identity File field above for a more secure connection.
-                  Password auth is supported as a last resort.
-                </span>
-              </div>
-
-              {editConnection?.hasPassword && !form.password && !editConnection.credentialId && (
-                <p className="text-xs text-accent-400/80 bg-accent-500/10 border border-accent-500/20 rounded-md px-3 py-2">
-                  A password is saved. Leave blank to keep it, or enter a new one to replace it.
-                </p>
-              )}
-
-              {/* Password */}
+              {/* External secret ref */}
               <div className="grid gap-1.5">
-                <Label htmlFor="ssh-password" className="text-gray-300 text-sm">
-                  Password{" "}
+                <Label className="text-gray-300 text-sm flex items-center gap-1.5">
+                  <Boxes size={12} className="text-gray-500" />
+                  External Secret{" "}
                   <span className="text-gray-500 font-normal">(optional)</span>
                 </Label>
-                <Input
-                  id="ssh-password"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder={editConnection?.hasPassword ? "Saved password" : "Leave blank to skip"}
-                  value={form.password}
-                  onChange={set("password")}
-                  className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
-                />
+                <div className="grid grid-cols-[120px_1fr] gap-2">
+                  <Select
+                    value={form.passwordRefProvider || "none"}
+                    onValueChange={(val) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        passwordRefProvider:
+                          val === "none" ? "" : (val as SecretProviderId),
+                        passwordRefRef:
+                          val === "none" ? "" : prev.passwordRefRef,
+                      }))
+                    }
+                  >
+                    <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-slate-900 border-slate-700/50">
+                      <SelectItem value="none">None</SelectItem>
+                      <SelectItem value="op">1Password</SelectItem>
+                      <SelectItem value="bw">Bitwarden</SelectItem>
+                      <SelectItem value="vault">HashiCorp Vault</SelectItem>
+                      <SelectItem value="aws">AWS Secrets Mgr</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    placeholder={
+                      form.passwordRefProvider === "op"
+                        ? "op://Vault/Item/password"
+                        : form.passwordRefProvider === "bw"
+                          ? "item-id-or-name"
+                          : form.passwordRefProvider === "vault"
+                            ? "secret/path#field"
+                            : form.passwordRefProvider === "aws"
+                              ? "my-secret-id#password"
+                              : "Pick a provider first"
+                    }
+                    disabled={!form.passwordRefProvider}
+                    value={form.passwordRefRef}
+                    onChange={set("passwordRefRef")}
+                    className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-xs"
+                  />
+                </div>
+                {form.passwordRefProvider && (
+                  <div className="flex items-center gap-2 text-xs">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={testSecret}
+                      className="h-7 px-2 text-xs bg-slate-800/60 border-slate-700/50"
+                    >
+                      Test
+                    </Button>
+                    {secretTestState === "ok" && (
+                      <span className="text-green-400">{secretTestMessage}</span>
+                    )}
+                    {secretTestState === "error" && (
+                      <span className="text-red-400 truncate">
+                        {secretTestMessage}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {errors.passwordRefRef && (
+                  <p className="text-red-400 text-xs">{errors.passwordRefRef}</p>
+                )}
               </div>
 
-              {form.password && (
-                <div className="grid gap-1.5">
-                  <Label htmlFor="ssh-confirm-password" className="text-gray-300 text-sm">
-                    Confirm Password <span className="text-red-400">*</span>
-                  </Label>
-                  <Input
-                    id="ssh-confirm-password"
-                    type="password"
-                    autoComplete="new-password"
-                    placeholder="Repeat password"
-                    value={form.confirmPassword}
-                    onChange={set("confirmPassword")}
-                    className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
-                  />
-                  {errors.confirmPassword && (
-                    <p className="text-red-400 text-xs">{errors.confirmPassword}</p>
+              {/* Plain password (only if no secret-ref) */}
+              {!form.passwordRefProvider && (
+                <>
+                  <div className="flex items-start gap-2.5 px-3 py-2.5 rounded-lg bg-amber-500/8 border border-amber-500/20 text-xs text-amber-400/80">
+                    <ShieldAlert
+                      size={13}
+                      className="mt-0.5 flex-shrink-0 text-amber-400/70"
+                    />
+                    <span>
+                      Prefer SSH keys or external secret references over plain
+                      passwords.
+                    </span>
+                  </div>
+
+                  {editConnection?.hasPassword && !form.password && (
+                    <p className="text-xs text-accent-400/80 bg-accent-500/10 border border-accent-500/20 rounded-md px-3 py-2">
+                      A password is saved. Leave blank to keep it, or enter a
+                      new one to replace it.
+                    </p>
                   )}
-                </div>
+
+                  <div className="grid gap-1.5">
+                    <Label htmlFor="ssh-password" className="text-gray-300 text-sm">
+                      Password{" "}
+                      <span className="text-gray-500 font-normal">
+                        (optional)
+                      </span>
+                    </Label>
+                    <Input
+                      id="ssh-password"
+                      type="password"
+                      autoComplete="new-password"
+                      placeholder={
+                        editConnection?.hasPassword
+                          ? "Saved password"
+                          : "Leave blank to skip"
+                      }
+                      value={form.password}
+                      onChange={set("password")}
+                      className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+                    />
+                  </div>
+
+                  {form.password && (
+                    <div className="grid gap-1.5">
+                      <Label
+                        htmlFor="ssh-confirm-password"
+                        className="text-gray-300 text-sm"
+                      >
+                        Confirm Password{" "}
+                        <span className="text-red-400">*</span>
+                      </Label>
+                      <Input
+                        id="ssh-confirm-password"
+                        type="password"
+                        autoComplete="new-password"
+                        placeholder="Repeat password"
+                        value={form.confirmPassword}
+                        onChange={set("confirmPassword")}
+                        className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+                      />
+                      {errors.confirmPassword && (
+                        <p className="text-red-400 text-xs">
+                          {errors.confirmPassword}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}

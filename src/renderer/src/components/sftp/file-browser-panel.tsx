@@ -2,10 +2,15 @@ import { useEffect, useRef, useState } from "react";
 import { SFTPFileEntry, SFTPTransfer } from "@renderer/types/sftp";
 import FileEntryRow from "./file-entry";
 import TransferItem from "./transfer-item";
+import RemoteEditorDialog from "./remote-editor-dialog";
+import TailViewerDialog from "./tail-viewer-dialog";
+import DiffViewerDialog from "./diff-viewer-dialog";
+import SyncDialog from "./sync-dialog";
 import {
   ChevronLeft,
   ChevronUp,
   FolderPlus,
+  FolderTree,
   RefreshCw,
   Upload,
   X,
@@ -59,6 +64,11 @@ export default function FileBrowserPanel({
   const [listError, setListError] = useState<string | null>(null);
 
   const [transfers, setTransfers] = useState<SFTPTransfer[]>([]);
+
+  const [editorPath, setEditorPath] = useState<string | null>(null);
+  const [tailPath, setTailPath] = useState<string | null>(null);
+  const [diffPath, setDiffPath] = useState<string | null>(null);
+  const [syncPath, setSyncPath] = useState<string | null>(null);
 
   const [newFolderMode, setNewFolderMode] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -371,6 +381,13 @@ export default function FileBrowserPanel({
               <Upload size={13} />
             </button>
             <button
+              onClick={() => setSyncPath(currentPath)}
+              className="p-1.5 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+              title="Sync this directory"
+            >
+              <FolderTree size={13} />
+            </button>
+            <button
               onClick={() => {
                 setNewFolderMode(true);
                 setNewFolderName("");
@@ -445,22 +462,29 @@ export default function FileBrowserPanel({
               </div>
             )}
 
-            {entries.map((entry) => (
-              <FileEntryRow
-                key={entry.filename}
-                entry={entry}
-                onDoubleClick={() => {
-                  if (entry.isDirectory) {
-                    navigateTo(joinPath(currentPath, entry.filename));
-                  } else {
-                    handleDownload(entry);
-                  }
-                }}
-                onDownload={() => handleDownload(entry)}
-                onRename={(newName) => handleRename(entry, newName)}
-                onDelete={() => handleDelete(entry)}
-              />
-            ))}
+            {entries.map((entry) => {
+              const fullPath = joinPath(currentPath, entry.filename);
+              return (
+                <FileEntryRow
+                  key={entry.filename}
+                  entry={entry}
+                  onDoubleClick={() => {
+                    if (entry.isDirectory) {
+                      navigateTo(fullPath);
+                    } else {
+                      setEditorPath(fullPath);
+                    }
+                  }}
+                  onDownload={() => handleDownload(entry)}
+                  onRename={(newName) => handleRename(entry, newName)}
+                  onDelete={() => handleDelete(entry)}
+                  onEdit={() => setEditorPath(fullPath)}
+                  onTail={() => setTailPath(fullPath)}
+                  onDiff={() => setDiffPath(fullPath)}
+                  onSync={() => setSyncPath(fullPath)}
+                />
+              );
+            })}
           </div>
 
           {/* Transfer queue */}
@@ -475,6 +499,39 @@ export default function FileBrowserPanel({
             </div>
           )}
         </>
+      )}
+
+      {editorPath && (
+        <RemoteEditorDialog
+          open={true}
+          sessionId={sessionId}
+          remotePath={editorPath}
+          onClose={() => setEditorPath(null)}
+        />
+      )}
+      {tailPath && (
+        <TailViewerDialog
+          open={true}
+          sessionId={sessionId}
+          remotePath={tailPath}
+          onClose={() => setTailPath(null)}
+        />
+      )}
+      {diffPath && (
+        <DiffViewerDialog
+          open={true}
+          sessionId={sessionId}
+          remotePath={diffPath}
+          onClose={() => setDiffPath(null)}
+        />
+      )}
+      {syncPath && (
+        <SyncDialog
+          open={true}
+          sessionId={sessionId}
+          remoteDir={syncPath}
+          onClose={() => setSyncPath(null)}
+        />
       )}
     </div>
   );

@@ -12,6 +12,8 @@ import type { Conversation } from "./chat/conversation-types";
 import { loadConversations, saveConversations } from "./chat/conversation-types";
 import ConversationList from "./chat/conversation-list";
 import type { ChatMessage } from "./chat/conversation-types";
+import { AgentLoop } from "@renderer/lib/agent/agent-loop";
+import { supportsTools } from "@renderer/lib/agent/tools";
 
 const INITIAL_MESSAGE: ChatMessage = {
   id: 1,
@@ -85,6 +87,48 @@ export default function AISidebarChat() {
   const activeStreamId = useRef<string | null>(null);
   const cleanupStreamRef = useRef<(() => void) | null>(null);
   const [autoScroll, setAutoScroll] = useState(true);
+
+  // --- Agent mode ---
+  const [agentMode, setAgentModeState] = useState<boolean>(() => {
+    return localStorage.getItem("aiAgentMode") === "1";
+  });
+  const setAgentMode = (v: boolean) => {
+    localStorage.setItem("aiAgentMode", v ? "1" : "0");
+    setAgentModeState(v);
+  };
+  const agentLoopRef = useRef<AgentLoop | null>(null);
+  // Inline (Copilot-style) approval state: pending resolvers keyed by tool-call
+  // id, plus a set of tool names the user has opted to always-allow for this
+  // conversation. Both live in refs so they survive across agent-loop turns
+  // (AgentLoop is recreated per user message in sendAgentTurn).
+  const pendingApprovalsRef = useRef<
+    Map<string, (r: "deny" | "approve" | "always_allow") => void>
+  >(new Map());
+  const alwaysAllowedToolsRef = useRef<Set<string>>(new Set());
+  const toolingSupported = supportsTools(aiProvider, selectedModel);
+  const effectiveAgentMode = agentMode && toolingSupported;
+
+  // Agent mode reads the terminal via tools, but also benefits from the
+  // first-turn screen snapshot. Auto-enable Terminal Context as visual
+  // feedback that this mode uses the terminal. The user can still untoggle.
+  useEffect(() => {
+    if (effectiveAgentMode) setEnableTerminalContext(true);
+  }, [effectiveAgentMode]);
+
+  const handleApproveTool = (callId: string, name: string, always: boolean) => {
+    const resolve = pendingApprovalsRef.current.get(callId);
+    if (!resolve) return;
+    pendingApprovalsRef.current.delete(callId);
+    if (always) alwaysAllowedToolsRef.current.add(name);
+    resolve(always ? "always_allow" : "approve");
+  };
+
+  const handleDenyTool = (callId: string) => {
+    const resolve = pendingApprovalsRef.current.get(callId);
+    if (!resolve) return;
+    pendingApprovalsRef.current.delete(callId);
+    resolve("deny");
+  };
 
   // Detect if user has scrolled up manually
   const handleScroll = () => {
@@ -247,6 +291,43 @@ export default function AISidebarChat() {
     );
   };
 
+  const sendAgentTurn = (allMessages: ChatMessage[]) => {
+    setIsTyping(true);
+    const termApi = getActive();
+    const screen = enableTerminalContext
+      ? (termApi?.getVisibleText() ?? "")
+      : undefined;
+
+    const loop = new AgentLoop(allMessages, {
+      basepath: apiUrl || defaultBaseUrl(aiProvider),
+      selectedModel,
+      provider: aiProvider,
+      systemPrompt: aiSystemPrompt,
+      temperature: aiTemperature,
+      maxTokens: aiMaxTokens,
+      terminalContent: screen,
+      runtime: {
+        getActiveTerminal: () => getActive(),
+      },
+      confirmRisky: (callId) =>
+        new Promise((resolve) => {
+          pendingApprovalsRef.current.set(callId, resolve);
+        }),
+      isAlwaysAllowed: (name) => alwaysAllowedToolsRef.current.has(name),
+      onMessages: (msgs) => setMessages(msgs),
+      onUsage: (u) => setLastUsage(u),
+      onError: (errMsg) => {
+        console.error("[Agent]", errMsg);
+      },
+      onDone: () => {
+        setIsTyping(false);
+        agentLoopRef.current = null;
+      },
+    });
+    agentLoopRef.current = loop;
+    loop.start();
+  };
+
   const handleSendMessage = (messageText: string) => {
     const userMessage: ChatMessage = {
       id: Date.now(),
@@ -261,10 +342,24 @@ export default function AISidebarChat() {
     const updated = [...messages, userMessage];
     setMessages(updated);
     setRetryCount(0);
-    sendMessageToAI(updated);
+    if (effectiveAgentMode) {
+      sendAgentTurn(updated);
+    } else {
+      sendMessageToAI(updated);
+    }
   };
 
   const handleCancel = () => {
+    if (agentLoopRef.current) {
+      agentLoopRef.current.abort();
+      agentLoopRef.current = null;
+    }
+    if (pendingApprovalsRef.current.size > 0) {
+      for (const resolve of pendingApprovalsRef.current.values()) {
+        resolve("deny");
+      }
+      pendingApprovalsRef.current.clear();
+    }
     if (activeStreamId.current) {
       window.electron.ipcRenderer.send(
         "ai-stream-cancel",
@@ -305,6 +400,7 @@ export default function AISidebarChat() {
     }
     
     handleCancel();
+    alwaysAllowedToolsRef.current.clear();
     setLastUsage(null);
     setRetryCount(0);
     setCurrentConvId(null);
@@ -510,12 +606,18 @@ export default function AISidebarChat() {
                   timestamp={message.timestamp}
                   error={message.error}
                   isTyping={
-                    isTyping && message.content === "" && !message.error
+                    isTyping &&
+                    message.content === "" &&
+                    (!message.toolCalls || message.toolCalls.length === 0) &&
+                    !message.error
                   }
                   onExecute={(cmd) => getActive()?.sendInput(cmd)}
                   onRetry={
                     message.error ? () => handleRetry(message.id) : undefined
                   }
+                  toolCalls={message.toolCalls}
+                  onApproveTool={handleApproveTool}
+                  onDenyTool={handleDenyTool}
                 />
               ),
             )}
@@ -544,9 +646,14 @@ export default function AISidebarChat() {
           enableTerminalContext={enableTerminalContext}
           setEnableTerminalContext={setEnableTerminalContext}
           disabled={isTyping}
+          agentMode={agentMode}
+          setAgentMode={setAgentMode}
+          agentModeSupported={toolingSupported}
+          effectiveAgentMode={effectiveAgentMode}
         />
         </>
       )}
+
     </div>
   );
 }

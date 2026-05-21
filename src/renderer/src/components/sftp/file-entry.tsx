@@ -9,6 +9,10 @@ import {
   Check,
   X,
   Link,
+  FileText,
+  Eye,
+  GitCompare,
+  FolderTree,
 } from "lucide-react";
 
 function formatSize(bytes: number): string {
@@ -28,6 +32,10 @@ type Props = {
   onDownload: () => void;
   onRename: (newName: string) => void;
   onDelete: () => void;
+  onEdit?: () => void;
+  onTail?: () => void;
+  onDiff?: () => void;
+  onSync?: () => void;
 };
 
 export default function FileEntryRow({
@@ -36,6 +44,10 @@ export default function FileEntryRow({
   onDownload,
   onRename,
   onDelete,
+  onEdit,
+  onTail,
+  onDiff,
+  onSync,
 }: Props) {
   const [renaming, setRenaming] = useState(false);
   const [nameValue, setNameValue] = useState(entry.filename);
@@ -116,6 +128,54 @@ export default function FileEntryRow({
 
           {/* Hover action buttons */}
           <div className="hidden group-hover:flex items-center gap-0.5 flex-shrink-0">
+            {entry.isDirectory && onSync && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSync();
+                }}
+                className="p-1 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+                title="Sync directory"
+              >
+                <FolderTree size={11} />
+              </button>
+            )}
+            {!entry.isDirectory && onEdit && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit();
+                }}
+                className="p-1 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+                title="Edit remote"
+              >
+                <FileText size={11} />
+              </button>
+            )}
+            {!entry.isDirectory && onTail && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onTail();
+                }}
+                className="p-1 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+                title="Tail -F"
+              >
+                <Eye size={11} />
+              </button>
+            )}
+            {!entry.isDirectory && onDiff && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDiff();
+                }}
+                className="p-1 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+                title="Compare with local"
+              >
+                <GitCompare size={11} />
+              </button>
+            )}
             {!entry.isDirectory && (
               <button
                 onClick={(e) => {
