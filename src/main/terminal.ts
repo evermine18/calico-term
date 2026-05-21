@@ -76,6 +76,18 @@ const sshPasswordSessions: Record<string, string> = {};
 const sshPasswordInjected = new Set<string>();
 // Out-of-band password overrides (for secret-ref auth) keyed by connId
 const oneShotPasswords = new Map<string, string>();
+// Rolling tail of recent PTY output per tab. Lets us match prompts that arrive
+// split across multiple onData chunks (common after a reconnect where the PTY
+// is in a different buffering state than on initial connect).
+const sshOutputTail: Record<string, string> = {};
+const SSH_TAIL_MAX = 512;
+// Timestamp at which an SSH session was last armed (via ssh-session-init).
+// Within this grace window we skip disconnect-pattern detection: on Windows
+// ConPTY the local shell may repaint scrollback (which still contains the
+// previous "Connection to host closed" line) when the new ssh command is
+// typed, producing a false disconnect right after a Reconnect.
+const sshSessionArmedAt: Record<string, number> = {};
+const SSH_DISCONNECT_GRACE_MS = 2500;
 
 // Tabs currently considered SSH-active. Used to gate disconnect-pattern
 // detection so we don't fire `ssh-disconnected` on plain local shells.
@@ -256,10 +268,24 @@ export function setupTerminal() {
           // can offer a reconnect action. We only run this when the tab is
           // marked SSH-active to avoid false positives in local shells.
           if (sshActiveTabs.has(tabId)) {
-            for (const pat of sshDisconnectPatterns) {
+            const armedAt = sshSessionArmedAt[tabId] ?? 0;
+            const inGrace = Date.now() - armedAt < SSH_DISCONNECT_GRACE_MS;
+            if (!inGrace) for (const pat of sshDisconnectPatterns) {
               if (pat.test(data)) {
+                console.log(
+                  `[ssh-debug] disconnect detected tab=${tabId} pattern=${pat}`,
+                );
                 sshActiveTabs.delete(tabId);
                 sshPasswordInjected.delete(tabId);
+                // Disarm password auto-injection until the user explicitly
+                // reconnects (armSSHSession re-sets sshPasswordSessions[tabId]).
+                // Otherwise any later "password:" string in local-shell output
+                // would cause the stored password to be typed into the shell.
+                const connId = sshPasswordSessions[tabId];
+                delete sshPasswordSessions[tabId];
+                if (connId) oneShotPasswords.delete(connId);
+                delete sshOutputTail[tabId];
+                delete sshSessionArmedAt[tabId];
                 for (const w of require("electron").BrowserWindow.getAllWindows()) {
                   w.webContents.send("ssh-disconnected", tabId);
                 }
@@ -270,17 +296,33 @@ export function setupTerminal() {
 
           // Auto-inject SSH password when the remote prompts for it
           if (sshPasswordSessions[tabId] && !sshPasswordInjected.has(tabId)) {
-            // Match common SSH/sudo password prompts
+            const prev = sshOutputTail[tabId] ?? "";
+            const tail = (prev + data).slice(-SSH_TAIL_MAX);
+            sshOutputTail[tabId] = tail;
+            // Match the prompt at the END of the rolling tail (the remote is
+            // waiting for input → no further output after the colon). This
+            // avoids false matches from ConPTY repainting the scrollback,
+            // which re-emits the previous "password:" line in the middle of
+            // a chunk.
+            const stripped = tail
+              .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "") // CSI sequences
+              .replace(/\x1b\][^\x07]*\x07/g, "") // OSC sequences
+              .replace(/\r/g, "");
+            const lastLine = stripped.split("\n").pop() ?? "";
             if (
-              /password\s*:/i.test(data) ||
-              /passphrase for key/i.test(data)
+              /password\s*:\s*$/i.test(lastLine) ||
+              /passphrase for key[^\n]*:\s*$/i.test(lastLine)
             ) {
               const connId = sshPasswordSessions[tabId];
               const pwd =
                 oneShotPasswords.get(connId) ?? retrievePassword(connId);
               oneShotPasswords.delete(connId);
+              console.log(
+                `[ssh-debug] prompt detected tab=${tabId} connId=${connId} hasPwd=${!!pwd}`,
+              );
               if (pwd) {
                 sshPasswordInjected.add(tabId);
+                sshOutputTail[tabId] = "";
                 // Small delay so the prompt is fully rendered before sending
                 setTimeout(() => terminals[tabId]?.write(pwd + "\r"), 80);
               }
@@ -319,6 +361,8 @@ export function setupTerminal() {
           delete sshPasswordSessions[tabId];
           sshPasswordInjected.delete(tabId);
           sshActiveTabs.delete(tabId);
+          delete sshOutputTail[tabId];
+          delete sshSessionArmedAt[tabId];
           delete guardrailLineBuf[tabId];
           guardrailPending.delete(tabId);
           setTabConn(tabId, null);
@@ -435,6 +479,11 @@ export function setupTerminal() {
   ipcMain.on("ssh-session-init", (_event, tabId: string, connId: string) => {
     sshPasswordSessions[tabId] = connId;
     sshPasswordInjected.delete(tabId); // allow fresh injection
+    sshSessionArmedAt[tabId] = Date.now();
+    delete sshOutputTail[tabId];
+    console.log(
+      `[ssh-debug] ssh-session-init tab=${tabId} connId=${connId} hasStoredPwd=${!!loadEncryptedPasswords()[connId]}`,
+    );
   });
 
   // Register the SSH connection a tab is tied to (regardless of password use).
