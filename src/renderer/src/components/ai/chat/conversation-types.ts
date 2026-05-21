@@ -8,6 +8,7 @@ export interface Conversation {
 
 export type ToolCallStatus =
   | "pending"
+  | "awaiting_approval"
   | "approved"
   | "denied"
   | "running"

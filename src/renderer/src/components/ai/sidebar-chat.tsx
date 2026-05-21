@@ -7,7 +7,7 @@ import {
   UserMessage,
 } from "./chat";
 import { useTerminalContext } from "@renderer/contexts/terminal-context";
-import { ArrowDown, Bot, MessageSquare, AlertTriangle } from "lucide-react";
+import { ArrowDown } from "lucide-react";
 import type { Conversation } from "./chat/conversation-types";
 import { loadConversations, saveConversations } from "./chat/conversation-types";
 import ConversationList from "./chat/conversation-list";
@@ -97,13 +97,38 @@ export default function AISidebarChat() {
     setAgentModeState(v);
   };
   const agentLoopRef = useRef<AgentLoop | null>(null);
-  const [confirmDialog, setConfirmDialog] = useState<{
-    name: string;
-    args: unknown;
-    resolve: (ok: boolean) => void;
-  } | null>(null);
+  // Inline (Copilot-style) approval state: pending resolvers keyed by tool-call
+  // id, plus a set of tool names the user has opted to always-allow for this
+  // conversation. Both live in refs so they survive across agent-loop turns
+  // (AgentLoop is recreated per user message in sendAgentTurn).
+  const pendingApprovalsRef = useRef<
+    Map<string, (r: "deny" | "approve" | "always_allow") => void>
+  >(new Map());
+  const alwaysAllowedToolsRef = useRef<Set<string>>(new Set());
   const toolingSupported = supportsTools(aiProvider, selectedModel);
   const effectiveAgentMode = agentMode && toolingSupported;
+
+  // Agent mode reads the terminal via tools, but also benefits from the
+  // first-turn screen snapshot. Auto-enable Terminal Context as visual
+  // feedback that this mode uses the terminal. The user can still untoggle.
+  useEffect(() => {
+    if (effectiveAgentMode) setEnableTerminalContext(true);
+  }, [effectiveAgentMode]);
+
+  const handleApproveTool = (callId: string, name: string, always: boolean) => {
+    const resolve = pendingApprovalsRef.current.get(callId);
+    if (!resolve) return;
+    pendingApprovalsRef.current.delete(callId);
+    if (always) alwaysAllowedToolsRef.current.add(name);
+    resolve(always ? "always_allow" : "approve");
+  };
+
+  const handleDenyTool = (callId: string) => {
+    const resolve = pendingApprovalsRef.current.get(callId);
+    if (!resolve) return;
+    pendingApprovalsRef.current.delete(callId);
+    resolve("deny");
+  };
 
   // Detect if user has scrolled up manually
   const handleScroll = () => {
@@ -284,10 +309,11 @@ export default function AISidebarChat() {
       runtime: {
         getActiveTerminal: () => getActive(),
       },
-      confirmRisky: (name, args) =>
+      confirmRisky: (callId) =>
         new Promise((resolve) => {
-          setConfirmDialog({ name, args, resolve });
+          pendingApprovalsRef.current.set(callId, resolve);
         }),
+      isAlwaysAllowed: (name) => alwaysAllowedToolsRef.current.has(name),
       onMessages: (msgs) => setMessages(msgs),
       onUsage: (u) => setLastUsage(u),
       onError: (errMsg) => {
@@ -328,9 +354,11 @@ export default function AISidebarChat() {
       agentLoopRef.current.abort();
       agentLoopRef.current = null;
     }
-    if (confirmDialog) {
-      confirmDialog.resolve(false);
-      setConfirmDialog(null);
+    if (pendingApprovalsRef.current.size > 0) {
+      for (const resolve of pendingApprovalsRef.current.values()) {
+        resolve("deny");
+      }
+      pendingApprovalsRef.current.clear();
     }
     if (activeStreamId.current) {
       window.electron.ipcRenderer.send(
@@ -372,6 +400,7 @@ export default function AISidebarChat() {
     }
     
     handleCancel();
+    alwaysAllowedToolsRef.current.clear();
     setLastUsage(null);
     setRetryCount(0);
     setCurrentConvId(null);
@@ -587,6 +616,8 @@ export default function AISidebarChat() {
                     message.error ? () => handleRetry(message.id) : undefined
                   }
                   toolCalls={message.toolCalls}
+                  onApproveTool={handleApproveTool}
+                  onDenyTool={handleDenyTool}
                 />
               ),
             )}
@@ -609,98 +640,20 @@ export default function AISidebarChat() {
             </button>
           )}
         </div>
-        <div className="px-4 pt-2 bg-slate-900/95 border-t border-slate-700/50 flex items-center justify-between">
-          <div
-            className="inline-flex rounded-md border border-slate-700/60 overflow-hidden"
-            title={
-              toolingSupported
-                ? "Switch between plain chat and autonomous agent mode"
-                : "This model does not support tool calling — agent mode disabled"
-            }
-          >
-            <button
-              onClick={() => setAgentMode(false)}
-              disabled={isTyping}
-              className={`px-2 py-1 text-[11px] flex items-center gap-1 transition-colors ${
-                !agentMode
-                  ? "bg-accent-500/20 text-accent-300"
-                  : "text-slate-400 hover:bg-slate-800"
-              } disabled:opacity-50 disabled:cursor-not-allowed`}
-            >
-              <MessageSquare size={11} />
-              Chat
-            </button>
-            <button
-              onClick={() => toolingSupported && setAgentMode(true)}
-              disabled={!toolingSupported || isTyping}
-              className={`px-2 py-1 text-[11px] flex items-center gap-1 transition-colors ${
-                effectiveAgentMode
-                  ? "bg-accent-500/20 text-accent-300"
-                  : "text-slate-400 hover:bg-slate-800"
-              } disabled:opacity-40 disabled:cursor-not-allowed`}
-            >
-              <Bot size={11} />
-              Agent
-            </button>
-          </div>
-          {effectiveAgentMode && (
-            <span className="text-[10px] text-accent-400/80">
-              Tools enabled · risky actions confirm
-            </span>
-          )}
-        </div>
         <MessageInput
           onSendMessage={handleSendMessage}
           onCancel={handleCancel}
           enableTerminalContext={enableTerminalContext}
           setEnableTerminalContext={setEnableTerminalContext}
           disabled={isTyping}
+          agentMode={agentMode}
+          setAgentMode={setAgentMode}
+          agentModeSupported={toolingSupported}
+          effectiveAgentMode={effectiveAgentMode}
         />
         </>
       )}
 
-      {confirmDialog && (
-        <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-amber-500/40 rounded-lg shadow-2xl max-w-md w-full p-4">
-            <div className="flex items-center gap-2 mb-3">
-              <AlertTriangle size={18} className="text-amber-400" />
-              <h3 className="text-sm font-semibold text-slate-100">
-                Confirm agent action
-              </h3>
-            </div>
-            <p className="text-xs text-slate-300 mb-2">
-              The agent wants to run{" "}
-              <code className="px-1 py-0.5 bg-slate-950 rounded text-accent-300 font-mono">
-                {confirmDialog.name}
-              </code>
-              :
-            </p>
-            <pre className="text-xs font-mono bg-slate-950 text-slate-300 rounded px-2 py-2 overflow-auto max-h-48 mb-3 border border-slate-800">
-              {JSON.stringify(confirmDialog.args, null, 2)}
-            </pre>
-            <div className="flex justify-end gap-2">
-              <button
-                onClick={() => {
-                  confirmDialog.resolve(false);
-                  setConfirmDialog(null);
-                }}
-                className="px-3 py-1.5 text-xs rounded border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
-              >
-                Deny
-              </button>
-              <button
-                onClick={() => {
-                  confirmDialog.resolve(true);
-                  setConfirmDialog(null);
-                }}
-                className="px-3 py-1.5 text-xs rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 hover:bg-amber-500/30 transition-colors"
-              >
-                Approve
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

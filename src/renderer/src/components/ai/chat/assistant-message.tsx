@@ -18,6 +18,8 @@ interface AssistantMessageProps {
   onRetry?: () => void;
   onExecute?: (cmd: string) => void;
   toolCalls?: ToolCall[];
+  onApproveTool?: (callId: string, name: string, always: boolean) => void;
+  onDenyTool?: (callId: string, name: string) => void;
 }
 
 function CodeBlock({
@@ -114,6 +116,8 @@ export default function AssistantMessage({
   onRetry,
   onExecute,
   toolCalls,
+  onApproveTool,
+  onDenyTool,
 }: AssistantMessageProps) {
   const handleCopy = () => {
     window.api.clipboard.writeText(message);
@@ -249,7 +253,12 @@ export default function AssistantMessage({
               {toolCalls && toolCalls.length > 0 && (
                 <div className="mt-1">
                   {toolCalls.map((tc) => (
-                    <ToolCallCard key={tc.id} call={tc} />
+                    <ToolCallCard
+                      key={tc.id}
+                      call={tc}
+                      onApprove={onApproveTool}
+                      onDeny={onDenyTool}
+                    />
                   ))}
                 </div>
               )}

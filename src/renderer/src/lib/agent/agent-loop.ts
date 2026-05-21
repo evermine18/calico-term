@@ -14,8 +14,16 @@ export interface AgentLoopOptions {
   maxTokens: number;
   terminalContent?: string;
   runtime: AgentRuntime;
-  // Risk confirmation hook. Resolve(true) approves, resolve(false) denies.
-  confirmRisky: (name: string, args: unknown) => Promise<boolean>;
+  // Risk confirmation hook. The component renders inline Approve / Deny /
+  // Always-allow controls on the tool-call card and resolves with the choice.
+  confirmRisky: (
+    callId: string,
+    name: string,
+    args: unknown,
+  ) => Promise<"deny" | "approve" | "always_allow">;
+  // Optional: whether the user has already opted into always-approving this
+  // tool name for the current session. When true the loop skips confirmRisky.
+  isAlwaysAllowed?: (name: string) => boolean;
   // Called whenever the message list should be re-rendered (replaces full list).
   onMessages: (messages: ChatMessage[]) => void;
   onUsage?: (usage: {
@@ -195,11 +203,20 @@ export class AgentLoop {
         });
         continue;
       }
-      if (spec.riskLevel === "risky") {
-        this.updateCall(assistantMsg.id, call.id, { status: "pending" });
-        const ok = await this.opts.confirmRisky(call.name, call.args);
+      if (
+        spec.riskLevel === "risky" &&
+        !this.opts.isAlwaysAllowed?.(call.name)
+      ) {
+        this.updateCall(assistantMsg.id, call.id, {
+          status: "awaiting_approval",
+        });
+        const decision = await this.opts.confirmRisky(
+          call.id,
+          call.name,
+          call.args,
+        );
         if (this.aborted) return;
-        if (!ok) {
+        if (decision === "deny") {
           this.updateCall(assistantMsg.id, call.id, {
             status: "denied",
             result: "User denied this action.",

@@ -14,6 +14,7 @@ import {
   Key,
   Download,
   Upload,
+  ShieldCheck,
 } from "lucide-react";
 import type { ToolCall } from "./conversation-types";
 
@@ -53,11 +54,24 @@ function summarizeArgs(name: string, args: unknown): string {
   return "";
 }
 
-export default function ToolCallCard({ call }: { call: ToolCall }) {
-  const [expanded, setExpanded] = useState(false);
+interface ToolCallCardProps {
+  call: ToolCall;
+  onApprove?: (callId: string, name: string, always: boolean) => void;
+  onDeny?: (callId: string, name: string) => void;
+}
+
+export default function ToolCallCard({
+  call,
+  onApprove,
+  onDeny,
+}: ToolCallCardProps) {
+  const awaitingApproval =
+    call.status === "awaiting_approval" && !!onApprove && !!onDeny;
+  const [expanded, setExpanded] = useState(awaitingApproval);
   const Icon = TOOL_ICONS[call.name] ?? Wrench;
   const label = TOOL_LABELS[call.name] ?? call.name;
   const summary = summarizeArgs(call.name, call.args);
+  const isExpanded = expanded || awaitingApproval;
 
   const statusBadge = (() => {
     switch (call.status) {
@@ -65,6 +79,13 @@ export default function ToolCallCard({ call }: { call: ToolCall }) {
         return (
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300">
             awaiting
+          </span>
+        );
+      case "awaiting_approval":
+        return (
+          <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+            <AlertTriangle size={9} />
+            needs approval
           </span>
         );
       case "running":
@@ -100,8 +121,14 @@ export default function ToolCallCard({ call }: { call: ToolCall }) {
     }
   })();
 
+  const cardBorder = awaitingApproval
+    ? "border-amber-500/40"
+    : "border-slate-700/40";
+
   return (
-    <div className="my-2 rounded-md border border-slate-700/40 bg-slate-950/40 overflow-hidden">
+    <div
+      className={`my-2 rounded-md border ${cardBorder} bg-slate-950/40 overflow-hidden`}
+    >
       <button
         onClick={() => setExpanded((v) => !v)}
         className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-slate-900/60 transition-colors"
@@ -109,7 +136,7 @@ export default function ToolCallCard({ call }: { call: ToolCall }) {
         <ChevronRight
           size={12}
           className={`text-slate-500 transition-transform ${
-            expanded ? "rotate-90" : ""
+            isExpanded ? "rotate-90" : ""
           }`}
         />
         <Icon size={12} className="text-accent-400 flex-shrink-0" />
@@ -123,7 +150,7 @@ export default function ToolCallCard({ call }: { call: ToolCall }) {
         )}
         <div className="flex-shrink-0">{statusBadge}</div>
       </button>
-      {expanded && (
+      {isExpanded && (
         <div className="px-2.5 pb-2 pt-1 space-y-2 border-t border-slate-800">
           <div>
             <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
@@ -133,6 +160,32 @@ export default function ToolCallCard({ call }: { call: ToolCall }) {
               {JSON.stringify(call.args, null, 2)}
             </pre>
           </div>
+          {awaitingApproval && (
+            <div className="flex flex-wrap items-center gap-1.5 pt-1">
+              <button
+                onClick={() => onDeny!(call.id, call.name)}
+                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
+              >
+                <X size={11} />
+                Deny
+              </button>
+              <button
+                onClick={() => onApprove!(call.id, call.name, false)}
+                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-accent-500/20 border border-accent-500/40 text-accent-300 hover:bg-accent-500/30 transition-colors"
+              >
+                <Check size={11} />
+                Approve
+              </button>
+              <button
+                onClick={() => onApprove!(call.id, call.name, true)}
+                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-200 hover:bg-amber-500/25 transition-colors ml-auto"
+                title={`Auto-approve every "${label}" call for the rest of this conversation`}
+              >
+                <ShieldCheck size={11} />
+                Always allow {label.toLowerCase()} this session
+              </button>
+            </div>
+          )}
           {call.result !== undefined && (
             <div>
               <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
