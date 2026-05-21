@@ -11,6 +11,13 @@ import { useAppContext } from "@renderer/contexts/app-context";
 import { ArrowDown } from "lucide-react";
 import { isMacPlatform } from "@renderer/lib/keyboard";
 
+// Tracks which tabs have already had their `initialCommand` sent. Lives at
+// module scope so React StrictMode's double-invocation of effects in dev does
+// not schedule the command twice — the second copy would otherwise queue in
+// the local shell's stdin and re-run when the SSH session exits, producing a
+// spurious auto-reconnect after logout.
+const initialCommandSentTabs = new Set<string>();
+
 interface TerminalPanelProps {
   tabId: string;
   active: boolean;
@@ -255,7 +262,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       envScopes: envScopes && envScopes.length ? envScopes : undefined,
     });
 
-    if (initialCommand) {
+    if (initialCommand && !initialCommandSentTabs.has(tabId)) {
+      initialCommandSentTabs.add(tabId);
       const cmd = initialCommand;
       setTimeout(() => {
         window.electron.ipcRenderer.send("terminal-input", {
