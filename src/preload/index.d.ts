@@ -345,6 +345,9 @@ declare global {
           publicKey: string;
         }) => Promise<boolean>;
       };
+      ssh: {
+        onDisconnected: (cb: (tabId: string) => void) => () => void;
+      };
       windowControls: {
         minimize: () => void;
         maximize: () => void;

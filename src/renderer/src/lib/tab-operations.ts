@@ -1,5 +1,44 @@
 import { Terminal } from "@xterm/xterm";
 
+type SSHConnLike = {
+  id: string;
+  credentialId?: string;
+  hasPassword?: boolean;
+  passwordRef?: { provider: "op" | "bw" | "vault" | "aws"; ref: string };
+};
+
+/**
+ * Re-prime SSH password injection and tab→conn mapping for a tab. Used both
+ * on first connect and on reconnect after a dropped session. Does NOT send
+ * the SSH command itself.
+ */
+export async function armSSHSession(
+  tabId: string,
+  conn: SSHConnLike,
+): Promise<void> {
+  if (conn.credentialId) {
+    window.electron.ipcRenderer.send(
+      "ssh-session-init",
+      tabId,
+      "vault-" + conn.credentialId,
+    );
+  } else if (conn.passwordRef) {
+    const ok = await window.api.secrets.primeForSSHSession(
+      conn.id,
+      conn.passwordRef.provider,
+      conn.passwordRef.ref,
+    );
+    if (ok) {
+      window.electron.ipcRenderer.send("ssh-session-init", tabId, conn.id);
+    }
+  } else if (conn.hasPassword) {
+    window.electron.ipcRenderer.send("ssh-session-init", tabId, conn.id);
+  }
+  // Re-register tab→conn mapping (alerts, guardrails, ssh-disconnect detection).
+  window.api.guardrails.setTabConn(tabId, conn.id);
+  window.api.alerts.setTabConn(tabId, conn.id);
+}
+
 export function updateTabTitle(
   id: string,
   title: string,

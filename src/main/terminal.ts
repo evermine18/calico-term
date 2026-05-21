@@ -77,6 +77,20 @@ const sshPasswordInjected = new Set<string>();
 // Out-of-band password overrides (for secret-ref auth) keyed by connId
 const oneShotPasswords = new Map<string, string>();
 
+// Tabs currently considered SSH-active. Used to gate disconnect-pattern
+// detection so we don't fire `ssh-disconnected` on plain local shells.
+const sshActiveTabs = new Set<string>();
+
+// Common patterns that indicate the remote SSH session has ended.
+const sshDisconnectPatterns: RegExp[] = [
+  /Connection to [^\s]+ closed/i,
+  /Connection (?:reset|closed) by [^\s]+/i,
+  /Connection timed out/i,
+  /client_loop: send disconnect/i,
+  /Write failed: Broken pipe/i,
+  /ssh_exchange_identification: (?:Connection closed|read: Connection reset)/i,
+];
+
 /**
  * Detect the user's default shell on macOS
  */
@@ -238,6 +252,22 @@ export function setupTerminal() {
           recordOutput(tabId, data);
           checkData(tabId, data);
 
+          // Detect remote SSH session closure and notify the renderer so it
+          // can offer a reconnect action. We only run this when the tab is
+          // marked SSH-active to avoid false positives in local shells.
+          if (sshActiveTabs.has(tabId)) {
+            for (const pat of sshDisconnectPatterns) {
+              if (pat.test(data)) {
+                sshActiveTabs.delete(tabId);
+                sshPasswordInjected.delete(tabId);
+                for (const w of require("electron").BrowserWindow.getAllWindows()) {
+                  w.webContents.send("ssh-disconnected", tabId);
+                }
+                break;
+              }
+            }
+          }
+
           // Auto-inject SSH password when the remote prompts for it
           if (sshPasswordSessions[tabId] && !sshPasswordInjected.has(tabId)) {
             // Match common SSH/sudo password prompts
@@ -288,6 +318,7 @@ export function setupTerminal() {
           delete terminals[tabId];
           delete sshPasswordSessions[tabId];
           sshPasswordInjected.delete(tabId);
+          sshActiveTabs.delete(tabId);
           delete guardrailLineBuf[tabId];
           guardrailPending.delete(tabId);
           setTabConn(tabId, null);
@@ -394,6 +425,7 @@ export function setupTerminal() {
     delete terminals[tabId];
     delete sshPasswordSessions[tabId];
     sshPasswordInjected.delete(tabId);
+    sshActiveTabs.delete(tabId);
     delete guardrailLineBuf[tabId];
     guardrailPending.delete(tabId);
     setTabConn(tabId, null);
@@ -406,11 +438,14 @@ export function setupTerminal() {
   });
 
   // Register the SSH connection a tab is tied to (regardless of password use).
-  // Drives alert-rule scoping and prod-guardrail evaluation by host.
+  // Drives alert-rule scoping and prod-guardrail evaluation by host. Also
+  // arms SSH-disconnect detection for the tab.
   ipcMain.on(
     "terminal-set-conn",
     (_event, tabId: string, connId: string | null) => {
       setTabConn(tabId, connId);
+      if (connId) sshActiveTabs.add(tabId);
+      else sshActiveTabs.delete(tabId);
     },
   );
 

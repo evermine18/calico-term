@@ -97,7 +97,7 @@ export function TabItem({
     accentStyle.backgroundColor = accent.tintBg;
   }
   return (
-    <div key={tab.id} className="relative flex flex-col flex-1 basis-0 min-w-[80px]">
+    <div key={tab.id} className="relative flex flex-col flex-1 basis-0 min-w-[120px] max-w-[200px]">
       <div
         draggable={tab.mode === 'normal'}
         onDragStart={onDragStart}

@@ -222,6 +222,13 @@ const api = {
       publicKey: string;
     }) => ipcRenderer.invoke("workspace-verify", payload),
   },
+  ssh: {
+    onDisconnected: (cb: (tabId: string) => void): (() => void) => {
+      const wrapped = (_e: unknown, tabId: string) => cb(tabId);
+      ipcRenderer.on("ssh-disconnected", wrapped);
+      return () => ipcRenderer.removeListener("ssh-disconnected", wrapped);
+    },
+  },
   windowControls: {
     minimize: () => ipcRenderer.send("win-minimize"),
     maximize: () => ipcRenderer.send("win-maximize"),

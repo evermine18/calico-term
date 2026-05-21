@@ -17,8 +17,8 @@ import { WorkspaceChip } from "./components/workspaces/workspace-chip";
 import { SnippetPalette } from "./components/workspaces/snippet-palette";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
-import { Minus, Square, TerminalSquare, X, ShieldAlert } from "lucide-react";
-import { closeTab } from "./lib/tab-operations";
+import { Minus, Square, TerminalSquare, X, ShieldAlert, PlugZap } from "lucide-react";
+import { closeTab, armSSHSession } from "./lib/tab-operations";
 import {
   Dialog,
   DialogContent,
@@ -81,6 +81,9 @@ function AppContent(): React.JSX.Element {
     description: string;
   } | null>(null);
   const [guardrailConfirm, setGuardrailConfirm] = useState("");
+  const [disconnectedTabs, setDisconnectedTabs] = useState<Set<string>>(
+    new Set(),
+  );
 
   const activeTabObj = tabs.find((t) => t.id === activeTab) ?? null;
   const activeSSHConn = activeTabObj?.isSSH && activeTabObj.connId
@@ -222,6 +225,49 @@ function AppContent(): React.JSX.Element {
     });
     return off;
   }, []);
+
+  // Listen for SSH session drops from main and flag the tab so the status bar
+  // can offer a Reconnect action.
+  useEffect(() => {
+    const off = window.api.ssh.onDisconnected((tabId) => {
+      setDisconnectedTabs((prev) => {
+        const next = new Set(prev);
+        next.add(tabId);
+        return next;
+      });
+    });
+    return off;
+  }, []);
+
+  // Prune disconnected-flag entries for tabs that no longer exist.
+  useEffect(() => {
+    setDisconnectedTabs((prev) => {
+      const tabIds = new Set(tabs.map((t) => t.id));
+      let changed = false;
+      const next = new Set<string>();
+      for (const id of prev) {
+        if (tabIds.has(id)) next.add(id);
+        else changed = true;
+      }
+      return changed ? next : prev;
+    });
+  }, [tabs]);
+
+  const reconnectSSHTab = async (tab: TerminalTab) => {
+    if (!tab.connId || !tab.initialCommand) return;
+    const conn = sshConnections.find((c) => c.id === tab.connId);
+    if (!conn) return;
+    await armSSHSession(tab.id, conn);
+    window.electron.ipcRenderer.send("terminal-input", {
+      tabId: tab.id,
+      data: tab.initialCommand + "\r",
+    });
+    setDisconnectedTabs((prev) => {
+      const next = new Set(prev);
+      next.delete(tab.id);
+      return next;
+    });
+  };
 
   return (
     <div
@@ -367,39 +413,9 @@ function AppContent(): React.JSX.Element {
                   isSSH: true,
                   connId: conn.id,
                 };
-                // Register password-injection session BEFORE the terminal mounts.
-                if (conn.credentialId) {
-                  window.electron.ipcRenderer.send(
-                    "ssh-session-init",
-                    id,
-                    "vault-" + conn.credentialId,
-                  );
-                } else if (conn.passwordRef) {
-                  // Resolve secret just-in-time; primes a one-shot password for this connId.
-                  const ok = await window.api.secrets.primeForSSHSession(
-                    conn.id,
-                    conn.passwordRef.provider,
-                    conn.passwordRef.ref,
-                  );
-                  if (ok) {
-                    window.electron.ipcRenderer.send(
-                      "ssh-session-init",
-                      id,
-                      conn.id,
-                    );
-                  }
-                } else if (conn.hasPassword) {
-                  window.electron.ipcRenderer.send(
-                    "ssh-session-init",
-                    id,
-                    conn.id,
-                  );
-                }
-                // Always inform main of the tab→conn mapping so alert scopes
-                // and prod guardrails resolve correctly (independent of the
-                // password-injection path above).
-                window.api.guardrails.setTabConn(id, conn.id);
-                window.api.alerts.setTabConn(id, conn.id);
+                // Register password-injection session BEFORE the terminal mounts
+                // and wire alert/guardrail scoping + SSH-disconnect detection.
+                await armSSHSession(id, conn);
                 setTabs((prev) => [...prev, newTab]);
                 handleSetActiveTab(id);
               }}
@@ -486,15 +502,6 @@ function AppContent(): React.JSX.Element {
       {/* Status Bar */}
       <div className="bg-slate-900/90 backdrop-blur-md border-t border-slate-700/30 px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-500 tracking-wide">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1.5">
-            <div
-              className="w-1.5 h-1.5 rounded-full bg-accent-400"
-              style={{ boxShadow: "0 0 4px rgba(var(--accent-rgb),0.8)" }}
-            ></div>
-            <span className="text-accent-400/80 font-medium uppercase tracking-widest text-[10px]">
-              ready
-            </span>
-          </span>
           <WorkspaceChip />
           {activeTab && (
             <span className="text-gray-600 truncate max-w-[200px]">
@@ -513,6 +520,21 @@ function AppContent(): React.JSX.Element {
               />
             </>
           )}
+          {activeTabObj?.isSSH &&
+            activeTabObj.connId &&
+            disconnectedTabs.has(activeTabObj.id) && (
+              <>
+                <span className="text-slate-700">·</span>
+                <button
+                  onClick={() => void reconnectSSHTab(activeTabObj)}
+                  title="La sesión SSH se ha cerrado. Click para reconectar."
+                  className="flex items-center gap-1 px-2 py-0.5 rounded text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:text-amber-200 transition-colors"
+                >
+                  <PlugZap size={11} />
+                  <span>Reconectar</span>
+                </button>
+              </>
+            )}
         </div>
         <div className="flex items-center gap-3 text-gray-600">
           <span>UTF-8</span>
