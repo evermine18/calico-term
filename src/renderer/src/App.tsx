@@ -15,6 +15,8 @@ import { useMetrics } from "./components/observability/use-metrics";
 import { WorkspaceSwitcher } from "./components/workspaces/workspace-switcher";
 import { WorkspaceChip } from "./components/workspaces/workspace-chip";
 import { SnippetPalette } from "./components/workspaces/snippet-palette";
+import WhatsNewDialog from "./components/whats-new/whats-new-dialog";
+import { APP_VERSION, WHATS_NEW_STORAGE_KEY } from "./lib/whats-new-data";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
 import { Minus, Square, TerminalSquare, X, ShieldAlert, PlugZap } from "lucide-react";
@@ -84,6 +86,28 @@ function AppContent(): React.JSX.Element {
   const [disconnectedTabs, setDisconnectedTabs] = useState<Set<string>>(
     new Set(),
   );
+  const [whatsNewOpen, setWhatsNewOpen] = useState(false);
+
+  // Show the What's New dialog once per release. We compare the persisted
+  // "last seen version" against APP_VERSION; if they differ (or it's missing)
+  // we open the dialog and mark it as seen on close.
+  useEffect(() => {
+    try {
+      const seen = localStorage.getItem(WHATS_NEW_STORAGE_KEY);
+      if (seen !== APP_VERSION) setWhatsNewOpen(true);
+    } catch {
+      // localStorage may be unavailable (e.g. file:// edge cases) — fail open.
+    }
+  }, []);
+
+  const handleWhatsNewClose = (): void => {
+    setWhatsNewOpen(false);
+    try {
+      localStorage.setItem(WHATS_NEW_STORAGE_KEY, APP_VERSION);
+    } catch {
+      // ignore — worst case the dialog reappears on next launch.
+    }
+  };
 
   const activeTabObj = tabs.find((t) => t.id === activeTab) ?? null;
   const activeSSHConn = activeTabObj?.isSSH && activeTabObj.connId
@@ -426,6 +450,9 @@ function AppContent(): React.JSX.Element {
 
       {/* Snippet palette (cmdk dialog) */}
       <SnippetPalette />
+
+      {/* What's New — gated by APP_VERSION via localStorage */}
+      <WhatsNewDialog open={whatsNewOpen} onClose={handleWhatsNewClose} />
 
       {/* Prod guardrail confirmation */}
       <Dialog
