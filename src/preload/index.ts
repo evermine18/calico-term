@@ -240,6 +240,10 @@ const api = {
       return () => ipcRenderer.removeListener("ssh-disconnected", wrapped);
     },
   },
+  agents: {
+    detect: (commands: string[]): Promise<Record<string, boolean>> =>
+      ipcRenderer.invoke("agents-detect", commands),
+  },
   windowControls: {
     minimize: () => ipcRenderer.send("win-minimize"),
     maximize: () => ipcRenderer.send("win-maximize"),
@@ -268,6 +272,7 @@ const api = {
         title: string;
         isSSH: boolean;
         connId?: string;
+        agentId?: string;
       }) => void,
     ): (() => void) => {
       const wrapped = (_e: unknown, d: unknown) => cb(d as any);
@@ -312,6 +317,7 @@ interface DetachPayload {
   title: string;
   isSSH: boolean;
   connId?: string;
+  agentId?: string;
   serialized: string;
 }
 

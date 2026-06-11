@@ -1,4 +1,10 @@
 import { Terminal } from "@xterm/xterm";
+import {
+  AgentLauncher,
+  agentRunString,
+  agentBanner,
+} from "@renderer/types/ai-agents";
+import { buildSSHCommand } from "@renderer/types/ssh";
 
 type SSHConnLike = {
   id: string;
@@ -37,6 +43,91 @@ export async function armSSHSession(
   // Re-register tab→conn mapping (alerts, guardrails, ssh-disconnect detection).
   window.api.guardrails.setTabConn(tabId, conn.id);
   window.api.alerts.setTabConn(tabId, conn.id);
+}
+
+/**
+ * Build the `<arg>` in `ssh … <arg>` that runs an agent (optionally inside
+ * `folder`) on the remote host.
+ *
+ * Two problems this solves:
+ *  1. `ssh host cmd` runs a NON-login, NON-interactive shell, which does not
+ *     source ~/.bash_profile / ~/.bashrc / ~/.zshrc — exactly where nvm,
+ *     npm-global and ~/.local/bin put things like `claude` on PATH. So we run
+ *     the agent through `exec "$SHELL" -ilc "<agent>"`: a login + interactive
+ *     shell that reproduces an interactive SSH session's environment. (`$SHELL`
+ *     expands remotely to the user's actual shell — bash, zsh, …)
+ *  2. The whole command is wrapped in single quotes as ONE argument so the
+ *     LOCAL shell never parses it — critical on Windows, whose PowerShell has
+ *     no `&&` operator and would choke on `cd … && claude`. Single quotes are
+ *     literal in PowerShell, bash and zsh alike.
+ *
+ * A leading `~` in `folder` is rewritten to `$HOME` because the remote shell
+ * does not expand `~` inside the double quotes that protect paths with spaces.
+ */
+function buildRemoteAgentCommand(run: string, folder: string | null): string {
+  const agent = run.replace(/(["\\$`])/g, "\\$1");
+  const login = `exec "$SHELL" -ilc "${agent}"`;
+  let remote = login;
+  if (folder) {
+    const path = /^~(\/|$)/.test(folder) ? "$HOME" + folder.slice(1) : folder;
+    const escapedPath = path.replace(/(["\\])/g, "\\$1");
+    remote = `cd "${escapedPath}" && ${login}`;
+  }
+  return `'${remote.replace(/'/g, `'\\''`)}'`;
+}
+
+/**
+ * Open a new tab that launches an external CLI agent (Claude Code, Codex, …)
+ * in a chosen working directory. When `conn` is provided the agent runs on that
+ * SSH host under a forced TTY (reusing the same password-injection / disconnect
+ * plumbing as a plain SSH tab); otherwise it runs in a local shell. Mirrors the
+ * SSH `onConnect` flow.
+ *
+ * `folder` is a local path (sets the PTY cwd) for local runs, or a remote path
+ * (prepended as `cd "<path>" && …`) for SSH runs. Empty means "default dir".
+ */
+export async function launchAgentTab(
+  agent: AgentLauncher,
+  conn: SSHConnectionEntry | null,
+  jumpChain: SSHConnectionEntry[],
+  folder: string | null,
+  setTabs: React.Dispatch<React.SetStateAction<any[]>>,
+  setActiveTab: (id: string) => void,
+): Promise<void> {
+  const id = crypto.randomUUID();
+  const run = agentRunString(agent);
+  const banner = agentBanner(agent);
+  const newTab = conn
+    ? {
+        id,
+        title: `${agent.name} · ${conn.name}`,
+        mode: "normal" as const,
+        terminal: new Terminal(),
+        initialCommand: buildSSHCommand(conn, jumpChain, {
+          forceTty: true,
+          remoteCommand: buildRemoteAgentCommand(run, folder),
+        }),
+        badge: conn.tags?.[0] ?? null,
+        isSSH: true,
+        connId: conn.id,
+        agentBanner: banner,
+        agentId: agent.id,
+      }
+    : {
+        id,
+        title: agent.name,
+        mode: "normal" as const,
+        terminal: new Terminal(),
+        initialCommand: run,
+        cwd: folder ?? undefined,
+        agentBanner: banner,
+        agentId: agent.id,
+      };
+
+  // Arm password-injection + alert/guardrail scoping BEFORE the terminal mounts.
+  if (conn) await armSSHSession(id, conn);
+  setTabs((prev) => [...prev, newTab]);
+  setActiveTab(id);
 }
 
 export function updateTabTitle(
@@ -90,6 +181,7 @@ export function detachTab(
     title: tab.title,
     isSSH: !!tab.isSSH,
     connId: tab.connId,
+    agentId: tab.agentId,
     serialized,
   });
 

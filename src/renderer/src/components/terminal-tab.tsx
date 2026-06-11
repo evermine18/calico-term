@@ -29,6 +29,10 @@ interface TerminalPanelProps {
   // Scrollback (xterm-serialized) to paint before attaching, used when a tab
   // is re-mounted in a detached window so its history carries over.
   initialSerialized?: string;
+  // Per-tab working directory for the PTY (overrides the global default cwd).
+  cwd?: string;
+  // ANSI "logo" written to the terminal at launch (agent tabs).
+  agentBanner?: string;
 }
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({
@@ -39,6 +43,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   onActivity,
   envScopes,
   initialSerialized,
+  cwd,
+  agentBanner,
 }) => {
   const { setActive, register } = useTerminalContext();
   const {
@@ -268,13 +274,17 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     if (initialSerialized) {
       terminal.write(initialSerialized);
     }
+    // Paint the agent "logo" before any PTY output so it sits at the top.
+    if (agentBanner) {
+      terminal.write(agentBanner);
+    }
     document.fonts.ready.then(safeFit);
     terminal.focus();
 
     // Create PTY instance
     window.electron.ipcRenderer.send("terminal-create", tabId, {
       shell: defaultShell || undefined,
-      cwd: defaultCwd || undefined,
+      cwd: cwd || defaultCwd || undefined,
       envScopes: envScopes && envScopes.length ? envScopes : undefined,
     });
 

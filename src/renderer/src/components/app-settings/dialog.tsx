@@ -143,7 +143,15 @@ function formatShortcut(s: ShortcutDef): string {
   return parts.join("+");
 }
 
-export default function SettingsDialog({ children }) {
+export default function SettingsDialog({
+  children,
+  open: openProp,
+  onOpenChange,
+}: {
+  children?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   const {
     theme,
     setTheme,
@@ -217,7 +225,9 @@ export default function SettingsDialog({ children }) {
   );
   const captureRef = useRef<HTMLButtonElement | null>(null);
   const [localTheme, setLocalTheme] = useState<ThemeId>(theme);
-  const [open, setOpen] = useState(false);
+  const [openState, setOpenState] = useState(false);
+  const open = openProp !== undefined ? openProp : openState;
+  const setOpen = onOpenChange ?? setOpenState;
   const [showApiKey, setShowApiKey] = useState(false);
   const [apiStatus, setApiStatus] = useState<
     "idle" | "loading" | "success" | "error"
@@ -467,7 +477,7 @@ export default function SettingsDialog({ children }) {
   return (
     <>
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger>{children}</DialogTrigger>
+        {children && <DialogTrigger>{children}</DialogTrigger>}
         <DialogContent className="w-[calc(100vw-3rem)] max-w-[1400px] sm:max-w-[1200px] h-[calc(100vh-3rem)] max-h-[900px] overflow-hidden bg-slate-900 border-slate-700/40 shadow-xl flex flex-col">
           <DialogHeader className="border-b border-slate-700/40 pb-4 shrink-0">
             <DialogTitle className="text-gray-100 flex items-center gap-2">

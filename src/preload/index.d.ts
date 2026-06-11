@@ -99,6 +99,7 @@ declare global {
     title: string;
     isSSH: boolean;
     connId?: string;
+    agentId?: string;
     serialized: string;
   }
 
@@ -354,6 +355,9 @@ declare global {
       ssh: {
         onDisconnected: (cb: (tabId: string) => void) => () => void;
       };
+      agents: {
+        detect: (commands: string[]) => Promise<Record<string, boolean>>;
+      };
       windowControls: {
         minimize: () => void;
         maximize: () => void;
@@ -371,6 +375,7 @@ declare global {
             title: string;
             isSSH: boolean;
             connId?: string;
+            agentId?: string;
           }) => void,
         ) => () => void;
       };

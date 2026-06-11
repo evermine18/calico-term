@@ -2,10 +2,27 @@ import { TerminalTab } from "@renderer/types/terminal";
 import { Terminal } from "@xterm/xterm";
 
 import TabsList from "./tabs-list";
-import { Bot, Cog, Plus, Clock, House, FolderOpen, Circle } from "lucide-react";
+import {
+  Bot,
+  Cog,
+  Plus,
+  Clock,
+  House,
+  FolderOpen,
+  Circle,
+  Sparkles,
+  ChevronDown,
+  MoreHorizontal,
+} from "lucide-react";
 import { useAppContext } from "@renderer/contexts/app-context";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@renderer/components/ui/popover";
 import SettingsDialog from "../app-settings/dialog";
-import { useEffect, useState } from "react";
+import AgentLaunchDialog from "../ai/agent-launch-dialog";
+import { ReactElement, ReactNode, useEffect, useState } from "react";
 
 export default function TerminalHeader({
   tabs,
@@ -31,6 +48,11 @@ export default function TerminalHeader({
   onDetachTab: (id: string) => void;
 }) {
   const [recording, setRecording] = useState(false);
+  // Tab-bar menus / controlled dialogs (keeps the toolbar uncluttered).
+  const [newMenuOpen, setNewMenuOpen] = useState(false);
+  const [overflowOpen, setOverflowOpen] = useState(false);
+  const [agentOpen, setAgentOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -114,6 +136,7 @@ export default function TerminalHeader({
       />
       {/* Action buttons group */}
       <div className="flex items-center gap-0.5 bg-slate-800/40 border border-slate-700/40 rounded-lg p-0.5 flex-shrink-0">
+        {/* New — split button: the icon opens a local terminal, the caret a menu */}
         <button
           onClick={addTab}
           className="
@@ -126,40 +149,37 @@ export default function TerminalHeader({
         >
           <Plus size={16} />
         </button>
-
-        <button
-          onClick={() => setHistoryDialogOpen(true)}
-          className="
-              flex items-center justify-center w-8 h-8 rounded-md
-              text-gray-500
-              hover:bg-slate-700/60 hover:text-accent-300
-              transition-all duration-150
-            "
-          title="Command History"
-        >
-          <Clock size={16} />
-        </button>
-
-        {activeTab && (
-          <button
-            onClick={toggleRecording}
-            className={`
-              flex items-center justify-center w-8 h-8 rounded-md
-              transition-all duration-150
-              ${
-                recording
-                  ? "bg-red-500/20 text-red-400"
-                  : "text-gray-500 hover:bg-slate-700/60 hover:text-red-400"
-              }
-            `}
-            title={recording ? "Stop recording" : "Record session"}
+        <Popover open={newMenuOpen} onOpenChange={setNewMenuOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className="flex items-center justify-center w-5 h-8 rounded-md text-gray-600 hover:bg-slate-700/60 hover:text-accent-300 transition-all duration-150"
+              title="New…"
+            >
+              <ChevronDown size={13} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="start"
+            className="w-52 p-1 bg-slate-900 border-slate-700 text-gray-200"
           >
-            <Circle
-              size={12}
-              className={recording ? "fill-red-500 animate-pulse" : ""}
+            <MenuItem
+              icon={<Plus size={14} className="text-accent-400/80" />}
+              label="Local terminal"
+              onClick={() => {
+                setNewMenuOpen(false);
+                addTab();
+              }}
             />
-          </button>
-        )}
+            <MenuItem
+              icon={<Sparkles size={14} className="text-accent-400/80" />}
+              label="Launch AI agent…"
+              onClick={() => {
+                setNewMenuOpen(false);
+                setAgentOpen(true);
+              }}
+            />
+          </PopoverContent>
+        </Popover>
 
         {activeTabIsSSH && (
           <button
@@ -194,21 +214,85 @@ export default function TerminalHeader({
 
         <div className="w-px h-5 bg-slate-700/50 mx-0.5" />
 
-        {/* Settings button */}
-        <SettingsDialog>
-          <button
-            className="
-              flex items-center justify-center w-8 h-8 rounded-md
-              text-gray-500
-              hover:bg-slate-700/60 hover:text-gray-300
-              transition-all duration-150
-            "
-            title="Settings"
+        {/* Overflow — secondary actions kept out of the toolbar */}
+        <Popover open={overflowOpen} onOpenChange={setOverflowOpen}>
+          <PopoverTrigger asChild>
+            <button
+              className="flex items-center justify-center w-8 h-8 rounded-md text-gray-500 hover:bg-slate-700/60 hover:text-gray-300 transition-all duration-150"
+              title="More"
+            >
+              <MoreHorizontal size={16} />
+            </button>
+          </PopoverTrigger>
+          <PopoverContent
+            align="end"
+            className="w-52 p-1 bg-slate-900 border-slate-700 text-gray-200"
           >
-            <Cog size={16} />
-          </button>
-        </SettingsDialog>
+            <MenuItem
+              icon={<Clock size={14} className="text-gray-400" />}
+              label="Command history"
+              onClick={() => {
+                setOverflowOpen(false);
+                setHistoryDialogOpen(true);
+              }}
+            />
+            {activeTab && (
+              <MenuItem
+                icon={
+                  <Circle
+                    size={12}
+                    className={
+                      recording ? "fill-red-500 text-red-500" : "text-gray-400"
+                    }
+                  />
+                }
+                label={recording ? "Stop recording" : "Record session"}
+                onClick={() => {
+                  setOverflowOpen(false);
+                  toggleRecording();
+                }}
+              />
+            )}
+            <MenuItem
+              icon={<Cog size={14} className="text-gray-400" />}
+              label="Settings"
+              onClick={() => {
+                setOverflowOpen(false);
+                setSettingsOpen(true);
+              }}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
+
+      {/* Controlled dialogs, opened from the menus above */}
+      <AgentLaunchDialog
+        open={agentOpen}
+        onOpenChange={setAgentOpen}
+        setTabs={setTabs}
+        setActiveTab={setActiveTab}
+      />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
+  );
+}
+
+function MenuItem({
+  icon,
+  label,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+}): ReactElement {
+  return (
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm text-gray-300 hover:bg-slate-800 transition-colors"
+    >
+      {icon}
+      {label}
+    </button>
   );
 }

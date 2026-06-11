@@ -24,6 +24,7 @@ import { setupHostMetricsHandlers } from "./host-metrics";
 import { setupAlertHandlers } from "./alerts";
 import { setupWorkspaceHandlers } from "./workspaces";
 import { setupGuardrailHandlers } from "./guardrails";
+import { setupAgentHandlers } from "./agents";
 
 // --- AI streaming controllers ---
 const streamControllers = new Map<string, AbortController>();
@@ -34,6 +35,7 @@ interface DetachPayload {
   title: string;
   isSSH: boolean;
   connId?: string;
+  agentId?: string;
   serialized: string;
 }
 // windowId -> the tab it hosts. `returning` guards the close handshake so the
@@ -183,6 +185,7 @@ function returnTabToMain(tabId: string, serialized: string): void {
     title: meta?.title ?? "Terminal",
     isSSH: meta?.isSSH ?? false,
     connId: meta?.connId,
+    agentId: meta?.agentId,
   });
 }
 
@@ -404,6 +407,7 @@ app.whenReady().then(() => {
   setupAlertHandlers();
   setupWorkspaceHandlers();
   setupGuardrailHandlers();
+  setupAgentHandlers();
   ipcMain.on("app-close", () => {
     console.log("App close requested");
     app.quit();

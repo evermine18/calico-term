@@ -1,4 +1,5 @@
 import { TerminalSquare, Server, X } from "lucide-react";
+import { AGENT_LAUNCHERS } from "../../types/ai-agents";
 import { TabBadge } from "./tab-badge";
 import { TabEditInput } from "./tab-edit-input";
 import { CustomTag } from "../../types/tabs";
@@ -84,6 +85,9 @@ export function TabItem({
   onClose,
 }: TabItemProps) {
   const accent = useTabAccent(tab.connId);
+  const agent = tab.agentId
+    ? AGENT_LAUNCHERS.find((a) => a.id === tab.agentId)
+    : undefined;
   const accentStyle: React.CSSProperties = {};
   if (accent.borderColor) {
     accentStyle.borderLeftColor = isActive
@@ -145,7 +149,7 @@ export function TabItem({
           />
         )}
 
-        {/* Terminal / SSH Icon */}
+        {/* Agent glyph / SSH / Terminal icon */}
         <div
           className={`flex-shrink-0 transition-colors duration-100 ${
             isActive
@@ -153,7 +157,18 @@ export function TabItem({
               : "text-slate-500 group-hover:text-accent-400/70"
           }`}
         >
-          {tab.isSSH ? (
+          {agent ? (
+            <span
+              className="block text-[14px] leading-none font-semibold"
+              style={{
+                color: `rgb(${agent.color.join(",")})`,
+                opacity: isActive ? 1 : 0.75,
+              }}
+              title={agent.name}
+            >
+              {agent.glyph}
+            </span>
+          ) : tab.isSSH ? (
             <Server size={14} strokeWidth={2} />
           ) : (
             <TerminalSquare size={14} strokeWidth={2} />

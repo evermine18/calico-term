@@ -21,8 +21,14 @@ export type SSHConnection = {
   tags?: string[];
 };
 
-export function buildSSHCommand(conn: SSHConnection, jumps?: SSHConnection[]): string {
+export function buildSSHCommand(
+  conn: SSHConnection,
+  jumps?: SSHConnection[],
+  opts?: { remoteCommand?: string; forceTty?: boolean },
+): string {
   const parts = ["ssh"];
+  // `-t` and other options must precede the destination.
+  if (opts?.forceTty) parts.push("-t");
   if (conn.identityFile) parts.push("-i", conn.identityFile);
   if (conn.port !== 22) parts.push("-p", String(conn.port));
   if (jumps && jumps.length > 0) {
@@ -35,5 +41,7 @@ export function buildSSHCommand(conn: SSHConnection, jumps?: SSHConnection[]): s
     parts.push("-J", chain);
   }
   parts.push(`${conn.username}@${conn.host}`);
+  // A remote command goes AFTER the destination.
+  if (opts?.remoteCommand) parts.push(opts.remoteCommand);
   return parts.join(" ");
 }

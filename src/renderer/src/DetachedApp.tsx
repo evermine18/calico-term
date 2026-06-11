@@ -7,6 +7,7 @@ import {
   useTerminalContext,
 } from "./contexts/terminal-context";
 import { Minus, Square, X, TerminalSquare, Server } from "lucide-react";
+import { AGENT_LAUNCHERS } from "./types/ai-agents";
 
 /**
  * Single-terminal window spawned when a tab is "popped out" of the main app.
@@ -46,13 +47,24 @@ function DetachedContent(): React.JSX.Element {
 
   const title = payload?.title ?? "Terminal";
   const isSSH = !!payload?.isSSH;
+  const agent = payload?.agentId
+    ? AGENT_LAUNCHERS.find((a) => a.id === payload.agentId)
+    : undefined;
 
   return (
     <div className="h-screen flex flex-col bg-slate-950 text-gray-100">
       {/* Minimal title bar */}
       <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/40 px-4 py-1.5 flex items-center gap-2 shadow-xl">
         <div className="drag-region flex flex-1 items-center gap-2 min-w-0">
-          {isSSH ? (
+          {agent ? (
+            <span
+              className="flex-shrink-0 text-[14px] leading-none font-semibold"
+              style={{ color: `rgb(${agent.color.join(",")})` }}
+              title={agent.name}
+            >
+              {agent.glyph}
+            </span>
+          ) : isSSH ? (
             <Server size={14} className="text-accent-400 flex-shrink-0" />
           ) : (
             <TerminalSquare

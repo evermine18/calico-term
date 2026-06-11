@@ -198,6 +198,7 @@ function AppContent(): React.JSX.Element {
           terminal: new Terminal(),
           isSSH: data.isSSH,
           connId: data.connId,
+          agentId: data.agentId,
         };
         return [...prev, newTab];
       });
@@ -450,6 +451,8 @@ function AppContent(): React.JSX.Element {
                 onActivity={() => handleTabActivity(tab.id)}
                 envScopes={tabEnvScopes}
                 initialSerialized={returnedSerialized[tab.id]}
+                cwd={tab.cwd}
+                agentBanner={tab.agentBanner}
               />
             </div>
           );
