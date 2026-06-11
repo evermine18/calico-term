@@ -1,6 +1,14 @@
-import { createPortal } from 'react-dom';
-import { Edit2, Copy, X, XCircle, Tag, ChevronRight } from 'lucide-react';
-import { ContextMenuState } from '../../types/tabs';
+import { createPortal } from "react-dom";
+import {
+  Edit2,
+  Copy,
+  ExternalLink,
+  X,
+  XCircle,
+  Tag,
+  ChevronRight,
+} from "lucide-react";
+import { ContextMenuState } from "../../types/tabs";
 
 interface TabContextMenuProps {
   contextMenu: ContextMenuState;
@@ -9,6 +17,7 @@ interface TabContextMenuProps {
   canCloseToRight: boolean;
   onRename: () => void;
   onDuplicate: () => void;
+  onDetach: () => void;
   onClose: () => void;
   onCloseOthers: () => void;
   onCloseToRight: () => void;
@@ -23,11 +32,12 @@ export function TabContextMenu({
   canCloseToRight,
   onRename,
   onDuplicate,
+  onDetach,
   onClose,
   onCloseOthers,
   onCloseToRight,
   onTagsHover,
-  onTagsLeave
+  onTagsLeave,
 }: TabContextMenuProps) {
   return createPortal(
     <div
@@ -35,7 +45,7 @@ export function TabContextMenu({
       style={{
         left: contextMenu.x,
         top: contextMenu.y,
-        zIndex: 9999999
+        zIndex: 9999999,
       }}
       onContextMenu={(e) => e.preventDefault()}
       onClick={(e) => e.stopPropagation()}
@@ -61,6 +71,16 @@ export function TabContextMenu({
         <Copy size={14} />
         <span>Duplicate</span>
         <span className="ml-auto text-xs text-gray-500">Ctrl+Shift+D</span>
+      </button>
+      <button
+        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-accent-300 flex items-center gap-2 transition-colors"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDetach();
+        }}
+      >
+        <ExternalLink size={14} />
+        <span>Open in New Window</span>
       </button>
 
       <div className="h-px bg-slate-700/50 my-1.5"></div>
@@ -113,6 +133,6 @@ export function TabContextMenu({
         <span>Close to the Right</span>
       </button>
     </div>,
-    document.body
+    document.body,
   );
 }

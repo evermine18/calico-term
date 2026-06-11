@@ -1,16 +1,24 @@
-import { useState } from 'react';
-import { TabItem } from './tab-item';
-import { TabContextMenu } from './tab-context-menu';
-import { TagsSubmenu } from './tags-submenu';
-import { useTabNavigation } from '../../hooks/useTabNavigation';
-import { useTags } from '../../hooks/useTags';
-import { useContextMenu } from '../../hooks/useContextMenu';
-import { TabsSubmenuState } from '../../types/tabs';
-import * as tabOps from '../../lib/tab-operations';
+import { useState, useRef } from "react";
+import { TabItem } from "./tab-item";
+import { TabContextMenu } from "./tab-context-menu";
+import { TagsSubmenu } from "./tags-submenu";
+import { useTabNavigation } from "../../hooks/useTabNavigation";
+import { useTags } from "../../hooks/useTags";
+import { useContextMenu } from "../../hooks/useContextMenu";
+import { TabsSubmenuState } from "../../types/tabs";
+import * as tabOps from "../../lib/tab-operations";
 
-export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
+export default function TabsList({
+  tabs,
+  setTabs,
+  activeTab,
+  setActiveTab,
+  onDetachTab,
+}) {
   const [draggedTab, setDraggedTab] = useState<string | null>(null);
   const [tagsSubmenu, setTagsSubmenu] = useState<TabsSubmenuState | null>(null);
+  // Whether the in-progress drag ended on another tab (reorder) vs. outside.
+  const droppedOnTabRef = useRef(false);
 
   const customTags = useTags();
   const { contextMenu, setContextMenu } = useContextMenu();
@@ -47,23 +55,26 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
     setActiveTab,
     setTabs,
     closeTab: handleCloseTab,
-    duplicateTab: handleDuplicateTab
+    duplicateTab: handleDuplicateTab,
   });
 
   // Drag and drop handlers
   const handleDragStart = (e: React.DragEvent, tabId: string) => {
+    droppedOnTabRef.current = false;
     setDraggedTab(tabId);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', tabId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", tabId);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+    e.dataTransfer.dropEffect = "move";
   };
 
   const handleDrop = (e: React.DragEvent, targetTabId: string) => {
     e.preventDefault();
+    // A drop landing on any tab is an in-bar reorder, never a pop-out.
+    droppedOnTabRef.current = true;
     if (!draggedTab || draggedTab === targetTabId) return;
 
     const draggedIndex = tabs.findIndex((t) => t.id === draggedTab);
@@ -77,8 +88,20 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
     setDraggedTab(null);
   };
 
-  const handleDragEnd = () => {
+  // If a tab is released outside the window (not dropped on another tab),
+  // pop it out into its own window.
+  const handleDragEnd = (e: React.DragEvent) => {
+    const dropped = droppedOnTabRef.current;
+    const id = draggedTab;
+    droppedOnTabRef.current = false;
     setDraggedTab(null);
+    if (dropped || !id) return;
+    const outside =
+      e.clientX <= 0 ||
+      e.clientY <= 0 ||
+      e.clientX >= window.innerWidth ||
+      e.clientY >= window.innerHeight;
+    if (outside) onDetachTab(id);
   };
 
   // Context menu handlers
@@ -94,13 +117,13 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
     setTagsSubmenu({
       x: rect.right + 5,
       y: rect.top,
-      tabId: contextMenu.tabId
+      tabId: contextMenu.tabId,
     });
   };
 
   const handleTagsLeave = (e: React.MouseEvent<HTMLButtonElement>) => {
     const relatedTarget = e.relatedTarget as HTMLElement;
-    if (!relatedTarget?.closest('.tags-submenu')) {
+    if (!relatedTarget?.closest(".tags-submenu")) {
       setTagsSubmenu(null);
     }
   };
@@ -119,7 +142,7 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
             onSelect={() => setActiveTab(tab.id)}
             onDoubleClick={() => {
               setTabs((prev) =>
-                prev.map((t) => (t.id === tab.id ? { ...t, mode: 'edit' } : t))
+                prev.map((t) => (t.id === tab.id ? { ...t, mode: "edit" } : t)),
               );
             }}
             onMiddleClick={() => {
@@ -133,7 +156,9 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
             onTitleChange={handleUpdateTabTitle}
             onFinishEdit={() => {
               setTabs((prev) =>
-                prev.map((t) => (t.id === tab.id ? { ...t, mode: 'normal' } : t))
+                prev.map((t) =>
+                  t.id === tab.id ? { ...t, mode: "normal" } : t,
+                ),
               );
             }}
             onClose={() => handleCloseTab(tab.id)}
@@ -153,13 +178,17 @@ export default function TabsList({ tabs, setTabs, activeTab, setActiveTab }) {
           onRename={() => {
             setTabs((prev) =>
               prev.map((t) =>
-                t.id === contextMenu.tabId ? { ...t, mode: 'edit' } : t
-              )
+                t.id === contextMenu.tabId ? { ...t, mode: "edit" } : t,
+              ),
             );
             setContextMenu(null);
           }}
           onDuplicate={() => {
             handleDuplicateTab(contextMenu.tabId);
+            setContextMenu(null);
+          }}
+          onDetach={() => {
+            onDetachTab(contextMenu.tabId);
             setContextMenu(null);
           }}
           onClose={() => {

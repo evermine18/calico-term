@@ -94,6 +94,14 @@ declare global {
     enabled: boolean;
   }
 
+  interface DetachPayload {
+    tabId: string;
+    title: string;
+    isSSH: boolean;
+    connId?: string;
+    serialized: string;
+  }
+
   interface Window {
     electron: ElectronAPI;
     platform: {
@@ -214,9 +222,7 @@ declare global {
       };
       envVault: {
         listScopes: () => Promise<string[]>;
-        list: (
-          scopeId: string,
-        ) => Promise<{ key: string; value: string }[]>;
+        list: (scopeId: string) => Promise<{ key: string; value: string }[]>;
         listKeys: (scopeId: string) => Promise<string[]>;
         set: (scopeId: string, key: string, value: string) => Promise<void>;
         delete: (scopeId: string, key: string) => Promise<void>;
@@ -352,6 +358,21 @@ declare global {
         minimize: () => void;
         maximize: () => void;
         close: () => void;
+      };
+      detach: {
+        open: (payload: DetachPayload) => void;
+        getPayload: () => Promise<DetachPayload | null>;
+        onSerializeRequest: (cb: () => void) => () => void;
+        sendSerialized: (serialized: string) => void;
+        onReturned: (
+          cb: (data: {
+            tabId: string;
+            serialized: string;
+            title: string;
+            isSSH: boolean;
+            connId?: string;
+          }) => void,
+        ) => () => void;
       };
     };
   }

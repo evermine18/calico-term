@@ -40,9 +40,13 @@ const api = {
     writeText: (sessionId: string, remotePath: string, content: string) =>
       ipcRenderer.invoke("sftp-write-text", sessionId, remotePath, content),
     tailStart: (sessionId: string, remotePath: string, lines?: number) =>
-      ipcRenderer.invoke("sftp-tail-start", sessionId, remotePath, lines ?? 200),
-    tailStop: (tailId: string) =>
-      ipcRenderer.send("sftp-tail-stop", tailId),
+      ipcRenderer.invoke(
+        "sftp-tail-start",
+        sessionId,
+        remotePath,
+        lines ?? 200,
+      ),
+    tailStop: (tailId: string) => ipcRenderer.send("sftp-tail-stop", tailId),
     onTailData: (
       cb: (data: { tailId: string; data: string; isErr: boolean }) => void,
     ): (() => void) => {
@@ -60,7 +64,14 @@ const api = {
       remoteDir: string,
       localDir: string,
       direction: "download" | "upload",
-    ) => ipcRenderer.invoke("sftp-sync-dir", sessionId, remoteDir, localDir, direction),
+    ) =>
+      ipcRenderer.invoke(
+        "sftp-sync-dir",
+        sessionId,
+        remoteDir,
+        localDir,
+        direction,
+      ),
     onSyncProgress: (
       cb: (data: {
         sessionId: string;
@@ -130,12 +141,12 @@ const api = {
     start: (tabId: string, title: string, cols: number, rows: number) =>
       ipcRenderer.invoke("recording-start", tabId, title, cols, rows),
     stop: (tabId: string) => ipcRenderer.invoke("recording-stop", tabId),
-    isActive: (tabId: string) => ipcRenderer.invoke("recording-is-active", tabId),
+    isActive: (tabId: string) =>
+      ipcRenderer.invoke("recording-is-active", tabId),
     list: () => ipcRenderer.invoke("recording-list"),
     load: (id: string) => ipcRenderer.invoke("recording-load", id),
     delete: (id: string) => ipcRenderer.invoke("recording-delete", id),
-    exportPath: (id: string) =>
-      ipcRenderer.invoke("recording-export-path", id),
+    exportPath: (id: string) => ipcRenderer.invoke("recording-export-path", id),
   },
   audit: {
     append: (entry: AuditEntry) => ipcRenderer.send("audit-append", entry),
@@ -234,6 +245,36 @@ const api = {
     maximize: () => ipcRenderer.send("win-maximize"),
     close: () => ipcRenderer.send("win-close"),
   },
+  detach: {
+    // Pop a tab out into its own window. The PTY keeps running in main.
+    open: (payload: DetachPayload) => ipcRenderer.send("detach-tab", payload),
+    // Detached window fetches its hosted tab's metadata + scrollback on mount.
+    getPayload: (): Promise<DetachPayload | null> =>
+      ipcRenderer.invoke("detach-get-payload"),
+    // Main asks the detached renderer to serialize before the window closes.
+    onSerializeRequest: (cb: () => void): (() => void) => {
+      const wrapped = () => cb();
+      ipcRenderer.on("detach-serialize-request", wrapped);
+      return () =>
+        ipcRenderer.removeListener("detach-serialize-request", wrapped);
+    },
+    sendSerialized: (serialized: string) =>
+      ipcRenderer.send("detach-serialize-response", serialized),
+    // Main window is notified when a detached tab should be re-adopted.
+    onReturned: (
+      cb: (data: {
+        tabId: string;
+        serialized: string;
+        title: string;
+        isSSH: boolean;
+        connId?: string;
+      }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("detach-returned", wrapped);
+      return () => ipcRenderer.removeListener("detach-returned", wrapped);
+    },
+  },
   updater: {
     check: () => ipcRenderer.invoke("updater:check"),
     download: () => ipcRenderer.invoke("updater:download"),
@@ -264,6 +305,14 @@ interface UpdateInfo {
   version: string;
   releaseDate?: string;
   releaseName?: string;
+}
+
+interface DetachPayload {
+  tabId: string;
+  title: string;
+  isSSH: boolean;
+  connId?: string;
+  serialized: string;
 }
 
 interface AuditEntry {

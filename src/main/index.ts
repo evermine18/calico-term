@@ -28,6 +28,25 @@ import { setupGuardrailHandlers } from "./guardrails";
 // --- AI streaming controllers ---
 const streamControllers = new Map<string, AbortController>();
 
+// --- Detached (popped-out) terminal windows ---
+interface DetachPayload {
+  tabId: string;
+  title: string;
+  isSSH: boolean;
+  connId?: string;
+  serialized: string;
+}
+// windowId -> the tab it hosts. `returning` guards the close handshake so the
+// second close() (after the renderer hands back its scrollback) is allowed.
+const detachedWindows = new Map<
+  number,
+  { tabId: string; returning?: boolean }
+>();
+// tabId -> the payload the detached renderer fetches on mount via handshake.
+const detachPayloads = new Map<string, DetachPayload>();
+// Set during app shutdown so detached close handlers skip the return dance.
+let isQuitting = false;
+
 function createContextMenu(): Menu {
   const contextMenu = Menu.buildFromTemplate([
     {
@@ -56,11 +75,12 @@ function createContextMenu(): Menu {
   return contextMenu;
 }
 
-function createWindow(): void {
-  // Create the browser window.
-  const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+// Shared BrowserWindow constructor options (preload, sandbox, titlebar chrome).
+// `extra` provides per-window sizing; it must not override webPreferences.
+function buildWindowOptions(
+  extra?: Electron.BrowserWindowConstructorOptions,
+): Electron.BrowserWindowConstructorOptions {
+  return {
     show: false,
     autoHideMenuBar: true,
     titleBarStyle: "hidden",
@@ -74,50 +94,131 @@ function createWindow(): void {
           },
         }
       : {}),
+    ...extra,
     webPreferences: {
       preload: join(__dirname, "../preload/index.js"),
       sandbox: false,
       disableBlinkFeatures: "Auxclick",
     },
-  });
+  };
+}
 
-  if (!is.dev) {
-    Menu.setApplicationMenu(null); //! Caution
-  }
+// Wire the chrome/event handlers shared by every window (context menu,
+// deferred show, crash logging, external-link handling).
+function wireWindowChrome(win: BrowserWindow): void {
   const contextMenu = createContextMenu();
 
-  mainWindow.webContents.on("context-menu", (_event, params) => {
-    contextMenu.popup({ window: mainWindow, x: params.x, y: params.y });
+  win.webContents.on("context-menu", (_event, params) => {
+    contextMenu.popup({ window: win, x: params.x, y: params.y });
   });
 
-  mainWindow.once("ready-to-show", () => {
-    mainWindow.show();
+  win.once("ready-to-show", () => {
+    win.show();
   });
 
   // Fallback: titleBarOverlay on Windows can prevent ready-to-show from firing.
   // If the window is still hidden after load completes, force show it.
-  mainWindow.webContents.once("did-finish-load", () => {
+  win.webContents.once("did-finish-load", () => {
     setTimeout(() => {
-      if (!mainWindow.isVisible()) mainWindow.show();
+      if (!win.isDestroyed() && !win.isVisible()) win.show();
     }, 300);
   });
 
-  mainWindow.webContents.on("render-process-gone", (_event, details) => {
+  win.webContents.on("render-process-gone", (_event, details) => {
     console.error("Renderer process gone:", details.reason, details.exitCode);
   });
 
-  mainWindow.webContents.setWindowOpenHandler((details) => {
+  win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url);
     return { action: "deny" };
   });
+}
 
-  // HMR for renderer base on electron-vite cli.
-  // Load the remote URL for development or the local html file for production.
+// HMR for renderer base on electron-vite cli.
+// Load the remote URL for development or the local html file for production.
+// `query` selects the renderer view (e.g. the detached single-terminal route).
+function loadRenderer(
+  win: BrowserWindow,
+  query?: Record<string, string>,
+): void {
   if (is.dev && process.env["ELECTRON_RENDERER_URL"]) {
-    mainWindow.loadURL(process.env["ELECTRON_RENDERER_URL"]);
+    const base = process.env["ELECTRON_RENDERER_URL"];
+    const suffix = query ? "/?" + new URLSearchParams(query).toString() : "";
+    win.loadURL(base + suffix);
   } else {
-    mainWindow.loadFile(join(__dirname, "../renderer/index.html"));
+    win.loadFile(
+      join(__dirname, "../renderer/index.html"),
+      query ? { query } : undefined,
+    );
   }
+}
+
+function createWindow(): void {
+  const mainWindow = new BrowserWindow(
+    buildWindowOptions({ width: 900, height: 670 }),
+  );
+
+  if (!is.dev) {
+    Menu.setApplicationMenu(null); //! Caution
+  }
+
+  wireWindowChrome(mainWindow);
+  loadRenderer(mainWindow);
+}
+
+// Find the main (non-detached) window to hand a returning tab back to.
+function findMainWindow(): BrowserWindow | undefined {
+  return BrowserWindow.getAllWindows().find(
+    (w) => !w.isDestroyed() && !detachedWindows.has(w.id),
+  );
+}
+
+// Re-adopt a popped-out tab into the main window with its accumulated
+// scrollback. The PTY was never killed, so the shell resumes seamlessly.
+function returnTabToMain(tabId: string, serialized: string): void {
+  const meta = detachPayloads.get(tabId);
+  findMainWindow()?.webContents.send("detach-returned", {
+    tabId,
+    serialized,
+    title: meta?.title ?? "Terminal",
+    isSSH: meta?.isSSH ?? false,
+    connId: meta?.connId,
+  });
+}
+
+// Open a popped-out window hosting a single live terminal (its PTY already
+// runs in main, keyed by tabId; the detached renderer only attaches to it).
+function createDetachedWindow(payload: DetachPayload): void {
+  const win = new BrowserWindow(
+    buildWindowOptions({ width: 760, height: 480 }),
+  );
+
+  detachedWindows.set(win.id, { tabId: payload.tabId });
+  detachPayloads.set(payload.tabId, payload);
+
+  wireWindowChrome(win);
+
+  // Closing a detached window must NOT kill the PTY. Intercept the first close,
+  // ask the renderer for its current scrollback, return the tab to the main
+  // window, then let the window actually close. Skipped during app shutdown.
+  win.on("close", (e) => {
+    const entry = detachedWindows.get(win.id);
+    if (!entry || entry.returning || isQuitting) return;
+    e.preventDefault();
+    entry.returning = true;
+    win.webContents.send("detach-serialize-request");
+    // Fallback: if the renderer never replies, force the close through.
+    setTimeout(() => {
+      if (!win.isDestroyed()) win.close();
+    }, 500);
+  });
+
+  win.on("closed", () => {
+    detachedWindows.delete(win.id);
+    detachPayloads.delete(payload.tabId);
+  });
+
+  loadRenderer(win, { view: "detached", tabId: payload.tabId });
 }
 
 // This method will be called when Electron has finished
@@ -229,9 +330,7 @@ app.whenReady().then(() => {
     const raw = String(input ?? "");
     if (!raw) throw new Error("Empty path");
     const expanded =
-      raw.startsWith("~/") || raw === "~"
-        ? join(homedir(), raw.slice(1))
-        : raw;
+      raw.startsWith("~/") || raw === "~" ? join(homedir(), raw.slice(1)) : raw;
     return isAbsolute(expanded) ? expanded : resolvePath(homedir(), expanded);
   }
 
@@ -309,18 +408,45 @@ app.whenReady().then(() => {
     console.log("App close requested");
     app.quit();
   });
-  ipcMain.on("win-minimize", () => {
-    BrowserWindow.getAllWindows()[0]?.minimize();
+  // Window controls are scoped to the window that sent them so detached
+  // windows control themselves (and never quit the whole app).
+  ipcMain.on("win-minimize", (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize();
   });
-  ipcMain.on("win-maximize", () => {
-    const win = BrowserWindow.getAllWindows()[0];
-    if (win?.isMaximized()) win.unmaximize();
-    else win?.maximize();
+  ipcMain.on("win-maximize", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return;
+    if (win.isMaximized()) win.unmaximize();
+    else win.maximize();
   });
-  ipcMain.on("win-close", () => {
-    app.quit();
+  ipcMain.on("win-close", (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close();
   });
+
+  // --- Detached terminal windows (pop-out) ---
+  ipcMain.on("detach-tab", (_event, payload: DetachPayload) => {
+    createDetachedWindow(payload);
+  });
+  ipcMain.handle("detach-get-payload", (event) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return null;
+    const entry = detachedWindows.get(win.id);
+    if (!entry) return null;
+    return detachPayloads.get(entry.tabId) ?? null;
+  });
+  // Reply to the close handshake: hand the tab (with up-to-date scrollback)
+  // back to the main window, then let the detached window finish closing.
+  ipcMain.on("detach-serialize-response", (event, serialized: string) => {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    if (!win) return;
+    const entry = detachedWindows.get(win.id);
+    if (!entry) return;
+    returnTabToMain(entry.tabId, serialized ?? "");
+    if (!win.isDestroyed()) win.close();
+  });
+
   app.once("before-quit", async (event) => {
+    isQuitting = true;
     event.preventDefault();
     BrowserWindow.getAllWindows().forEach((w) => w.hide());
     await closeTerminal();

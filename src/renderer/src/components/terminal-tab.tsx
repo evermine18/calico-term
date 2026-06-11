@@ -4,6 +4,7 @@ import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
+import { SerializeAddon } from "@xterm/addon-serialize";
 import { useTerminalContext } from "@renderer/contexts/terminal-context";
 import useCopyNotification from "@renderer/hooks/useCopyNotification";
 import CopyNotification from "./terminal/copy-notification";
@@ -25,6 +26,9 @@ interface TerminalPanelProps {
   initialCommand?: string;
   onActivity?: () => void;
   envScopes?: string[];
+  // Scrollback (xterm-serialized) to paint before attaching, used when a tab
+  // is re-mounted in a detached window so its history carries over.
+  initialSerialized?: string;
 }
 
 export const TerminalPanel: React.FC<TerminalPanelProps> = ({
@@ -34,8 +38,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   initialCommand,
   onActivity,
   envScopes,
+  initialSerialized,
 }) => {
-  const { setActive } = useTerminalContext();
+  const { setActive, register } = useTerminalContext();
   const {
     addCommandToHistory,
     terminalFontFamily,
@@ -51,6 +56,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
+  const serializeAddonRef = useRef<SerializeAddon | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const isInitializedRef = useRef(false);
   const activeRef = useRef(active);
@@ -92,6 +98,9 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         out += (b.getLine(y)?.translateToString(true) ?? "") + "\n";
       }
       return out;
+    },
+    serialize() {
+      return serializeAddonRef.current?.serialize() ?? "";
     },
   };
 
@@ -186,9 +195,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
     const fitAddon = new FitAddon();
     const unicode11Addon = new Unicode11Addon();
+    const serializeAddon = new SerializeAddon();
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(new WebLinksAddon());
     terminal.loadAddon(unicode11Addon);
+    terminal.loadAddon(serializeAddon);
     terminal.unicode.activeVersion = "11";
 
     if (isMacPlatform()) {
@@ -252,6 +263,11 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     window.electron.ipcRenderer.on("terminal-output", handleOutput);
 
     terminal.open(containerRef.current);
+    // Repaint inherited scrollback before attaching so a popped-out window
+    // shows the prior history above the live PTY output.
+    if (initialSerialized) {
+      terminal.write(initialSerialized);
+    }
     document.fonts.ready.then(safeFit);
     terminal.focus();
 
@@ -275,9 +291,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
+    serializeAddonRef.current = serializeAddon;
+    // Make this tab serializable from anywhere (e.g. pop-out of a background tab).
+    register(tabId, api);
 
     return () => {
       setActive(null);
+      register(tabId, null);
       resizeObserverRef.current?.disconnect();
       window.electron.ipcRenderer.removeListener(
         "terminal-output",
@@ -286,6 +306,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       terminal.dispose();
       terminalRef.current = null;
       fitAddonRef.current = null;
+      serializeAddonRef.current = null;
       isInitializedRef.current = false;
     };
   }, [tabId]);

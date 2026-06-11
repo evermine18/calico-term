@@ -69,6 +69,40 @@ export function closeTab(
   }
 }
 
+/**
+ * Pop a tab out into its own window. Unlike closeTab this MUST NOT kill the
+ * PTY — the shell keeps running in main and the detached window re-attaches to
+ * it. `serialized` carries the current scrollback so history follows the tab.
+ */
+export function detachTab(
+  tabId: string,
+  tabs: any[],
+  activeTab: string | null,
+  setTabs: React.Dispatch<React.SetStateAction<any[]>>,
+  setActiveTab: (id: string) => void,
+  serialized: string,
+) {
+  const tab = tabs.find((t) => t.id === tabId);
+  if (!tab) return;
+
+  window.api.detach.open({
+    tabId,
+    title: tab.title,
+    isSSH: !!tab.isSSH,
+    connId: tab.connId,
+    serialized,
+  });
+
+  const currentIndex = tabs.findIndex((t) => t.id === tabId);
+  const nextActiveIndex = currentIndex > 0 ? currentIndex - 1 : 1;
+
+  setTabs((prev) => prev.filter((t) => t.id !== tabId));
+
+  if (activeTab === tabId && tabs.length > 1) {
+    setActiveTab(tabs[nextActiveIndex]?.id ?? tabs[0]?.id);
+  }
+}
+
 export function closeOtherTabs(
   id: string,
   tabs: any[],

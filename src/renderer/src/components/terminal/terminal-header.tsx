@@ -17,6 +17,7 @@ export default function TerminalHeader({
   sftpOpen,
   setSftpOpen,
   activeTabIsSSH,
+  onDetachTab,
 }: {
   tabs: TerminalTab[];
   setTabs: React.Dispatch<React.SetStateAction<TerminalTab[]>>;
@@ -27,6 +28,7 @@ export default function TerminalHeader({
   sftpOpen: boolean;
   setSftpOpen: (v: boolean) => void;
   activeTabIsSSH: boolean;
+  onDetachTab: (id: string) => void;
 }) {
   const [recording, setRecording] = useState(false);
 
@@ -88,9 +90,10 @@ export default function TerminalHeader({
           className={`
             flex items-center justify-center w-9 h-8 rounded-lg
             border transition-all duration-150 shadow-sm
-            ${isHomeActive
-              ? "bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-accent-300 border-l-[3px] border-l-cyan-400 border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-accent-500/20"
-              : "bg-slate-900/60 text-gray-400 border-l-[3px] border-l-slate-700/50 border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-accent-100 hover:border-l-cyan-400/50"
+            ${
+              isHomeActive
+                ? "bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-accent-300 border-l-[3px] border-l-cyan-400 border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-accent-500/20"
+                : "bg-slate-900/60 text-gray-400 border-l-[3px] border-l-slate-700/50 border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-accent-100 hover:border-l-cyan-400/50"
             }
             ${tabs.length === 0 ? "cursor-default" : "cursor-pointer"}
           `}
@@ -99,9 +102,7 @@ export default function TerminalHeader({
           <House size={15} />
         </button>
 
-        {tabs.length > 0 && (
-          <div className="w-px h-5 bg-slate-700/60" />
-        )}
+        {tabs.length > 0 && <div className="w-px h-5 bg-slate-700/60" />}
       </div>
 
       <TabsList
@@ -109,6 +110,7 @@ export default function TerminalHeader({
         setTabs={setTabs}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onDetachTab={onDetachTab}
       />
       {/* Action buttons group */}
       <div className="flex items-center gap-0.5 bg-slate-800/40 border border-slate-700/40 rounded-lg p-0.5 flex-shrink-0">
@@ -144,9 +146,10 @@ export default function TerminalHeader({
             className={`
               flex items-center justify-center w-8 h-8 rounded-md
               transition-all duration-150
-              ${recording
-                ? "bg-red-500/20 text-red-400"
-                : "text-gray-500 hover:bg-slate-700/60 hover:text-red-400"
+              ${
+                recording
+                  ? "bg-red-500/20 text-red-400"
+                  : "text-gray-500 hover:bg-slate-700/60 hover:text-red-400"
               }
             `}
             title={recording ? "Stop recording" : "Record session"}
@@ -164,9 +167,10 @@ export default function TerminalHeader({
             className={`
               flex items-center justify-center w-8 h-8 rounded-md
               transition-all duration-150
-              ${sftpOpen
-                ? "bg-slate-700/60 text-accent-300"
-                : "text-gray-500 hover:bg-slate-700/60 hover:text-accent-300"
+              ${
+                sftpOpen
+                  ? "bg-slate-700/60 text-accent-300"
+                  : "text-gray-500 hover:bg-slate-700/60 hover:text-accent-300"
               }
             `}
             title="File Browser (SFTP)"

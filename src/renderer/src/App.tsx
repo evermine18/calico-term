@@ -5,7 +5,10 @@ import TerminalHeader from "./components/terminal/terminal-header";
 import { AppProvider, useAppContext } from "./contexts/app-context";
 import AISidebarChat from "./components/ai/sidebar-chat";
 import { ThemeProvider } from "./components/theme-provider";
-import { TerminalProvider } from "./contexts/terminal-context";
+import {
+  TerminalProvider,
+  useTerminalContext,
+} from "./contexts/terminal-context";
 import CommandHistoryDialog from "./components/command-history/dialog";
 import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
 import FileBrowserPanel from "./components/sftp/file-browser-panel";
@@ -19,8 +22,15 @@ import WhatsNewDialog from "./components/whats-new/whats-new-dialog";
 import { APP_VERSION, WHATS_NEW_STORAGE_KEY } from "./lib/whats-new-data";
 import { buildSSHCommand } from "./types/ssh";
 import { Terminal } from "@xterm/xterm";
-import { Minus, Square, TerminalSquare, X, ShieldAlert, PlugZap } from "lucide-react";
-import { closeTab, armSSHSession } from "./lib/tab-operations";
+import {
+  Minus,
+  Square,
+  TerminalSquare,
+  X,
+  ShieldAlert,
+  PlugZap,
+} from "lucide-react";
+import { closeTab, detachTab, armSSHSession } from "./lib/tab-operations";
 import {
   Dialog,
   DialogContent,
@@ -66,6 +76,11 @@ function AppContent(): React.JSX.Element {
   const [showHome, setShowHome] = useState(false);
   const [sftpOpen, setSftpOpen] = useState(false);
   const [metricsOpen, setMetricsOpen] = useState(false);
+  // Scrollback to repaint for tabs returning from a closed detached window.
+  const [returnedSerialized, setReturnedSerialized] = useState<
+    Record<string, string>
+  >({});
+  const { getById } = useTerminalContext();
   const {
     setHistoryDialogOpen,
     shortcuts,
@@ -110,9 +125,10 @@ function AppContent(): React.JSX.Element {
   };
 
   const activeTabObj = tabs.find((t) => t.id === activeTab) ?? null;
-  const activeSSHConn = activeTabObj?.isSSH && activeTabObj.connId
-    ? sshConnections.find((c) => c.id === activeTabObj.connId) ?? null
-    : null;
+  const activeSSHConn =
+    activeTabObj?.isSSH && activeTabObj.connId
+      ? (sshConnections.find((c) => c.id === activeTabObj.connId) ?? null)
+      : null;
 
   // Build metrics-connection info from the active SSH connection (independent
   // of SFTP). null when no SSH tab is active so the polling stops.
@@ -140,9 +156,8 @@ function AppContent(): React.JSX.Element {
       }
     : null;
 
-  const metricsSessionId = activeSSHConn && activeTabObj
-    ? `metrics-${activeTabObj.id}`
-    : null;
+  const metricsSessionId =
+    activeSSHConn && activeTabObj ? `metrics-${activeTabObj.id}` : null;
   const metrics = useMetrics(metricsSessionId, metricsConn);
 
   // Wrap setActiveTab so any tab click also dismisses the home overlay and clears activity
@@ -159,6 +174,38 @@ function AppContent(): React.JSX.Element {
       prev.map((t) => (t.id === id ? { ...t, hasActivity: true } : t)),
     );
   };
+
+  // Pop a tab out into its own window. Serialize its current buffer first so
+  // the detached window inherits the scrollback; the PTY keeps running.
+  const handleDetachTab = (id: string) => {
+    const serialized = getById(id)?.serialize() ?? "";
+    detachTab(id, tabs, activeTab, setTabs, handleSetActiveTab, serialized);
+  };
+
+  // Re-adopt a tab whose detached window was closed, restoring its scrollback.
+  useEffect(() => {
+    const off = window.api.detach.onReturned((data) => {
+      setReturnedSerialized((prev) => ({
+        ...prev,
+        [data.tabId]: data.serialized,
+      }));
+      setTabs((prev) => {
+        if (prev.some((t) => t.id === data.tabId)) return prev;
+        const newTab: TerminalTab = {
+          id: data.tabId,
+          title: data.title,
+          mode: "normal",
+          terminal: new Terminal(),
+          isSSH: data.isSSH,
+          connId: data.connId,
+        };
+        return [...prev, newTab];
+      });
+      setShowHome(false);
+      setActiveTab(data.tabId);
+    });
+    return off;
+  }, []);
 
   // Configurable keyboard shortcuts
   useEffect(() => {
@@ -294,12 +341,12 @@ function AppContent(): React.JSX.Element {
   };
 
   return (
-    <div
-      className="h-screen flex flex-col relative bg-slate-950 text-gray-100"
-    >
+    <div className="h-screen flex flex-col relative bg-slate-950 text-gray-100">
       {/* Header with window controls */}
       <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/40 px-4 py-1.5 flex items-center gap-2 shadow-xl">
-        {window.platform?.os === "darwin" && <div className="ml-16 flex-shrink-0" />}
+        {window.platform?.os === "darwin" && (
+          <div className="ml-16 flex-shrink-0" />
+        )}
         <div className="drag-region flex flex-1 items-center gap-2">
           <div className="flex items-center gap-2">
             <TerminalSquare
@@ -359,6 +406,7 @@ function AppContent(): React.JSX.Element {
         sftpOpen={sftpOpen}
         setSftpOpen={setSftpOpen}
         activeTabIsSSH={!!activeSSHConn}
+        onDetachTab={handleDetachTab}
       />
       {/* Terminal Content */}
       <div className="flex-1 bg-slate-950 relative overflow-hidden pb-8">
@@ -388,10 +436,11 @@ function AppContent(): React.JSX.Element {
           return (
             <div
               key={tab.id}
-              className={`absolute inset-0 transition-all duration-300 ${!showHome && activeTab === tab.id
-                ? "opacity-100 scale-100"
-                : "opacity-0 scale-95 pointer-events-none"
-                }`}
+              className={`absolute inset-0 transition-all duration-300 ${
+                !showHome && activeTab === tab.id
+                  ? "opacity-100 scale-100"
+                  : "opacity-0 scale-95 pointer-events-none"
+              }`}
             >
               <TerminalPanel
                 tabId={tab.id}
@@ -400,6 +449,7 @@ function AppContent(): React.JSX.Element {
                 initialCommand={tab.initialCommand}
                 onActivity={() => handleTabActivity(tab.id)}
                 envScopes={tabEnvScopes}
+                initialSerialized={returnedSerialized[tab.id]}
               />
             </div>
           );
@@ -483,8 +533,10 @@ function AppContent(): React.JSX.Element {
                 {guardrailPrompt.command || "(empty)"}
               </pre>
               <p className="text-xs text-gray-400">
-                This tab belongs to a workspace marked <span className="text-red-400 font-bold">PROD</span>. Type{" "}
-                <span className="font-mono text-red-300">yes</span> below to confirm.
+                This tab belongs to a workspace marked{" "}
+                <span className="text-red-400 font-bold">PROD</span>. Type{" "}
+                <span className="font-mono text-red-300">yes</span> below to
+                confirm.
               </p>
               <Input
                 autoFocus

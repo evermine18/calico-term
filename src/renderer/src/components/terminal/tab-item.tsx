@@ -1,23 +1,20 @@
-import { TerminalSquare, Server, X } from 'lucide-react';
-import { TabBadge } from './tab-badge';
-import { TabEditInput } from './tab-edit-input';
-import { CustomTag } from '../../types/tabs';
-import { useAppContext } from '../../contexts/app-context';
+import { TerminalSquare, Server, X } from "lucide-react";
+import { TabBadge } from "./tab-badge";
+import { TabEditInput } from "./tab-edit-input";
+import { CustomTag } from "../../types/tabs";
+import { useAppContext } from "../../contexts/app-context";
 import {
   shouldShowWorkspaceIdentity,
   workspaceForConnection,
-} from '../../lib/workspace-helpers';
+} from "../../lib/workspace-helpers";
 
 function WorkspaceDot({ connId }: { connId?: string }) {
   const { workspaces, activeWorkspaceId } = useAppContext();
   if (!connId) return null;
-  const owning = workspaces.filter((w) =>
-    w.sshConnectionIds.includes(connId),
-  );
+  const owning = workspaces.filter((w) => w.sshConnectionIds.includes(connId));
   if (owning.length === 0) return null;
   // Prefer the active workspace when the connection belongs to several.
-  const ws =
-    owning.find((w) => w.id === activeWorkspaceId) ?? owning[0];
+  const ws = owning.find((w) => w.id === activeWorkspaceId) ?? owning[0];
   const tooltip =
     owning.length === 1
       ? `Workspace: ${ws.name}${ws.environment === "prod" ? " (PROD)" : ""}`
@@ -62,7 +59,7 @@ interface TabItemProps {
   onDragStart: (e: React.DragEvent) => void;
   onDragOver: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent) => void;
-  onDragEnd: () => void;
+  onDragEnd: (e: React.DragEvent) => void;
   onTitleChange: (id: string, title: string) => void;
   onFinishEdit: () => void;
   onClose: () => void;
@@ -84,7 +81,7 @@ export function TabItem({
   onDragEnd,
   onTitleChange,
   onFinishEdit,
-  onClose
+  onClose,
 }: TabItemProps) {
   const accent = useTabAccent(tab.connId);
   const accentStyle: React.CSSProperties = {};
@@ -97,9 +94,12 @@ export function TabItem({
     accentStyle.backgroundColor = accent.tintBg;
   }
   return (
-    <div key={tab.id} className="relative flex flex-col flex-1 basis-0 min-w-[120px] max-w-[200px]">
+    <div
+      key={tab.id}
+      className="relative flex flex-col flex-1 basis-0 min-w-[120px] max-w-[200px]"
+    >
       <div
-        draggable={tab.mode === 'normal'}
+        draggable={tab.mode === "normal"}
         onDragStart={onDragStart}
         onDragOver={onDragOver}
         onDrop={onDrop}
@@ -111,10 +111,11 @@ export function TabItem({
           text-sm font-medium border-l-[3px] border-r border-t border-b
           w-full min-w-0 cursor-pointer
           backdrop-blur-md transition-all duration-100
-          ${isDragged ? 'opacity-50' : ''}
-          ${isActive
-            ? `bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-gray-100 ${accent.borderColor ? '' : 'border-l-cyan-400'} border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-xl shadow-accent-500/20 z-10`
-            : `bg-slate-900/60 text-gray-400 ${accent.borderColor ? '' : 'border-l-slate-700/50'} border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-accent-100 ${accent.borderColor ? '' : 'hover:border-l-cyan-400/50'} hover:shadow-lg hover:shadow-accent-500/10`
+          ${isDragged ? "opacity-50" : ""}
+          ${
+            isActive
+              ? `bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-gray-100 ${accent.borderColor ? "" : "border-l-cyan-400"} border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-xl shadow-accent-500/20 z-10`
+              : `bg-slate-900/60 text-gray-400 ${accent.borderColor ? "" : "border-l-slate-700/50"} border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-accent-100 ${accent.borderColor ? "" : "hover:border-l-cyan-400/50"} hover:shadow-lg hover:shadow-accent-500/10`
           }
         `}
         onClick={onSelect}
@@ -130,30 +131,38 @@ export function TabItem({
         }}
         onContextMenu={onContextMenu}
       >
-        <TabBadge badge={tab.badge} customTags={customTags} isActive={isActive} />
+        <TabBadge
+          badge={tab.badge}
+          customTags={customTags}
+          isActive={isActive}
+        />
 
         {/* Activity indicator: pulsing dot when tab has background output */}
         {tab.hasActivity && !isActive && (
-          <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse z-10"
-            style={{ boxShadow: '0 0 4px rgba(6,182,212,0.8)' }}
+          <span
+            className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse z-10"
+            style={{ boxShadow: "0 0 4px rgba(6,182,212,0.8)" }}
           />
         )}
 
         {/* Terminal / SSH Icon */}
         <div
-          className={`flex-shrink-0 transition-colors duration-100 ${isActive ? 'text-accent-400' : 'text-slate-500 group-hover:text-accent-400/70'
-            }`}
+          className={`flex-shrink-0 transition-colors duration-100 ${
+            isActive
+              ? "text-accent-400"
+              : "text-slate-500 group-hover:text-accent-400/70"
+          }`}
         >
-          {tab.isSSH
-            ? <Server size={14} strokeWidth={2} />
-            : <TerminalSquare size={14} strokeWidth={2} />
-          }
+          {tab.isSSH ? (
+            <Server size={14} strokeWidth={2} />
+          ) : (
+            <TerminalSquare size={14} strokeWidth={2} />
+          )}
         </div>
         <WorkspaceDot connId={tab.connId} />
 
-
         {/* Tab title */}
-        {tab.mode === 'edit' ? (
+        {tab.mode === "edit" ? (
           <TabEditInput
             tabId={tab.id}
             title={tab.title}
@@ -161,11 +170,13 @@ export function TabItem({
             onFinishEdit={onFinishEdit}
           />
         ) : (
-          <span className="truncate flex-1 select-none font-medium">{tab.title}</span>
+          <span className="truncate flex-1 select-none font-medium">
+            {tab.title}
+          </span>
         )}
 
         {/* Close button */}
-        {tab.mode === 'normal' && canClose && (
+        {tab.mode === "normal" && canClose && (
           <button
             onClick={(e) => {
               e.stopPropagation();
@@ -175,8 +186,11 @@ export function TabItem({
               e.stopPropagation();
             }}
             className={`w-5 h-5 rounded flex items-center justify-center text-gray-500 
-                       hover:text-red-400 hover:bg-red-500/15 transition-colors duration-75 ${isActive ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-              }`}
+                       hover:text-red-400 hover:bg-red-500/15 transition-colors duration-75 ${
+                         isActive
+                           ? "opacity-100"
+                           : "opacity-0 group-hover:opacity-100"
+                       }`}
             title="Close (Ctrl+W)"
           >
             <X size={12} />
