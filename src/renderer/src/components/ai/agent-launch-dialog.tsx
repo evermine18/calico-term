@@ -143,10 +143,10 @@ export default function AgentLaunchDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md bg-slate-900 border-slate-700/40 shadow-xl">
         <DialogHeader>
-          <DialogTitle>Launch AI Agent</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="text-gray-100">Launch AI Agent</DialogTitle>
+          <DialogDescription className="text-gray-400">
             Run a coding agent in a new tab — locally or over SSH.
           </DialogDescription>
         </DialogHeader>
@@ -154,12 +154,12 @@ export default function AgentLaunchDialog({
         <div className="flex flex-col gap-4 py-2">
           {/* Agent */}
           <div className="flex flex-col gap-1.5">
-            <Label>Agent</Label>
+            <Label className="text-gray-300 text-sm">Agent</Label>
             <Select value={agentId} onValueChange={setAgentId}>
-              <SelectTrigger>
+              <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-slate-900 border-slate-700/50">
                 {AGENT_LAUNCHERS.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
                     <span className="flex items-center gap-2">
@@ -193,7 +193,7 @@ export default function AgentLaunchDialog({
 
           {/* Run on */}
           <div className="flex flex-col gap-1.5">
-            <Label>Run on</Label>
+            <Label className="text-gray-300 text-sm">Run on</Label>
             <Select
               value={target}
               onValueChange={(v) => {
@@ -202,10 +202,10 @@ export default function AgentLaunchDialog({
                 setBrowsing(false);
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-slate-900 border-slate-700/50">
                 <SelectItem value={LOCAL}>Local</SelectItem>
                 {visibleConnections.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
@@ -218,7 +218,9 @@ export default function AgentLaunchDialog({
 
           {/* Folder */}
           <div className="flex flex-col gap-1.5">
-            <Label>{isLocal ? "Folder" : "Remote folder"}</Label>
+            <Label className="text-gray-300 text-sm">
+              {isLocal ? "Folder" : "Remote folder"}
+            </Label>
             <div className="flex items-center gap-2">
               <Input
                 value={folder}
@@ -226,6 +228,7 @@ export default function AgentLaunchDialog({
                 placeholder={
                   isLocal ? "Default (home directory)" : "~ (default login dir)"
                 }
+                className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
               />
               <Button
                 type="button"
@@ -233,6 +236,7 @@ export default function AgentLaunchDialog({
                 size="icon"
                 onClick={isLocal ? browseFolder : () => setBrowsing((v) => !v)}
                 title="Browse…"
+                className="border-slate-700 text-gray-300 hover:bg-slate-800 hover:text-gray-100"
               >
                 <FolderOpen size={16} />
               </Button>
@@ -250,8 +254,20 @@ export default function AgentLaunchDialog({
           </div>
         </div>
 
-        <DialogFooter>
-          <Button onClick={launch}>Launch</Button>
+        <DialogFooter className="gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            className="border-slate-700 text-gray-300 hover:bg-slate-800"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={launch}
+            className="bg-accent-600 hover:bg-accent-500 text-white"
+          >
+            Launch
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
