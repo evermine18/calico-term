@@ -103,6 +103,24 @@ declare global {
     serialized: string;
   }
 
+  interface McpStatus {
+    enabled: boolean;
+    allowAcceptAll: boolean;
+    port: number;
+    token: string;
+    running: boolean;
+    url: string;
+  }
+
+  interface McpApprovalPrompt {
+    id: string;
+    tool: string;
+    tabId: string;
+    title: string;
+    detail: string;
+    allowAcceptAll: boolean;
+  }
+
   interface Window {
     electron: ElectronAPI;
     platform: {
@@ -357,6 +375,30 @@ declare global {
       };
       agents: {
         detect: (commands: string[]) => Promise<Record<string, boolean>>;
+      };
+      mcp: {
+        getConfig: () => Promise<McpStatus>;
+        setConfig: (patch: {
+          enabled?: boolean;
+          allowAcceptAll?: boolean;
+          port?: number;
+        }) => Promise<McpStatus>;
+        regenerateToken: () => Promise<McpStatus>;
+        setTabsMeta: (
+          metas: {
+            tabId: string;
+            title?: string;
+            isSSH?: boolean;
+            connId?: string | null;
+          }[],
+        ) => void;
+        onApprovalPrompt: (
+          cb: (data: McpApprovalPrompt) => void,
+        ) => () => void;
+        resolveApproval: (
+          id: string,
+          decision: "allow" | "deny" | "allow-all",
+        ) => void;
       };
       windowControls: {
         minimize: () => void;

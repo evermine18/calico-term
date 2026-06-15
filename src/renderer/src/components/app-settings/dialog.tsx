@@ -48,6 +48,7 @@ import {
   Keyboard, Info, Download, RefreshCw, RotateCcw,
   Variable,
   Circle, Bell, FileSignature, Layers, ShieldAlert, Sparkles,
+  PlugZap,
 } from "lucide-react";
 import { ThemePicker } from "./theme-picker";
 import { SSHKeysPanel } from "./ssh-keys-panel";
@@ -58,6 +59,7 @@ import { AuditPanel } from "./audit-panel";
 import { WorkspacesPanel } from "../workspaces/workspaces-panel";
 import { WorkspaceIdentityPanel } from "./workspace-identity-panel";
 import { GuardrailsPanel } from "./guardrails-panel";
+import { McpPanel } from "./mcp-panel";
 import type { ThemeId } from "@renderer/themes";
 
 interface TagItem {
@@ -102,7 +104,10 @@ const SETTINGS_GROUPS: SettingsGroup[] = [
   },
   {
     label: "AI",
-    items: [{ value: "ai", label: "AI", icon: Bot }],
+    items: [
+      { value: "ai", label: "AI", icon: Bot },
+      { value: "mcp", label: "MCP", icon: PlugZap },
+    ],
   },
   {
     label: "Security",
@@ -1521,6 +1526,9 @@ export default function SettingsDialog({
               </TabsContent>
               <TabsContent value="guardrails" className="flex-1 overflow-y-auto px-1 mt-4">
                 <GuardrailsPanel />
+              </TabsContent>
+              <TabsContent value="mcp" className="flex-1 overflow-y-auto px-1 mt-4">
+                <McpPanel />
               </TabsContent>
 
               {/* About Tab */}

@@ -9,7 +9,14 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, "package.json"), "utf-8")
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    // The MCP SDK (and zod) are ESM-only / dual packages. The main process is
+    // emitted as CommonJS, so we must let Vite bundle them in rather than
+    // externalize them (a bare require() of the ESM-only SDK would fail).
+    plugins: [
+      externalizeDepsPlugin({
+        exclude: ["@modelcontextprotocol/sdk", "zod"],
+      }),
+    ],
   },
   preload: {
     plugins: [externalizeDepsPlugin()],

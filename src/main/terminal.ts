@@ -3,6 +3,7 @@ import { ipcMain, safeStorage, app } from "electron";
 import os from "os";
 import fs from "fs";
 import path from "path";
+import crypto from "crypto";
 import { resolveEnv } from "./env-vault";
 import { resolveSecret, SecretProvider } from "./secret-providers";
 import { recordOutput } from "./recording";
@@ -92,6 +93,203 @@ const SSH_DISCONNECT_GRACE_MS = 2500;
 // Tabs currently considered SSH-active. Used to gate disconnect-pattern
 // detection so we don't fire `ssh-disconnected` on plain local shells.
 const sshActiveTabs = new Set<string>();
+
+// --- Output ring buffer (powers the MCP read_terminal tool) ---
+// Per-tab rolling capture of recent raw PTY output. Lets external agents (and
+// runCapturedCommand) read what a terminal has produced without depending on
+// the renderer/xterm being mounted.
+const outputBuffers: Record<string, string> = {};
+const OUTPUT_BUFFER_MAX = 200_000;
+
+// --- Tab metadata mirror (pushed from the renderer) ---
+// The main process only knows tabIds; the renderer owns titles/SSH info. It
+// pushes a snapshot via `terminal-meta-set` so list_terminals can describe tabs.
+interface TabMeta {
+  title?: string;
+  isSSH?: boolean;
+  connId?: string | null;
+}
+let tabMeta: Record<string, TabMeta> = {};
+
+// Tabs with an in-flight runCapturedCommand. Prevents two captures racing on
+// the same PTY (their marker streams would interleave).
+const captureBusy = new Set<string>();
+
+// Which shell family a local tab was spawned with — decides how
+// runCapturedCommand brackets a command (printf/$? vs Write-Output/$LASTEXITCODE).
+// SSH tabs ignore this and assume POSIX (the remote shell, usually Linux).
+type ShellKind = "posix" | "powershell";
+const shellKind: Record<string, ShellKind> = {};
+
+function detectShellKind(shell: string): ShellKind {
+  return /powershell|pwsh/i.test(shell) ? "powershell" : "posix";
+}
+
+/**
+ * Build the wrapped command that brackets `command` with unique start/end
+ * markers (and captures the exit code). Markers are emitted via string
+ * concatenation so the shell's echo of this line never contains the literal
+ * marker we scan for — only the command's real output does.
+ *
+ * Supported shells: POSIX (bash/zsh/sh) and Windows PowerShell. SSH tabs are
+ * always treated as POSIX (the remote shell is assumed to be Linux).
+ *
+ * NOT supported: cmd.exe and fish. Their syntax differs (`printf`/`$?` and the
+ * adjacent-string anti-echo trick don't work the same), so they silently fall
+ * through to the POSIX wrapper here — the end marker never appears and
+ * runCapturedCommand returns partial output with `timedOut: true` once the
+ * timeout elapses. For those shells use the send_keys + read_terminal tools
+ * instead. To add real support, branch a new wrapper variant below.
+ */
+function buildCaptureWrapper(
+  kind: ShellKind,
+  nonce: string,
+  command: string,
+): string {
+  if (kind === "powershell") {
+    return (
+      `Write-Output ("__CCS"+"_${nonce}__"); ` +
+      `${command}; ` +
+      `$__cc=$LASTEXITCODE; if($null -eq $__cc){if($?){$__cc=0}else{$__cc=1}}; ` +
+      `Write-Output ("__CCE"+"_${nonce}__:"+$__cc)\r`
+    );
+  }
+  // POSIX shells (bash/zsh/sh).
+  return (
+    `printf '%s\\n' "__CCS""_${nonce}__"; ` +
+    `${command}; ` +
+    `__cc=$?; printf '%s:%s\\n' "__CCE""_${nonce}__" "$__cc"\r`
+  );
+}
+
+/** Strip ANSI/control noise so captured output is readable plain text. */
+function stripAnsi(s: string): string {
+  return s
+    .replace(/\x1b\[[0-9;?]*[A-Za-z]/g, "") // CSI sequences
+    .replace(/\x1b\][^\x07]*(?:\x07|\x1b\\)/g, "") // OSC sequences
+    .replace(/\x1b[=>]/g, "")
+    .replace(/\x1b[()][AB0]/g, "")
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f]/g, "") // other control chars
+    .replace(/\r/g, "");
+}
+
+export interface ManagedTerminal {
+  tabId: string;
+  title: string;
+  isSSH: boolean;
+  connId: string | null;
+}
+
+/** List the live PTYs with whatever metadata the renderer last reported. */
+export function listManagedTerminals(): ManagedTerminal[] {
+  return Object.keys(terminals).map((id) => ({
+    tabId: id,
+    title: tabMeta[id]?.title ?? "Terminal",
+    isSSH: !!tabMeta[id]?.isSSH,
+    connId: tabMeta[id]?.connId ?? null,
+  }));
+}
+
+/**
+ * Recent plain-text output for a tab (ANSI stripped, last `maxChars`).
+ * Returns null when no such terminal exists.
+ */
+export function getTerminalOutput(tabId: string, maxChars = 8000): string | null {
+  if (!terminals[tabId]) return null;
+  const buf = outputBuffers[tabId] ?? "";
+  return stripAnsi(buf).slice(-maxChars);
+}
+
+/** Write raw data to a tab's PTY. Returns false if the tab is gone or gated. */
+export function writeToTerminal(tabId: string, data: string): boolean {
+  const pty = terminals[tabId];
+  if (!pty) return false;
+  if (guardrailPending.has(tabId)) return false;
+  pty.write(data);
+  return true;
+}
+
+export interface CapturedResult {
+  output: string;
+  exitCode: number | null;
+  timedOut: boolean;
+  busy?: boolean;
+}
+
+/**
+ * Run a command on a tab's PTY and capture just that command's output by
+ * bracketing it with unique markers. Assumes a POSIX shell (bash/zsh/sh) on
+ * the target — including the remote end of an SSH session. Not for TUIs:
+ * interactive programs never reach the end marker (use send_keys + read instead).
+ *
+ * The markers are written split (`"__CCS""_<nonce>__"`) so the shell's own echo
+ * of this command line never contains the literal marker we scan for — only the
+ * printf *output* does.
+ */
+export function runCapturedCommand(
+  tabId: string,
+  command: string,
+  timeoutMs = 20000,
+): Promise<CapturedResult | null> {
+  const pty = terminals[tabId];
+  if (!pty) return Promise.resolve(null);
+  if (captureBusy.has(tabId)) {
+    return Promise.resolve({
+      output: "",
+      exitCode: null,
+      timedOut: false,
+      busy: true,
+    });
+  }
+  captureBusy.add(tabId);
+
+  return new Promise<CapturedResult>((resolve) => {
+    const nonce = crypto.randomBytes(6).toString("hex");
+    const sMark = `__CCS_${nonce}__`;
+    const eMark = `__CCE_${nonce}__`;
+    const endNeedle = eMark + ":";
+    let raw = "";
+    let settled = false;
+
+    const finish = (timedOut: boolean): void => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      disp.dispose();
+      captureBusy.delete(tabId);
+
+      const clean = stripAnsi(raw);
+      const startIdx = clean.indexOf(sMark);
+      const endIdx = clean.indexOf(endNeedle);
+      let output = "";
+      let exitCode: number | null = null;
+      if (startIdx >= 0 && endIdx >= 0 && endIdx > startIdx) {
+        output = clean.slice(startIdx + sMark.length, endIdx);
+        const m = clean.slice(endIdx + endNeedle.length).match(/^(\d+)/);
+        if (m) exitCode = parseInt(m[1], 10);
+      } else if (startIdx >= 0) {
+        output = clean.slice(startIdx + sMark.length);
+      } else {
+        output = clean;
+      }
+      output = output.replace(/^\r?\n/, "").replace(/[\r\n]+$/, "");
+      resolve({ output, exitCode, timedOut });
+    };
+
+    const disp = pty.onData((d: string) => {
+      raw += d;
+      if (raw.length > OUTPUT_BUFFER_MAX * 2) raw = raw.slice(-OUTPUT_BUFFER_MAX);
+      if (stripAnsi(raw).includes(endNeedle)) finish(false);
+    });
+    const timer = setTimeout(() => finish(true), timeoutMs);
+
+    // SSH tabs run a remote shell (assume POSIX); local tabs use whatever
+    // shell we spawned them with.
+    const isRemote = sshActiveTabs.has(tabId) || !!tabMeta[tabId]?.isSSH;
+    const kind: ShellKind = isRemote ? "posix" : (shellKind[tabId] ?? "posix");
+    pty.write(buildCaptureWrapper(kind, nonce, command));
+  });
+}
 
 // Common patterns that indicate the remote SSH session has ended.
 const sshDisconnectPatterns: RegExp[] = [
@@ -256,11 +454,16 @@ export function setupTerminal() {
         });
 
         terminals[tabId] = ptyProcess;
+        shellKind[tabId] = detectShellKind(shell);
 
         ptyProcess.onData((data: string) => {
           for (const w of require("electron").BrowserWindow.getAllWindows()) {
             w.webContents.send("terminal-output", tabId, data);
           }
+          // Keep a rolling buffer for the MCP read_terminal tool.
+          outputBuffers[tabId] = ((outputBuffers[tabId] ?? "") + data).slice(
+            -OUTPUT_BUFFER_MAX,
+          );
           recordOutput(tabId, data);
           checkData(tabId, data);
 
@@ -365,6 +568,10 @@ export function setupTerminal() {
           delete sshSessionArmedAt[tabId];
           delete guardrailLineBuf[tabId];
           guardrailPending.delete(tabId);
+          delete outputBuffers[tabId];
+          delete tabMeta[tabId];
+          delete shellKind[tabId];
+          captureBusy.delete(tabId);
           setTabConn(tabId, null);
           clearTabBuffer(tabId);
           // Notify the renderer that the terminal was closed
@@ -472,8 +679,29 @@ export function setupTerminal() {
     sshActiveTabs.delete(tabId);
     delete guardrailLineBuf[tabId];
     guardrailPending.delete(tabId);
+    delete outputBuffers[tabId];
+    delete tabMeta[tabId];
+    delete shellKind[tabId];
+    captureBusy.delete(tabId);
     setTabConn(tabId, null);
   });
+
+  // Renderer pushes a snapshot of tab metadata (title/SSH/connId) so the MCP
+  // list_terminals tool can describe tabs by something other than a raw UUID.
+  ipcMain.on(
+    "terminal-meta-set",
+    (_event, metas: Array<{ tabId: string } & TabMeta>) => {
+      const next: Record<string, TabMeta> = {};
+      for (const m of metas ?? []) {
+        next[m.tabId] = {
+          title: m.title,
+          isSSH: m.isSSH,
+          connId: m.connId ?? null,
+        };
+      }
+      tabMeta = next;
+    },
+  );
 
   // Associate a terminal with an SSH connection so the password is auto-injected
   ipcMain.on("ssh-session-init", (_event, tabId: string, connId: string) => {

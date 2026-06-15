@@ -98,6 +98,7 @@ function AppContent(): React.JSX.Element {
     description: string;
   } | null>(null);
   const [guardrailConfirm, setGuardrailConfirm] = useState("");
+  const [mcpPrompt, setMcpPrompt] = useState<McpApprovalPrompt | null>(null);
   const [disconnectedTabs, setDisconnectedTabs] = useState<Set<string>>(
     new Set(),
   );
@@ -284,6 +285,33 @@ function AppContent(): React.JSX.Element {
     }
     window.api.guardrails.setProdTabs(prodTabIds);
   }, [tabs, workspaces]);
+
+  // Mirror tab metadata to main so the MCP `list_terminals` tool can name tabs
+  // (the main process only knows raw tabIds otherwise).
+  useEffect(() => {
+    window.api.mcp.setTabsMeta(
+      tabs.map((t) => ({
+        tabId: t.id,
+        title: t.title,
+        isSSH: !!t.isSSH,
+        connId: t.connId ?? null,
+      })),
+    );
+  }, [tabs]);
+
+  // Listen for MCP command-approval requests from main and surface a dialog.
+  useEffect(() => {
+    const off = window.api.mcp.onApprovalPrompt((data) => {
+      setMcpPrompt(data);
+    });
+    return off;
+  }, []);
+
+  const resolveMcp = (decision: "allow" | "deny" | "allow-all") => {
+    if (!mcpPrompt) return;
+    window.api.mcp.resolveApproval(mcpPrompt.id, decision);
+    setMcpPrompt(null);
+  };
 
   // Listen for guardrail prompts from main.
   useEffect(() => {
@@ -576,6 +604,68 @@ function AppContent(): React.JSX.Element {
               className="bg-red-600/90 hover:bg-red-600 text-white"
             >
               Execute
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* MCP agent action approval */}
+      <Dialog
+        open={!!mcpPrompt}
+        onOpenChange={(o) => {
+          if (!o) resolveMcp("deny");
+        }}
+      >
+        <DialogContent className="sm:max-w-[480px] bg-slate-900 border-accent-500/40">
+          <DialogHeader>
+            <DialogTitle className="text-accent-300 flex items-center gap-2">
+              <PlugZap size={16} />
+              External agent request
+            </DialogTitle>
+          </DialogHeader>
+          {mcpPrompt && (
+            <div className="space-y-3 py-1">
+              <p className="text-sm text-gray-300">
+                A connected agent (via MCP) wants to run{" "}
+                <span className="font-mono text-accent-300">
+                  {mcpPrompt.tool}
+                </span>{" "}
+                on tab{" "}
+                <span className="font-semibold text-gray-100">
+                  {mcpPrompt.title}
+                </span>
+                .
+              </p>
+              <pre className="text-xs font-mono text-gray-100 bg-slate-800/80 border border-slate-700/40 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap break-all">
+                {mcpPrompt.detail || "(empty)"}
+              </pre>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => resolveMcp("deny")}
+              className="border-slate-700/50 text-gray-300"
+            >
+              Deny
+            </Button>
+            {mcpPrompt?.allowAcceptAll && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => resolveMcp("allow-all")}
+                className="border-accent-500/40 text-accent-300 hover:bg-accent-500/10"
+              >
+                Allow all this session
+              </Button>
+            )}
+            <Button
+              size="sm"
+              onClick={() => resolveMcp("allow")}
+              className="bg-accent-600/90 hover:bg-accent-600 text-white"
+            >
+              Allow
             </Button>
           </DialogFooter>
         </DialogContent>

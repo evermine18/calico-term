@@ -244,6 +244,41 @@ const api = {
     detect: (commands: string[]): Promise<Record<string, boolean>> =>
       ipcRenderer.invoke("agents-detect", commands),
   },
+  mcp: {
+    getConfig: (): Promise<McpStatus> => ipcRenderer.invoke("mcp-get-config"),
+    setConfig: (patch: {
+      enabled?: boolean;
+      allowAcceptAll?: boolean;
+      port?: number;
+    }): Promise<McpStatus> => ipcRenderer.invoke("mcp-set-config", patch),
+    regenerateToken: (): Promise<McpStatus> =>
+      ipcRenderer.invoke("mcp-regenerate-token"),
+    // Push the current tab metadata snapshot so list_terminals can name tabs.
+    setTabsMeta: (
+      metas: {
+        tabId: string;
+        title?: string;
+        isSSH?: boolean;
+        connId?: string | null;
+      }[],
+    ) => ipcRenderer.send("terminal-meta-set", metas),
+    onApprovalPrompt: (
+      cb: (data: {
+        id: string;
+        tool: string;
+        tabId: string;
+        title: string;
+        detail: string;
+        allowAcceptAll: boolean;
+      }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("mcp-approval-prompt", wrapped);
+      return () => ipcRenderer.removeListener("mcp-approval-prompt", wrapped);
+    },
+    resolveApproval: (id: string, decision: "allow" | "deny" | "allow-all") =>
+      ipcRenderer.send("mcp-approval-resolve", id, decision),
+  },
   windowControls: {
     minimize: () => ipcRenderer.send("win-minimize"),
     maximize: () => ipcRenderer.send("win-maximize"),
@@ -310,6 +345,15 @@ interface UpdateInfo {
   version: string;
   releaseDate?: string;
   releaseName?: string;
+}
+
+interface McpStatus {
+  enabled: boolean;
+  allowAcceptAll: boolean;
+  port: number;
+  token: string;
+  running: boolean;
+  url: string;
 }
 
 interface DetachPayload {

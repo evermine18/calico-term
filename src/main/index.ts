@@ -25,6 +25,7 @@ import { setupAlertHandlers } from "./alerts";
 import { setupWorkspaceHandlers } from "./workspaces";
 import { setupGuardrailHandlers } from "./guardrails";
 import { setupAgentHandlers } from "./agents";
+import { setupMcp, stopMcp } from "./mcp";
 
 // --- AI streaming controllers ---
 const streamControllers = new Map<string, AbortController>();
@@ -408,6 +409,7 @@ app.whenReady().then(() => {
   setupWorkspaceHandlers();
   setupGuardrailHandlers();
   setupAgentHandlers();
+  setupMcp();
   ipcMain.on("app-close", () => {
     console.log("App close requested");
     app.quit();
@@ -453,6 +455,7 @@ app.whenReady().then(() => {
     isQuitting = true;
     event.preventDefault();
     BrowserWindow.getAllWindows().forEach((w) => w.hide());
+    stopMcp();
     await closeTerminal();
     app.quit();
   });
