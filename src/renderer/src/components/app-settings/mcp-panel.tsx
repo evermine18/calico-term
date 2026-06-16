@@ -11,6 +11,11 @@ import {
   EyeOff,
   ShieldAlert,
 } from "lucide-react";
+import {
+  AGENT_LAUNCHERS,
+  MCP_CAPABLE_AGENTS,
+  mcpConnect,
+} from "@renderer/types/ai-agents";
 
 function Toggle({
   checked,
@@ -41,6 +46,7 @@ export function McpPanel() {
   const [portInput, setPortInput] = useState("");
   const [showToken, setShowToken] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState<string>(MCP_CAPABLE_AGENTS[0]);
 
   useEffect(() => {
     window.api.mcp.getConfig().then((s) => {
@@ -74,7 +80,10 @@ export function McpPanel() {
     return <div className="text-sm text-gray-500 px-1 py-4">Loading…</div>;
   }
 
-  const addCommand = `claude mcp add --transport http calico-term ${status.url} --header "Authorization: Bearer ${status.token}"`;
+  const connect = mcpConnect(agentId, status.url, status.token);
+  const agents = MCP_CAPABLE_AGENTS.map(
+    (id) => AGENT_LAUNCHERS.find((a) => a.id === id)!,
+  );
 
   return (
     <div className="space-y-5">
@@ -144,9 +153,7 @@ export function McpPanel() {
           <Button
             size="sm"
             variant="outline"
-            disabled={
-              !portInput || parseInt(portInput, 10) === status.port
-            }
+            disabled={!portInput || parseInt(portInput, 10) === status.port}
             onClick={() => {
               const p = parseInt(portInput, 10);
               if (p >= 1024 && p <= 65535) apply({ port: p });
@@ -196,29 +203,67 @@ export function McpPanel() {
         </div>
       </div>
 
-      {/* Connect command */}
+      {/* Connect an agent */}
       <div className="grid gap-2 pt-3 border-t border-slate-700/40">
-        <Label className="text-gray-300 text-sm">Connect Claude Code</Label>
-        <p className="text-xs text-gray-400">
-          Run this once in a terminal to register Calico Term as an MCP server:
-        </p>
-        <div className="flex items-start gap-2">
-          <pre className="flex-1 text-xs font-mono text-accent-200 bg-slate-800/80 border border-slate-700/40 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
-            {addCommand}
-          </pre>
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={() => copy("cmd", addCommand)}
-            className="bg-slate-800/60 border-slate-700/50 shrink-0"
-          >
-            {copied === "cmd" ? <Check size={15} /> : <Copy size={15} />}
-          </Button>
+        <Label className="text-gray-300 text-sm">Connect an agent</Label>
+
+        {/* Agent picker */}
+        <div className="flex flex-wrap gap-1.5">
+          {agents.map((a) => {
+            const active = a.id === agentId;
+            const [r, g, b] = a.color;
+            return (
+              <button
+                key={a.id}
+                type="button"
+                onClick={() => setAgentId(a.id)}
+                className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors ${
+                  active
+                    ? "border-slate-600 bg-slate-700/70 text-gray-100"
+                    : "border-slate-700/50 bg-slate-800/40 text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                <span
+                  style={{ color: active ? `rgb(${r} ${g} ${b})` : undefined }}
+                >
+                  {a.glyph}
+                </span>
+                {a.name}
+              </button>
+            );
+          })}
         </div>
+
+        {connect && (
+          <>
+            <p className="text-xs text-gray-400">
+              {connect.kind === "command"
+                ? "Run this once in a terminal to register Calico Term as an MCP server:"
+                : `Add this to ${connect.configPath}:`}
+            </p>
+            <div className="flex items-start gap-2">
+              <pre className="flex-1 text-xs font-mono text-accent-200 bg-slate-800/80 border border-slate-700/40 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
+                {connect.snippet}
+              </pre>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => copy("cmd", connect.snippet)}
+                className="bg-slate-800/60 border-slate-700/50 shrink-0"
+              >
+                {copied === "cmd" ? <Check size={15} /> : <Copy size={15} />}
+              </Button>
+            </div>
+            {connect.note && (
+              <p className="text-[11px] text-amber-300/80">{connect.note}</p>
+            )}
+          </>
+        )}
+
         <p className="text-[11px] text-gray-500">
           The server binds to localhost only and requires the token above.
-          Anyone who has the token can drive your terminals — keep it private and
-          regenerate it if leaked.
+          Anyone who has the token can drive your terminals — keep it private
+          and regenerate it if leaked.
         </p>
       </div>
     </div>

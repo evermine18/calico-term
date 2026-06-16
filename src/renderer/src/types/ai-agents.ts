@@ -80,6 +80,87 @@ export function agentRunString(agent: AgentLauncher): string {
 }
 
 /**
+ * How an agent registers Calico Term's local (HTTP) MCP server. Each CLI does
+ * this differently: some take a one-shot shell command, others want a snippet
+ * pasted into a config file.
+ */
+export type McpConnect = {
+  /** "command" = paste into a shell; "config" = add to a config file. */
+  kind: "command" | "config";
+  /** Copyable text — shell command(s), or a config-file snippet. */
+  snippet: string;
+  /** For kind "config", the file the snippet belongs in. */
+  configPath?: string;
+  /** Optional caveat (e.g. an experimental flag the agent needs first). */
+  note?: string;
+};
+
+/** Agent ids that can connect to the MCP server, in display order. */
+export const MCP_CAPABLE_AGENTS = [
+  "claude-code",
+  "codex",
+  "opencode",
+  "gemini",
+] as const;
+
+/**
+ * Build the instructions for pointing an agent at Calico Term's MCP server.
+ * `name` is the server name the agent will register it under. Returns null for
+ * agents with no known HTTP-MCP support.
+ */
+export function mcpConnect(
+  agentId: string,
+  url: string,
+  token: string,
+  name = "calico-term",
+): McpConnect | null {
+  switch (agentId) {
+    case "claude-code":
+      return {
+        kind: "command",
+        snippet: `claude mcp add --transport http ${name} ${url} --header "Authorization: Bearer ${token}"`,
+      };
+    case "codex":
+      return {
+        kind: "command",
+        // Codex only accepts the bearer token via an env var (no inline header),
+        // and needs the experimental rmcp client for Streamable HTTP servers.
+        snippet:
+          `export CALICO_TERM_TOKEN="${token}"\n` +
+          `codex mcp add ${name} --url ${url} --bearer-token-env-var CALICO_TERM_TOKEN`,
+        note: 'Requires `experimental_use_rmcp_client = true` in ~/.codex/config.toml. On PowerShell, set the token with `$env:CALICO_TERM_TOKEN="…"` instead of `export`.',
+      };
+    case "gemini":
+      return {
+        kind: "command",
+        snippet: `gemini mcp add --transport http ${name} ${url} --header "Authorization: Bearer ${token}"`,
+      };
+    case "opencode":
+      return {
+        kind: "config",
+        configPath:
+          "opencode.json (project root) or ~/.config/opencode/opencode.json",
+        snippet: JSON.stringify(
+          {
+            mcp: {
+              [name]: {
+                type: "remote",
+                url,
+                enabled: true,
+                headers: { Authorization: `Bearer ${token}` },
+              },
+            },
+          },
+          null,
+          2,
+        ),
+      };
+    default:
+      return null;
+  }
+}
+
+/**
  * An ANSI banner (the agent's "logo") printed to the terminal right before the
  * agent starts. Full-screen TUIs (Claude Code, Codex, …) use the alternate
  * screen buffer, so the banner stays in the normal buffer — visible at launch
