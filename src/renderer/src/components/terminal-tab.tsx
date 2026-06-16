@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
@@ -534,46 +535,59 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         />
       )}
 
-      {ctxMenu && (
-        <>
-          <div className="fixed inset-0 z-40" onClick={closeCtxMenu} />
-          <div
-            className="fixed z-50 min-w-[160px] py-1 rounded-md border border-slate-700/60 bg-slate-900/97 shadow-xl shadow-black/40 backdrop-blur-md text-sm text-gray-200"
-            style={{ top: ctxMenu.y, left: ctxMenu.x }}
-          >
-            <CtxItem
-              icon={<Copy size={13} />}
-              label="Copiar"
-              shortcut="Ctrl+Shift+C"
-              disabled={!hasSelection}
-              onClick={ctxCopy}
+      {/* Rendered in a portal to document.body: the terminal panel has a
+          `transform` (scale) ancestor, which would otherwise make these
+          `fixed` elements resolve relative to the panel box instead of the
+          viewport — placing the menu away from the cursor. */}
+      {ctxMenu &&
+        createPortal(
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={closeCtxMenu}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                setCtxMenu({ x: e.clientX, y: e.clientY });
+              }}
             />
-            <CtxItem
-              icon={<ClipboardPaste size={13} />}
-              label="Pegar"
-              shortcut="Ctrl+Shift+V"
-              onClick={ctxPaste}
-            />
-            <CtxItem
-              icon={<TextSelect size={13} />}
-              label="Seleccionar todo"
-              onClick={ctxSelectAll}
-            />
-            <div className="my-1 border-t border-slate-700/50" />
-            <CtxItem
-              icon={<Search size={13} />}
-              label="Buscar"
-              shortcut="Ctrl+Shift+F"
-              onClick={ctxFind}
-            />
-            <CtxItem
-              icon={<Eraser size={13} />}
-              label="Limpiar"
-              onClick={ctxClear}
-            />
-          </div>
-        </>
-      )}
+            <div
+              className="fixed z-50 min-w-[160px] py-1 rounded-md border border-slate-700/60 bg-slate-900/97 shadow-xl shadow-black/40 backdrop-blur-md text-sm text-gray-200"
+              style={{ top: ctxMenu.y, left: ctxMenu.x }}
+            >
+              <CtxItem
+                icon={<Copy size={13} />}
+                label="Copiar"
+                shortcut="Ctrl+Shift+C"
+                disabled={!hasSelection}
+                onClick={ctxCopy}
+              />
+              <CtxItem
+                icon={<ClipboardPaste size={13} />}
+                label="Pegar"
+                shortcut="Ctrl+Shift+V"
+                onClick={ctxPaste}
+              />
+              <CtxItem
+                icon={<TextSelect size={13} />}
+                label="Seleccionar todo"
+                onClick={ctxSelectAll}
+              />
+              <div className="my-1 border-t border-slate-700/50" />
+              <CtxItem
+                icon={<Search size={13} />}
+                label="Buscar"
+                shortcut="Ctrl+Shift+F"
+                onClick={ctxFind}
+              />
+              <CtxItem
+                icon={<Eraser size={13} />}
+                label="Limpiar"
+                onClick={ctxClear}
+              />
+            </div>
+          </>,
+          document.body,
+        )}
 
       {active && isScrolledUp && (
         <button
