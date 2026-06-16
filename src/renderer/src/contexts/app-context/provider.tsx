@@ -259,6 +259,62 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     );
   };
 
+  // --- Ansible runner: persistent sources + playbooks ---
+  const [ansibleSources, setAnsibleSources] = useState<AnsibleSourceEntry[]>(
+    () => {
+      const stored = localStorage.getItem("ansibleSources");
+      if (stored) {
+        try {
+          return JSON.parse(stored);
+        } catch {
+          return [];
+        }
+      }
+      return [];
+    },
+  );
+
+  useEffect(() => {
+    localStorage.setItem("ansibleSources", JSON.stringify(ansibleSources));
+  }, [ansibleSources]);
+
+  const addAnsibleSource = (src: AnsibleSourceEntry) =>
+    setAnsibleSources((prev) => [...prev, src]);
+  const updateAnsibleSource = (src: AnsibleSourceEntry) =>
+    setAnsibleSources((prev) => prev.map((s) => (s.id === src.id ? src : s)));
+  const deleteAnsibleSource = (id: string) => {
+    setAnsibleSources((prev) => prev.filter((s) => s.id !== id));
+    // Cascade: drop playbooks belonging to the removed source.
+    setAnsiblePlaybooks((prev) => prev.filter((p) => p.sourceId !== id));
+  };
+
+  const [ansiblePlaybooks, setAnsiblePlaybooks] = useState<
+    AnsiblePlaybookEntry[]
+  >(() => {
+    const stored = localStorage.getItem("ansiblePlaybooks");
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem("ansiblePlaybooks", JSON.stringify(ansiblePlaybooks));
+  }, [ansiblePlaybooks]);
+
+  const addAnsiblePlaybook = (pb: AnsiblePlaybookEntry) =>
+    setAnsiblePlaybooks((prev) => [...prev, pb]);
+  const updateAnsiblePlaybook = (pb: AnsiblePlaybookEntry) =>
+    setAnsiblePlaybooks((prev) => prev.map((p) => (p.id === pb.id ? pb : p)));
+  const deleteAnsiblePlaybook = (id: string) =>
+    setAnsiblePlaybooks((prev) => prev.filter((p) => p.id !== id));
+
+  const [ansiblePanelOpen, setAnsiblePanelOpen] = useState(false);
+
   const [vaultCredentials, setVaultCredentials] = useState<VaultCredential[]>(
     () => {
       const stored = localStorage.getItem("vaultCredentials");
@@ -327,10 +383,12 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.setItem("workspaces", JSON.stringify(workspaces));
   }, [workspaces]);
 
-  const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string>(() => {
-    const stored = localStorage.getItem("activeWorkspaceId");
-    return stored || "ws-personal";
-  });
+  const [activeWorkspaceId, setActiveWorkspaceIdState] = useState<string>(
+    () => {
+      const stored = localStorage.getItem("activeWorkspaceId");
+      return stored || "ws-personal";
+    },
+  );
 
   const setActiveWorkspaceId = (id: string) => {
     localStorage.setItem("activeWorkspaceId", id);
@@ -381,7 +439,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
           return has
             ? {
                 ...w,
-                sshConnectionIds: w.sshConnectionIds.filter((c) => c !== connId),
+                sshConnectionIds: w.sshConnectionIds.filter(
+                  (c) => c !== connId,
+                ),
               }
             : w;
         }
@@ -611,6 +671,16 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       addSSHConnection,
       updateSSHConnection,
       deleteSSHConnection,
+      ansibleSources,
+      addAnsibleSource,
+      updateAnsibleSource,
+      deleteAnsibleSource,
+      ansiblePlaybooks,
+      addAnsiblePlaybook,
+      updateAnsiblePlaybook,
+      deleteAnsiblePlaybook,
+      ansiblePanelOpen,
+      setAnsiblePanelOpen,
       vaultCredentials,
       addVaultCredential,
       updateVaultCredential,
@@ -640,6 +710,9 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       historyDialogOpen,
       historyRetentionDays,
       sshConnections,
+      ansibleSources,
+      ansiblePlaybooks,
+      ansiblePanelOpen,
       vaultCredentials,
       terminalFontFamily,
       terminalFontSize,

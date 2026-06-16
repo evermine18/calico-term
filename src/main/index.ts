@@ -26,6 +26,7 @@ import { setupWorkspaceHandlers } from "./workspaces";
 import { setupGuardrailHandlers } from "./guardrails";
 import { setupAgentHandlers } from "./agents";
 import { setupMcp, stopMcp } from "./mcp";
+import { setupAnsibleHandlers } from "./ansible";
 
 // --- AI streaming controllers ---
 const streamControllers = new Map<string, AbortController>();
@@ -438,6 +439,7 @@ app.whenReady().then(() => {
   setupGuardrailHandlers();
   setupAgentHandlers();
   setupMcp();
+  setupAnsibleHandlers();
   ipcMain.on("app-close", () => {
     console.log("App close requested");
     app.quit();

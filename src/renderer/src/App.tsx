@@ -12,6 +12,7 @@ import {
 import CommandHistoryDialog from "./components/command-history/dialog";
 import SSHConnectionsHome from "./components/ssh/ssh-connections-home";
 import FileBrowserPanel from "./components/sftp/file-browser-panel";
+import AnsiblePanel from "./components/ansible/ansible-panel";
 import MetricsPanel from "./components/observability/metrics-panel";
 import MetricsStatusInline from "./components/observability/metrics-status-inline";
 import { useMetrics } from "./components/observability/use-metrics";
@@ -29,6 +30,7 @@ import {
   X,
   ShieldAlert,
   PlugZap,
+  ScrollText,
 } from "lucide-react";
 import { closeTab, detachTab, armSSHSession } from "./lib/tab-operations";
 import {
@@ -91,6 +93,8 @@ function AppContent(): React.JSX.Element {
     activeWorkspaceId,
     setWorkspaceSwitcherOpen,
     setSnippetPaletteOpen,
+    ansiblePanelOpen,
+    setAnsiblePanelOpen,
   } = useAppContext();
   const [guardrailPrompt, setGuardrailPrompt] = useState<{
     tabId: string;
@@ -395,6 +399,20 @@ function AppContent(): React.JSX.Element {
             <span className="selectable-section">
               <WorkspaceSwitcher />
             </span>
+            <span className="selectable-section">
+              <button
+                onClick={() => setAnsiblePanelOpen(!ansiblePanelOpen)}
+                className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-150 ${
+                  ansiblePanelOpen
+                    ? "bg-slate-700/60 text-accent-300"
+                    : "text-gray-500 hover:bg-slate-700/60 hover:text-accent-300"
+                }`}
+                title="Ansible Runner"
+              >
+                <ScrollText size={14} />
+                <span className="text-xs font-medium">Ansible</span>
+              </button>
+            </span>
           </div>
         </div>
         {window.platform?.os === "linux" && (
@@ -452,6 +470,9 @@ function AppContent(): React.JSX.Element {
             error={metrics.error}
             onClose={() => setMetricsOpen(false)}
           />
+        )}
+        {ansiblePanelOpen && (
+          <AnsiblePanel onClose={() => setAnsiblePanelOpen(false)} />
         )}
         <AISidebarChat />
         <CommandHistoryDialog />

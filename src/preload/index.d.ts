@@ -16,6 +16,52 @@ interface DownloadProgress {
 declare global {
   type SecretProvider = "op" | "bw" | "vault" | "aws";
 
+  interface AnsibleControlNode {
+    id: string;
+    host: string;
+    port: number;
+    username: string;
+    identityFile?: string;
+    identityKeyId?: string;
+    hasPassword?: boolean;
+    credentialId?: string;
+    passwordRef?: { provider: SecretProvider; ref: string };
+    jumpHosts?: {
+      host: string;
+      port: number;
+      username: string;
+      identityFile?: string;
+      identityKeyId?: string;
+    }[];
+  }
+
+  interface AnsibleInventoryHost {
+    name: string;
+    host: string;
+    port: number;
+    username: string;
+    tags?: string[];
+  }
+
+  interface AnsibleRunPayload {
+    runId: string;
+    sourceId: string;
+    conn: AnsibleControlNode;
+    origin: "git" | "path";
+    repoUrl?: string;
+    branch?: string;
+    deployKeyId?: string;
+    subdir?: string;
+    basePath?: string;
+    playbook: string;
+    inventoryMode: "auto" | "file";
+    inventoryFile?: string;
+    inventoryHosts?: AnsibleInventoryHost[];
+    limit?: string;
+    extraVars?: string;
+    check?: boolean;
+  }
+
   interface SSHKeyMetadata {
     id: string;
     name: string;
@@ -327,6 +373,34 @@ declare global {
           cb: (data: { sessionId: string; error: string }) => void,
         ) => () => void;
       };
+      ansible: {
+        startRun: (
+          payload: AnsibleRunPayload,
+        ) => Promise<{ ok: boolean; error?: string }>;
+        cancelRun: (runId: string) => void;
+        testGit: (
+          conn: AnsibleControlNode,
+          repoUrl: string,
+          deployKeyId?: string,
+        ) => Promise<{ ok: boolean; output: string }>;
+        onOutput: (
+          cb: (data: {
+            runId: string;
+            line: string;
+            stream: "stdout" | "stderr";
+          }) => void,
+        ) => () => void;
+        onStatus: (
+          cb: (data: { runId: string; phase: string }) => void,
+        ) => () => void;
+        onDone: (
+          cb: (data: {
+            runId: string;
+            code: number | null;
+            error?: string;
+          }) => void,
+        ) => () => void;
+      };
       alerts: {
         setRules: (rules: AlertRule[]) => void;
         setWorkspaceMap: (map: Record<string, string[]>) => void;
@@ -392,9 +466,7 @@ declare global {
             connId?: string | null;
           }[],
         ) => void;
-        onApprovalPrompt: (
-          cb: (data: McpApprovalPrompt) => void,
-        ) => () => void;
+        onApprovalPrompt: (cb: (data: McpApprovalPrompt) => void) => () => void;
         resolveApproval: (
           id: string,
           decision: "allow" | "deny" | "allow-all",

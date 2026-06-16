@@ -47,6 +47,33 @@ type SSHConnectionEntry = {
   tags?: string[];
 };
 
+type AnsibleSourceEntry = {
+  id: string;
+  name: string;
+  sshConnectionId: string; // control node this source runs on
+  origin: "git" | "path";
+  // git origin
+  repoUrl?: string;
+  branch?: string;
+  deployKeyId?: string; // managed SSH key id used for git auth on the node
+  subdir?: string; // playbook root within the repo
+  // path origin
+  basePath?: string; // existing playbook root on the node
+  // inventory
+  inventoryMode: "auto" | "file";
+  inventoryFile?: string; // relative to run dir when mode === "file"
+};
+
+type AnsiblePlaybookEntry = {
+  id: string;
+  sourceId: string;
+  name: string;
+  relativePath: string; // path to the playbook relative to the run dir
+  defaultLimit?: string;
+  defaultExtraVars?: string;
+  defaultCheck?: boolean;
+};
+
 type VaultCredential = {
   id: string;
   name: string;
@@ -134,6 +161,17 @@ type AppContextType = {
   addSSHConnection: (conn: SSHConnectionEntry) => void;
   updateSSHConnection: (conn: SSHConnectionEntry) => void;
   deleteSSHConnection: (id: string) => void;
+  // Ansible runner — persistent sources + playbooks
+  ansibleSources: AnsibleSourceEntry[];
+  addAnsibleSource: (src: AnsibleSourceEntry) => void;
+  updateAnsibleSource: (src: AnsibleSourceEntry) => void;
+  deleteAnsibleSource: (id: string) => void;
+  ansiblePlaybooks: AnsiblePlaybookEntry[];
+  addAnsiblePlaybook: (pb: AnsiblePlaybookEntry) => void;
+  updateAnsiblePlaybook: (pb: AnsiblePlaybookEntry) => void;
+  deleteAnsiblePlaybook: (id: string) => void;
+  ansiblePanelOpen: boolean;
+  setAnsiblePanelOpen: (open: boolean) => void;
   vaultCredentials: VaultCredential[];
   addVaultCredential: (cred: VaultCredential) => void;
   updateVaultCredential: (cred: VaultCredential) => void;

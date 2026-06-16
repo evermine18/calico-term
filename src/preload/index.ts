@@ -174,6 +174,42 @@ const api = {
       return () => ipcRenderer.removeListener("metrics-error", wrapped);
     },
   },
+  ansible: {
+    startRun: (payload: unknown) =>
+      ipcRenderer.invoke("ansible-run-start", payload),
+    cancelRun: (runId: string) => ipcRenderer.send("ansible-run-cancel", runId),
+    testGit: (conn: unknown, repoUrl: string, deployKeyId?: string) =>
+      ipcRenderer.invoke("ansible-test-git", conn, repoUrl, deployKeyId),
+    onOutput: (
+      cb: (data: {
+        runId: string;
+        line: string;
+        stream: "stdout" | "stderr";
+      }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("ansible-run-output", wrapped);
+      return () => ipcRenderer.removeListener("ansible-run-output", wrapped);
+    },
+    onStatus: (
+      cb: (data: { runId: string; phase: string }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("ansible-run-status", wrapped);
+      return () => ipcRenderer.removeListener("ansible-run-status", wrapped);
+    },
+    onDone: (
+      cb: (data: {
+        runId: string;
+        code: number | null;
+        error?: string;
+      }) => void,
+    ): (() => void) => {
+      const wrapped = (_e: unknown, d: unknown) => cb(d as any);
+      ipcRenderer.on("ansible-run-done", wrapped);
+      return () => ipcRenderer.removeListener("ansible-run-done", wrapped);
+    },
+  },
   alerts: {
     setRules: (rules: AlertRule[]) =>
       ipcRenderer.send("alert-rules-set", rules),
