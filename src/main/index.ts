@@ -131,6 +131,20 @@ function wireWindowChrome(win: BrowserWindow): void {
     console.error("Renderer process gone:", details.reason, details.exitCode);
   });
 
+  // Ctrl/Cmd+Shift+N opens another window in this same process. Shift is
+  // included so a bare Ctrl+N still reaches the terminal as a control char.
+  win.webContents.on("before-input-event", (event, input) => {
+    if (
+      input.type === "keyDown" &&
+      (input.control || input.meta) &&
+      input.shift &&
+      input.key.toLowerCase() === "n"
+    ) {
+      event.preventDefault();
+      createWindow();
+    }
+  });
+
   win.webContents.setWindowOpenHandler((details) => {
     shell.openExternal(details.url);
     return { action: "deny" };
@@ -223,6 +237,20 @@ function createDetachedWindow(payload: DetachPayload): void {
   });
 
   loadRenderer(win, { view: "detached", tabId: payload.tabId });
+}
+
+// Single-instance: relaunching the app (double-clicking the .exe again) opens
+// a NEW window inside the already-running process instead of spawning a second
+// process. Every window shares the same userData (encrypted vault, SSH config,
+// audit log, settings), so opening as many windows as you want never clobbers
+// state. The losing second process exits immediately.
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+} else {
+  app.on("second-instance", () => {
+    createWindow();
+  });
 }
 
 // This method will be called when Electron has finished
