@@ -45,9 +45,18 @@ import {
   Palette,
   Terminal as TerminalIcon,
   Settings2,
-  Keyboard, Info, Download, RefreshCw, RotateCcw,
+  Keyboard,
+  Info,
+  Download,
+  RefreshCw,
+  RotateCcw,
   Variable,
-  Circle, Bell, FileSignature, Layers, ShieldAlert, Sparkles,
+  Circle,
+  Bell,
+  FileSignature,
+  Layers,
+  ShieldAlert,
+  Sparkles,
   PlugZap,
 } from "lucide-react";
 import { ThemePicker } from "./theme-picker";
@@ -190,6 +199,8 @@ export default function SettingsDialog({
     setDefaultShell,
     defaultCwd,
     setDefaultCwd,
+    restoreTabsOnStartup,
+    setRestoreTabsOnStartup,
     // AI advanced
     aiSystemPrompt,
     setAiSystemPrompt,
@@ -216,6 +227,7 @@ export default function SettingsDialog({
     scrollback,
     defaultShell,
     defaultCwd,
+    restoreTabsOnStartup,
     // AI advanced
     aiSystemPrompt,
     aiTemperature,
@@ -249,7 +261,14 @@ export default function SettingsDialog({
   const [editingTagId, setEditingTagId] = useState<string | null>(null);
 
   // Updater state
-  type UpdaterStatus = "idle" | "checking" | "up-to-date" | "available" | "downloading" | "downloaded" | "error";
+  type UpdaterStatus =
+    | "idle"
+    | "checking"
+    | "up-to-date"
+    | "available"
+    | "downloading"
+    | "downloaded"
+    | "error";
   const [updaterStatus, setUpdaterStatus] = useState<UpdaterStatus>("idle");
   const [updaterVersion, setUpdaterVersion] = useState<string | null>(null);
   const [updaterProgress, setUpdaterProgress] = useState(0);
@@ -329,6 +348,7 @@ export default function SettingsDialog({
         scrollback,
         defaultShell,
         defaultCwd,
+        restoreTabsOnStartup,
         aiSystemPrompt,
         aiTemperature,
         aiMaxTokens,
@@ -463,16 +483,17 @@ export default function SettingsDialog({
     setScrollback(localSettings.scrollback);
     setDefaultShell(localSettings.defaultShell);
     setDefaultCwd(localSettings.defaultCwd);
+    setRestoreTabsOnStartup(localSettings.restoreTabsOnStartup);
     // AI advanced
     setAiSystemPrompt(localSettings.aiSystemPrompt);
     setAiTemperature(localSettings.aiTemperature);
     setAiMaxTokens(localSettings.aiMaxTokens);
     setAiProvider(
       localSettings.aiProvider as
-      | "openai"
-      | "anthropic"
-      | "ollama"
-      | "openai-compatible",
+        | "openai"
+        | "anthropic"
+        | "ollama"
+        | "openai-compatible",
     );
     // Shortcuts
     setShortcuts(localShortcuts);
@@ -536,7 +557,6 @@ export default function SettingsDialog({
             </TabsList>
 
             <div className="flex-1 min-w-0 min-h-0 flex flex-col">
-
               {/* Appearance Tab */}
               <TabsContent
                 value="appearance"
@@ -551,7 +571,10 @@ export default function SettingsDialog({
                       Changes apply instantly — no need to save.
                     </p>
                   </div>
-                  <ThemePicker value={localTheme} onChange={handleThemeChange} />
+                  <ThemePicker
+                    value={localTheme}
+                    onChange={handleThemeChange}
+                  />
                 </div>
               </TabsContent>
 
@@ -561,7 +584,10 @@ export default function SettingsDialog({
                 className="flex-1 overflow-y-auto px-1 space-y-5 mt-4"
               >
                 <div className="grid gap-2.5">
-                  <Label htmlFor="ai-provider" className="text-gray-300 text-sm">
+                  <Label
+                    htmlFor="ai-provider"
+                    className="text-gray-300 text-sm"
+                  >
                     Provider
                   </Label>
                   <Select
@@ -657,12 +683,13 @@ export default function SettingsDialog({
                 {/* Connection status */}
                 {apiStatus !== "idle" && (
                   <div
-                    className={`flex items-start gap-2 rounded-md px-3 py-2 text-xs border ${apiStatus === "loading"
-                      ? "bg-slate-800/40 border-slate-700/40 text-gray-400"
-                      : apiStatus === "success"
-                        ? "bg-green-500/10 border-green-500/20 text-green-400"
-                        : "bg-red-500/10 border-red-500/20 text-red-400"
-                      }`}
+                    className={`flex items-start gap-2 rounded-md px-3 py-2 text-xs border ${
+                      apiStatus === "loading"
+                        ? "bg-slate-800/40 border-slate-700/40 text-gray-400"
+                        : apiStatus === "success"
+                          ? "bg-green-500/10 border-green-500/20 text-green-400"
+                          : "bg-red-500/10 border-red-500/20 text-red-400"
+                    }`}
                   >
                     {apiStatus === "loading" && (
                       <Loader2
@@ -683,8 +710,8 @@ export default function SettingsDialog({
                         (apiError.includes("401") || apiError.includes("403")
                           ? "Invalid API key or unauthorized"
                           : apiError.includes("ECONNREFUSED") ||
-                            apiError.includes("ENOTFOUND") ||
-                            apiError.includes("fetch")
+                              apiError.includes("ENOTFOUND") ||
+                              apiError.includes("fetch")
                             ? "Could not reach the API URL"
                             : apiError || "Connection failed")}
                     </span>
@@ -701,14 +728,17 @@ export default function SettingsDialog({
                     hasStoredApiKey={hasApiKey}
                     provider={
                       localSettings.aiProvider as
-                      | "openai"
-                      | "anthropic"
-                      | "ollama"
-                      | "openai-compatible"
+                        | "openai"
+                        | "anthropic"
+                        | "ollama"
+                        | "openai-compatible"
                     }
                     currentValue={localSettings.selectedModel}
                     onValueChange={(model) =>
-                      setLocalSettings({ ...localSettings, selectedModel: model })
+                      setLocalSettings({
+                        ...localSettings,
+                        selectedModel: model,
+                      })
                     }
                     onStatusChange={(status, error) => {
                       setApiStatus(status);
@@ -872,7 +902,8 @@ export default function SettingsDialog({
                             },
                             {
                               label: "IBM Plex Mono",
-                              stack: "'IBM Plex Mono', 'Courier New', monospace",
+                              stack:
+                                "'IBM Plex Mono', 'Courier New', monospace",
                             },
                           ] as { label: string; stack: string }[]
                         ).map(({ label, stack }) => (
@@ -886,7 +917,9 @@ export default function SettingsDialog({
                               className="text-sm"
                             >
                               {label}&nbsp;&nbsp;
-                              <span className="opacity-50">ABCabc 0123 !@#</span>
+                              <span className="opacity-50">
+                                ABCabc 0123 !@#
+                              </span>
                             </span>
                           </SelectItem>
                         ))}
@@ -913,7 +946,9 @@ export default function SettingsDialog({
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label className="text-gray-300 text-sm">Line Height</Label>
+                      <Label className="text-gray-300 text-sm">
+                        Line Height
+                      </Label>
                       <Input
                         type="number"
                         min={1}
@@ -923,7 +958,8 @@ export default function SettingsDialog({
                         onChange={(e) =>
                           setLocalSettings({
                             ...localSettings,
-                            terminalLineHeight: parseFloat(e.target.value) || 1.2,
+                            terminalLineHeight:
+                              parseFloat(e.target.value) || 1.2,
                           })
                         }
                         className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20"
@@ -1208,6 +1244,28 @@ export default function SettingsDialog({
                       className="bg-slate-800/60 border-slate-700/50 text-gray-100 placeholder:text-gray-500 focus:border-accent-500/50 focus:ring-accent-500/20 font-mono text-sm"
                     />
                   </div>
+                  <label className="flex items-start gap-2.5 cursor-pointer pt-1">
+                    <input
+                      type="checkbox"
+                      checked={localSettings.restoreTabsOnStartup}
+                      onChange={(e) =>
+                        setLocalSettings({
+                          ...localSettings,
+                          restoreTabsOnStartup: e.target.checked,
+                        })
+                      }
+                      className="mt-0.5 accent-accent-500"
+                    />
+                    <span>
+                      <span className="block text-gray-300 text-sm">
+                        Restore tabs on startup
+                      </span>
+                      <span className="block text-gray-500 text-xs">
+                        Reopen the tabs from your last session when the app
+                        launches. SSH tabs reconnect automatically.
+                      </span>
+                    </span>
+                  </label>
                 </div>
 
                 {/* Keyboard Shortcuts */}
@@ -1286,10 +1344,11 @@ export default function SettingsDialog({
                               setCapturingKey(isCapturing ? null : action);
                               setTimeout(() => captureRef.current?.focus(), 10);
                             }}
-                            className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors outline-none ${isCapturing
-                              ? "bg-yellow-500/20 border-yellow-500/50 text-yellow-300"
-                              : "bg-slate-700/60 border-slate-600/50 text-gray-400 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50"
-                              }`}
+                            className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors outline-none ${
+                              isCapturing
+                                ? "bg-yellow-500/20 border-yellow-500/50 text-yellow-300"
+                                : "bg-slate-700/60 border-slate-600/50 text-gray-400 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50"
+                            }`}
                           >
                             {isCapturing ? "Cancel" : "Record"}
                           </button>
@@ -1500,60 +1559,114 @@ export default function SettingsDialog({
                 </div>
               </TabsContent>
               {/* SSH Keys Tab */}
-              <TabsContent value="keys" className="flex-1 overflow-y-auto px-1 mt-4">
+              <TabsContent
+                value="keys"
+                className="flex-1 overflow-y-auto px-1 mt-4"
+              >
                 <SSHKeysPanel />
               </TabsContent>
 
               {/* Env Vault Tab */}
-              <TabsContent value="env" className="flex-1 overflow-y-auto px-1 mt-4">
+              <TabsContent
+                value="env"
+                className="flex-1 overflow-y-auto px-1 mt-4"
+              >
                 <EnvVaultPanel />
               </TabsContent>
 
-              <TabsContent value="recordings" className="flex-1 overflow-y-auto px-1 mt-4">
+              <TabsContent
+                value="recordings"
+                className="flex-1 overflow-y-auto px-1 mt-4"
+              >
                 <RecordingsPanel />
               </TabsContent>
-              <TabsContent value="alerts" className="flex-1 overflow-y-auto px-1 mt-4">
+              <TabsContent
+                value="alerts"
+                className="flex-1 overflow-y-auto px-1 mt-4"
+              >
                 <AlertsPanel />
               </TabsContent>
-              <TabsContent value="audit" className="flex-1 overflow-y-auto px-1 mt-4">
+              <TabsContent
+                value="audit"
+                className="flex-1 overflow-y-auto px-1 mt-4"
+              >
                 <AuditPanel />
               </TabsContent>
-              <TabsContent value="workspaces" className="flex-1 overflow-y-auto px-1 mt-4">
+              <TabsContent
+                value="workspaces"
+                className="flex-1 overflow-y-auto px-1 mt-4"
+              >
                 <WorkspacesPanel />
               </TabsContent>
-              <TabsContent value="workspace-identity" className="flex-1 overflow-y-auto px-1 mt-4">
+              <TabsContent
+                value="workspace-identity"
+                className="flex-1 overflow-y-auto px-1 mt-4"
+              >
                 <WorkspaceIdentityPanel />
               </TabsContent>
-              <TabsContent value="guardrails" className="flex-1 overflow-y-auto px-1 mt-4">
+              <TabsContent
+                value="guardrails"
+                className="flex-1 overflow-y-auto px-1 mt-4"
+              >
                 <GuardrailsPanel />
               </TabsContent>
-              <TabsContent value="mcp" className="flex-1 overflow-y-auto px-1 mt-4">
+              <TabsContent
+                value="mcp"
+                className="flex-1 overflow-y-auto px-1 mt-4"
+              >
                 <McpPanel />
               </TabsContent>
 
               {/* About Tab */}
-              <TabsContent value="about" className="flex-1 overflow-y-auto px-1 mt-4">
+              <TabsContent
+                value="about"
+                className="flex-1 overflow-y-auto px-1 mt-4"
+              >
                 <div className="space-y-6">
                   <div className="space-y-1">
-                    <p className="text-gray-300 text-sm font-semibold">About calico-term</p>
-                    <p className="text-xs text-gray-400">Check for updates and manage the application version.</p>
+                    <p className="text-gray-300 text-sm font-semibold">
+                      About calico-term
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Check for updates and manage the application version.
+                    </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-3">
-                      <p className="text-xs text-gray-400 mb-1">Current version</p>
-                      <p className="text-sm font-mono text-gray-100">{currentVersion}</p>
+                      <p className="text-xs text-gray-400 mb-1">
+                        Current version
+                      </p>
+                      <p className="text-sm font-mono text-gray-100">
+                        {currentVersion}
+                      </p>
                     </div>
                     <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-3">
-                      <p className="text-xs text-gray-400 mb-1">Latest version</p>
+                      <p className="text-xs text-gray-400 mb-1">
+                        Latest version
+                      </p>
                       <p className="text-sm font-mono text-gray-100">
-                        {updaterStatus === "checking" && <span className="text-gray-400">Checking...</span>}
-                        {updaterStatus === "idle" && <span className="text-gray-500">—</span>}
-                        {updaterStatus === "up-to-date" && <span className="text-green-400">{currentVersion}</span>}
-                        {(updaterStatus === "available" || updaterStatus === "downloading" || updaterStatus === "downloaded") && (
-                          <span className="text-accent-400">{updaterVersion}</span>
+                        {updaterStatus === "checking" && (
+                          <span className="text-gray-400">Checking...</span>
                         )}
-                        {updaterStatus === "error" && <span className="text-red-400">Error</span>}
+                        {updaterStatus === "idle" && (
+                          <span className="text-gray-500">—</span>
+                        )}
+                        {updaterStatus === "up-to-date" && (
+                          <span className="text-green-400">
+                            {currentVersion}
+                          </span>
+                        )}
+                        {(updaterStatus === "available" ||
+                          updaterStatus === "downloading" ||
+                          updaterStatus === "downloaded") && (
+                          <span className="text-accent-400">
+                            {updaterVersion}
+                          </span>
+                        )}
+                        {updaterStatus === "error" && (
+                          <span className="text-red-400">Error</span>
+                        )}
                       </p>
                     </div>
                   </div>
@@ -1590,7 +1703,8 @@ export default function SettingsDialog({
                   {updaterStatus === "downloaded" && (
                     <div className="flex items-center gap-2 text-green-400 text-sm bg-green-400/10 border border-green-400/20 rounded-lg px-3 py-2">
                       <CheckCircle2 size={14} />
-                      Update downloaded. Restart to install version {updaterVersion}.
+                      Update downloaded. Restart to install version{" "}
+                      {updaterVersion}.
                     </div>
                   )}
 
@@ -1602,7 +1716,9 @@ export default function SettingsDialog({
                   )}
 
                   <div className="flex gap-2 flex-wrap">
-                    {(updaterStatus === "idle" || updaterStatus === "up-to-date" || updaterStatus === "error") && (
+                    {(updaterStatus === "idle" ||
+                      updaterStatus === "up-to-date" ||
+                      updaterStatus === "error") && (
                       <Button
                         variant="outline"
                         size="sm"
@@ -1614,7 +1730,12 @@ export default function SettingsDialog({
                       </Button>
                     )}
                     {updaterStatus === "checking" && (
-                      <Button variant="outline" size="sm" disabled className="bg-slate-800/60 border-slate-700/50 text-gray-500 flex items-center gap-1.5">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled
+                        className="bg-slate-800/60 border-slate-700/50 text-gray-500 flex items-center gap-1.5"
+                      >
                         <Loader2 size={13} className="animate-spin" />
                         Checking...
                       </Button>

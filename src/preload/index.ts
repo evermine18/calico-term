@@ -17,6 +17,8 @@ const api = {
       ipcRenderer.invoke("sftp-download", sessionId, remotePath),
     upload: (sessionId: string, remotePath: string) =>
       ipcRenderer.invoke("sftp-upload", sessionId, remotePath),
+    uploadPath: (sessionId: string, localPath: string, remoteDir: string) =>
+      ipcRenderer.invoke("sftp-upload-path", sessionId, localPath, remoteDir),
     delete: (sessionId: string, entryPath: string, isDirectory: boolean) =>
       ipcRenderer.invoke("sftp-delete", sessionId, entryPath, isDirectory),
     mkdir: (sessionId: string, dirPath: string) =>

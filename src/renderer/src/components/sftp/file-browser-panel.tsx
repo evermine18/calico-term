@@ -59,6 +59,7 @@ export default function FileBrowserPanel({
   const [connectError, setConnectError] = useState<string | null>(null);
 
   const [currentPath, setCurrentPath] = useState("/");
+  const [dragOver, setDragOver] = useState(false);
   const [entries, setEntries] = useState<SFTPFileEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [listError, setListError] = useState<string | null>(null);
@@ -150,10 +151,7 @@ export default function FileBrowserPanel({
     }
   }
 
-  function addTransfer(
-    type: "upload" | "download",
-    filename: string,
-  ): string {
+  function addTransfer(type: "upload" | "download", filename: string): string {
     const id = crypto.randomUUID();
     activeTransferIds.current.add(id);
     setTransfers((prev) => [
@@ -175,9 +173,7 @@ export default function FileBrowserPanel({
     activeTransferIds.current.delete(id);
     setTransfers((prev) =>
       prev.map((t) =>
-        t.id === id
-          ? { ...t, status: error ? "error" : "done", error }
-          : t,
+        t.id === id ? { ...t, status: error ? "error" : "done", error } : t,
       ),
     );
     setTimeout(() => {
@@ -205,6 +201,29 @@ export default function FileBrowserPanel({
     } catch (err: any) {
       finishTransfer(id, err?.message ?? String(err));
     }
+  }
+
+  // Upload files dropped from the OS file manager. Electron augments dropped
+  // File objects with an absolute `path`, which we hand to the main process.
+  async function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    setDragOver(false);
+    const files = Array.from(e.dataTransfer.files);
+    const paths = files
+      .map((f) => (f as unknown as { path?: string }).path)
+      .filter((p): p is string => !!p);
+    if (paths.length === 0) return;
+    for (const localPath of paths) {
+      const name = localPath.split(/[\\/]/).pop() ?? "file";
+      const id = addTransfer("upload", name);
+      try {
+        await window.api.sftp.uploadPath(sessionId, localPath, currentPath);
+        finishTransfer(id);
+      } catch (err: any) {
+        finishTransfer(id, err?.message ?? String(err));
+      }
+    }
+    await navigateTo(currentPath);
   }
 
   async function handleDelete(entry: SFTPFileEntry) {
@@ -288,7 +307,24 @@ export default function FileBrowserPanel({
       id="sftp-panel"
       className="absolute left-0 top-0 bottom-0 h-full bg-slate-900/95 backdrop-blur-md border-r border-slate-700/50 flex flex-col z-10 shadow-2xl"
       style={{ width: 260 }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        if (!dragOver) setDragOver(true);
+      }}
+      onDragLeave={(e) => {
+        // Only clear when the cursor actually leaves the panel bounds.
+        if (e.currentTarget === e.target) setDragOver(false);
+      }}
+      onDrop={handleDrop}
     >
+      {dragOver && (
+        <div className="absolute inset-0 z-30 flex items-center justify-center bg-accent-500/10 border-2 border-dashed border-accent-500/60 pointer-events-none">
+          <span className="text-sm font-medium text-accent-200">
+            Soltar para subir a {currentPath}
+          </span>
+        </div>
+      )}
+
       {/* Resize handle (right edge) */}
       <div
         className="absolute right-0 top-0 h-full w-1 cursor-ew-resize bg-transparent hover:bg-accent-500/30 active:bg-accent-500/50 z-10 transition-colors"
@@ -436,7 +472,10 @@ export default function FileBrowserPanel({
             {/* New folder input row */}
             {newFolderMode && (
               <div className="flex items-center gap-1.5 px-2 py-1">
-                <FolderPlus size={13} className="text-accent-400/80 flex-shrink-0" />
+                <FolderPlus
+                  size={13}
+                  className="text-accent-400/80 flex-shrink-0"
+                />
                 <input
                   ref={newFolderInputRef}
                   value={newFolderName}

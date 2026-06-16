@@ -1,9 +1,20 @@
 import { useState } from "react";
-import { Plus, Server, Pencil, Trash2, Terminal, KeyRound, ChevronDown, ChevronRight } from "lucide-react";
+import {
+  Plus,
+  Server,
+  Pencil,
+  Trash2,
+  Terminal,
+  KeyRound,
+  ChevronDown,
+  ChevronRight,
+  FileDown,
+} from "lucide-react";
 import { useAppContext } from "@renderer/contexts/app-context";
 import SSHDialog from "./ssh-dialog";
 import { useTags } from "@renderer/hooks/useTags";
 import { CustomTag } from "@renderer/types/tabs";
+import { useToast } from "@renderer/components/ui/toaster";
 
 type Props = {
   onConnect: (conn: SSHConnectionEntry) => void;
@@ -19,7 +30,7 @@ type Group = {
 
 function buildGroups(
   connections: SSHConnectionEntry[],
-  allTags: CustomTag[]
+  allTags: CustomTag[],
 ): Group[] {
   const groups: Group[] = [];
 
@@ -30,9 +41,7 @@ function buildGroups(
     }
   }
 
-  const untagged = connections.filter(
-    (c) => !c.tags || c.tags.length === 0
-  );
+  const untagged = connections.filter((c) => !c.tags || c.tags.length === 0);
   if (untagged.length > 0) {
     groups.push({ id: UNTAGGED_ID, tag: null, connections: untagged });
   }
@@ -43,10 +52,51 @@ function buildGroups(
 export default function SSHConnectionsHome({ onConnect }: Props) {
   const {
     sshConnections,
+    addSSHConnection,
     deleteSSHConnection,
     workspaces,
     activeWorkspaceId,
   } = useAppContext();
+  const { toast } = useToast();
+
+  // Import hosts from ~/.ssh/config as saved connections, skipping ones that
+  // already exist (matched by host + user + port).
+  const handleImportConfig = async () => {
+    const hosts = await window.api.sshConfig.list();
+    if (hosts.length === 0) {
+      toast("No se encontraron hosts en ~/.ssh/config", "info");
+      return;
+    }
+    let added = 0;
+    let skipped = 0;
+    for (const h of hosts) {
+      const exists = sshConnections.some(
+        (c) =>
+          c.host === h.host &&
+          (c.username || "") === (h.user || "") &&
+          c.port === h.port,
+      );
+      if (exists) {
+        skipped++;
+        continue;
+      }
+      addSSHConnection({
+        id: crypto.randomUUID(),
+        name: h.alias,
+        host: h.host,
+        port: h.port,
+        username: h.user || "",
+        identityFile: h.identityFile,
+      });
+      added++;
+    }
+    toast(
+      added > 0
+        ? `Importadas ${added} conexión(es)${skipped ? `, ${skipped} ya existían` : ""}`
+        : `Sin novedades — ${skipped} ya existían`,
+      added > 0 ? "success" : "info",
+    );
+  };
   const activeWs =
     workspaces.find((w) => w.id === activeWorkspaceId) ?? workspaces[0] ?? null;
   const visibleConnections = activeWs
@@ -107,18 +157,28 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
         {/* Radial glow behind hero */}
         <div
           className="absolute top-0 left-1/2 -translate-x-1/2 w-[500px] h-[300px] pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse at top, rgba(var(--accent-rgb),0.06) 0%, transparent 70%)' }}
+          style={{
+            background:
+              "radial-gradient(ellipse at top, rgba(var(--accent-rgb),0.06) 0%, transparent 70%)",
+          }}
         />
 
         <div className="my-auto flex flex-col items-center w-full px-8 py-12">
-
           {/* Hero icon */}
           <div className="mb-8 flex flex-col items-center gap-4 relative">
             <div
               className="w-16 h-16 rounded-2xl bg-slate-900/80 border border-accent-500/20 flex items-center justify-center"
-              style={{ boxShadow: '0 0 30px rgba(var(--accent-rgb),0.12), inset 0 1px 0 rgba(var(--accent-rgb),0.1)' }}
+              style={{
+                boxShadow:
+                  "0 0 30px rgba(var(--accent-rgb),0.12), inset 0 1px 0 rgba(var(--accent-rgb),0.1)",
+              }}
             >
-              <Terminal className="w-8 h-8 text-accent-400" style={{ filter: 'drop-shadow(0 0 8px rgba(var(--accent-rgb),0.6))' }} />
+              <Terminal
+                className="w-8 h-8 text-accent-400"
+                style={{
+                  filter: "drop-shadow(0 0 8px rgba(var(--accent-rgb),0.6))",
+                }}
+              />
             </div>
             <div className="text-center">
               <h2 className="text-base font-semibold tracking-widest text-gray-300">
@@ -138,15 +198,27 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
               <span className="text-xs uppercase tracking-widest text-gray-500 font-semibold">
                 SSH Connections
               </span>
-              <button
-                onClick={openAdd}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
-                bg-accent-600/20 text-accent-400 border border-accent-600/30
-                hover:bg-accent-600/30 hover:border-accent-500/50 transition-all duration-150"
-              >
-                <Plus size={13} />
-                New Connection
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleImportConfig}
+                  title="Importar hosts desde ~/.ssh/config"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
+                  bg-slate-800/60 text-gray-400 border border-slate-700/50
+                  hover:bg-slate-700/60 hover:text-accent-300 hover:border-accent-500/40 transition-all duration-150"
+                >
+                  <FileDown size={13} />
+                  Import ~/.ssh/config
+                </button>
+                <button
+                  onClick={openAdd}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
+                  bg-accent-600/20 text-accent-400 border border-accent-600/30
+                  hover:bg-accent-600/30 hover:border-accent-500/50 transition-all duration-150"
+                >
+                  <Plus size={13} />
+                  New Connection
+                </button>
+              </div>
             </div>
 
             {visibleConnections.length === 0 ? (
@@ -177,7 +249,9 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
                     onToggle={() => toggleGroup(group.id)}
                     onConnect={onConnect}
                     onEdit={openEdit}
-                    onDelete={(id, hasPassword) => handleDelete(id, hasPassword)}
+                    onDelete={(id, hasPassword) =>
+                      handleDelete(id, hasPassword)
+                    }
                   />
                 ))}
 
@@ -204,7 +278,6 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
             </kbd>{" "}
             in the tab bar to open a local terminal
           </p>
-
         </div>
       </div>
     </>
@@ -224,7 +297,14 @@ type TagGroupProps = {
   onDelete: (id: string, hasPassword?: boolean) => void;
 };
 
-function TagGroup({ group, isOpen, onToggle, onConnect, onEdit, onDelete }: TagGroupProps) {
+function TagGroup({
+  group,
+  isOpen,
+  onToggle,
+  onConnect,
+  onEdit,
+  onDelete,
+}: TagGroupProps) {
   const { tag, connections } = group;
   const color = tag?.color ?? "#64748b"; // slate-500 for untagged
   const label = tag?.name ?? "Untagged";
@@ -249,7 +329,10 @@ function TagGroup({ group, isOpen, onToggle, onConnect, onEdit, onDelete }: TagG
         />
 
         {/* Tag name */}
-        <span className="text-xs font-semibold uppercase tracking-widest" style={{ color }}>
+        <span
+          className="text-xs font-semibold uppercase tracking-widest"
+          style={{ color }}
+        >
           {label}
         </span>
 
@@ -268,7 +351,8 @@ function TagGroup({ group, isOpen, onToggle, onConnect, onEdit, onDelete }: TagG
         {/* Mini preview — only when collapsed */}
         {!isOpen && (
           <span className="flex-1 min-w-0 text-xs text-gray-600 truncate">
-            {preview}{hasMore ? " …" : ""}
+            {preview}
+            {hasMore ? " …" : ""}
           </span>
         )}
 
@@ -307,7 +391,13 @@ type CardProps = {
   onDelete: (id: string) => void;
 };
 
-function SSHConnectionCard({ conn, showTags, onConnect, onEdit, onDelete }: CardProps) {
+function SSHConnectionCard({
+  conn,
+  showTags,
+  onConnect,
+  onEdit,
+  onDelete,
+}: CardProps) {
   const customTags = useTags();
   const assignedTags = customTags.filter((t) => conn.tags?.includes(t.id));
   return (
@@ -326,9 +416,15 @@ function SSHConnectionCard({ conn, showTags, onConnect, onEdit, onDelete }: Card
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className="text-sm font-medium text-gray-200 truncate">{conn.name}</p>
+          <p className="text-sm font-medium text-gray-200 truncate">
+            {conn.name}
+          </p>
           {conn.hasPassword && (
-            <KeyRound size={10} className="text-accent-400/60 flex-shrink-0" aria-label="Password saved" />
+            <KeyRound
+              size={10}
+              className="text-accent-400/60 flex-shrink-0"
+              aria-label="Password saved"
+            />
           )}
         </div>
         <p className="text-xs text-gray-500 font-mono truncate mt-0.5">

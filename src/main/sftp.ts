@@ -46,7 +46,10 @@ const sessions = new Map<string, SFTPSession>();
 
 type TailHandle = {
   sessionId: string;
-  stream: NodeJS.ReadableStream & { signal?: (s: string) => void; close?: () => void };
+  stream: NodeJS.ReadableStream & {
+    signal?: (s: string) => void;
+    close?: () => void;
+  };
 };
 const tails = new Map<string, TailHandle>();
 
@@ -82,7 +85,10 @@ export function getSessionTargetClient(sessionId: string): Client | null {
   return s ? s.clients[0] : null;
 }
 
-export function buildAuthConfig(hop: SSHHopInfo, password?: string): ConnectConfig {
+export function buildAuthConfig(
+  hop: SSHHopInfo,
+  password?: string,
+): ConnectConfig {
   const cfg: ConnectConfig = {
     host: hop.host,
     port: hop.port,
@@ -132,8 +138,9 @@ export function forwardOut(
   return new Promise((resolve, reject) => {
     via.forwardOut("127.0.0.1", 0, dstHost, dstPort, (err, stream) => {
       if (err) return reject(err);
-      resolve(stream as unknown as NodeJS.ReadableStream &
-        NodeJS.WritableStream);
+      resolve(
+        stream as unknown as NodeJS.ReadableStream & NodeJS.WritableStream,
+      );
     });
   });
 }
@@ -227,10 +234,10 @@ function listDirectory(
           mtime: (item.attrs as any).mtime ?? 0,
         },
         isDirectory:
-          !!((item.attrs as any).mode) &&
+          !!(item.attrs as any).mode &&
           ((item.attrs as any).mode & 0o170000) === 0o040000,
         isSymlink:
-          !!((item.attrs as any).mode) &&
+          !!(item.attrs as any).mode &&
           ((item.attrs as any).mode & 0o170000) === 0o120000,
       }));
       entries.sort((a, b) => {
@@ -347,7 +354,11 @@ function readText(sessionId: string, remotePath: string): Promise<string> {
       if (err) return reject(err);
       const size = (stats as any).size ?? 0;
       if (size > READ_TEXT_LIMIT) {
-        return reject(new Error(`File too large to edit (${size} bytes, max ${READ_TEXT_LIMIT})`));
+        return reject(
+          new Error(
+            `File too large to edit (${size} bytes, max ${READ_TEXT_LIMIT})`,
+          ),
+        );
       }
       const chunks: Buffer[] = [];
       const rs = sftp.createReadStream(remotePath);
@@ -382,28 +393,31 @@ function startTail(
   const target = clients[0];
   return new Promise((resolve, reject) => {
     const safe = remotePath.replace(/'/g, "'\\''");
-    target.exec(`tail -n ${Math.max(1, Math.floor(lines))} -F '${safe}'`, (err, stream) => {
-      if (err) return reject(err);
-      tails.set(tailId, { sessionId, stream: stream as any });
-      const send = (chunk: Buffer | string, isErr: boolean) => {
-        BrowserWindow.getAllWindows().forEach((w) => {
-          w.webContents.send("sftp-tail-data", {
-            tailId,
-            data: chunk.toString(),
-            isErr,
+    target.exec(
+      `tail -n ${Math.max(1, Math.floor(lines))} -F '${safe}'`,
+      (err, stream) => {
+        if (err) return reject(err);
+        tails.set(tailId, { sessionId, stream: stream as any });
+        const send = (chunk: Buffer | string, isErr: boolean) => {
+          BrowserWindow.getAllWindows().forEach((w) => {
+            w.webContents.send("sftp-tail-data", {
+              tailId,
+              data: chunk.toString(),
+              isErr,
+            });
+          });
+        };
+        stream.on("data", (c: Buffer) => send(c, false));
+        stream.stderr.on("data", (c: Buffer) => send(c, true));
+        stream.on("close", () => {
+          tails.delete(tailId);
+          BrowserWindow.getAllWindows().forEach((w) => {
+            w.webContents.send("sftp-tail-end", { tailId });
           });
         });
-      };
-      stream.on("data", (c: Buffer) => send(c, false));
-      stream.stderr.on("data", (c: Buffer) => send(c, true));
-      stream.on("close", () => {
-        tails.delete(tailId);
-        BrowserWindow.getAllWindows().forEach((w) => {
-          w.webContents.send("sftp-tail-end", { tailId });
-        });
-      });
-      resolve();
-    });
+        resolve();
+      },
+    );
   });
 }
 
@@ -443,7 +457,9 @@ async function walkRemote(
       sftp.readdir(cur, (e, l) => (e ? rej(e) : res(l))),
     );
     for (const item of list) {
-      const full = cur.endsWith("/") ? cur + item.filename : `${cur}/${item.filename}`;
+      const full = cur.endsWith("/")
+        ? cur + item.filename
+        : `${cur}/${item.filename}`;
       const mode = (item.attrs as any).mode ?? 0;
       const isDir = (mode & 0o170000) === 0o040000;
       if (isDir) {
@@ -523,9 +539,7 @@ async function syncDirectory(
     const { files } = walkLocal(localDir);
     const total = files.length;
     // Ensure remote root exists
-    await new Promise<void>((res) =>
-      sftp.mkdir(remoteDir, (_e) => res()),
-    );
+    await new Promise<void>((res) => sftp.mkdir(remoteDir, (_e) => res()));
     for (const f of files) {
       const rel = path.relative(localDir, f).split(path.sep).join("/");
       const remote = remoteDir.endsWith("/")
@@ -546,8 +560,7 @@ async function syncDirectory(
       const needsCopy =
         !remoteStat ||
         (remoteStat as any).size !== localStat.size ||
-        ((remoteStat as any).mtime ?? 0) <
-          Math.floor(localStat.mtimeMs / 1000);
+        ((remoteStat as any).mtime ?? 0) < Math.floor(localStat.mtimeMs / 1000);
       if (needsCopy) {
         await uploadFile(sessionId, f, remote);
         transferred++;
@@ -631,6 +644,20 @@ export function setupSFTPHandlers(): void {
     },
   );
 
+  // Upload a specific local file (by path) — used by drag-and-drop, which
+  // already knows the dropped file's path and shouldn't open a dialog.
+  ipcMain.handle(
+    "sftp-upload-path",
+    async (_event, sessionId: string, localPath: string, remoteDir: string) => {
+      const filename = localPath.split(/[\\/]/).pop() ?? "file";
+      const dest = remoteDir.endsWith("/")
+        ? remoteDir + filename
+        : remoteDir + "/" + filename;
+      await uploadFile(sessionId, localPath, dest);
+      return { filename };
+    },
+  );
+
   ipcMain.handle(
     "sftp-delete",
     async (
@@ -652,12 +679,7 @@ export function setupSFTPHandlers(): void {
 
   ipcMain.handle(
     "sftp-rename",
-    async (
-      _event,
-      sessionId: string,
-      oldPath: string,
-      newPath: string,
-    ) => {
+    async (_event, sessionId: string, oldPath: string, newPath: string) => {
       await renameEntry(sessionId, oldPath, newPath);
     },
   );
@@ -671,12 +693,7 @@ export function setupSFTPHandlers(): void {
 
   ipcMain.handle(
     "sftp-write-text",
-    async (
-      _event,
-      sessionId: string,
-      remotePath: string,
-      content: string,
-    ) => {
+    async (_event, sessionId: string, remotePath: string, content: string) => {
       await writeText(sessionId, remotePath, content);
     },
   );

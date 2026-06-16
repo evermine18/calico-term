@@ -208,6 +208,11 @@ declare global {
         realpath: (sessionId: string, remotePath: string) => Promise<string>;
         download: (sessionId: string, remotePath: string) => Promise<void>;
         upload: (sessionId: string, remotePath: string) => Promise<void>;
+        uploadPath: (
+          sessionId: string,
+          localPath: string,
+          remoteDir: string,
+        ) => Promise<{ filename: string }>;
         delete: (
           sessionId: string,
           entryPath: string,

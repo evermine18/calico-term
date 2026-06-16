@@ -99,6 +99,15 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
     setTerminalFontSizeState(v);
   };
 
+  const [restoreTabsOnStartup, setRestoreTabsOnStartupState] =
+    useState<boolean>(
+      () => localStorage.getItem("restoreTabsOnStartup") === "true",
+    );
+  const setRestoreTabsOnStartup = (v: boolean) => {
+    localStorage.setItem("restoreTabsOnStartup", String(v));
+    setRestoreTabsOnStartupState(v);
+  };
+
   const [terminalLineHeight, setTerminalLineHeightState] = useState<number>(
     () => {
       const s = localStorage.getItem("terminalLineHeight");
@@ -648,6 +657,8 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       setDefaultShell,
       defaultCwd,
       setDefaultCwd,
+      restoreTabsOnStartup,
+      setRestoreTabsOnStartup,
       // AI advanced
       aiSystemPrompt,
       setAiSystemPrompt,
@@ -722,6 +733,7 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
       scrollback,
       defaultShell,
       defaultCwd,
+      restoreTabsOnStartup,
       aiSystemPrompt,
       aiTemperature,
       aiMaxTokens,

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { TerminalPanel } from "./components/terminal-tab";
 import { TerminalTab } from "./types/terminal";
 import TerminalHeader from "./components/terminal/terminal-header";
@@ -42,6 +42,7 @@ import {
 } from "./components/ui/dialog";
 import { Button } from "./components/ui/button";
 import { Input } from "./components/ui/input";
+import { ToastProvider } from "./components/ui/toaster";
 
 function matchShortcut(e: KeyboardEvent, s: ShortcutDef): boolean {
   return (
@@ -95,7 +96,11 @@ function AppContent(): React.JSX.Element {
     setSnippetPaletteOpen,
     ansiblePanelOpen,
     setAnsiblePanelOpen,
+    restoreTabsOnStartup,
   } = useAppContext();
+  // Guards the persist effect so the initial empty-state render doesn't clobber
+  // the saved snapshot before the restore effect has rehydrated it.
+  const tabsHydratedRef = useRef(false);
   const [guardrailPrompt, setGuardrailPrompt] = useState<{
     tabId: string;
     command: string;
@@ -212,6 +217,83 @@ function AppContent(): React.JSX.Element {
     });
     return off;
   }, []);
+
+  // Restore previously-open tabs on startup, when the user enabled it in
+  // settings. SSH tabs are re-armed before mount so their session reconnects;
+  // agent tabs are intentionally skipped (re-launching an agent is surprising).
+  useEffect(() => {
+    (async () => {
+      if (restoreTabsOnStartup) {
+        try {
+          const raw = localStorage.getItem("openTabs");
+          const saved = raw
+            ? (JSON.parse(raw) as {
+                tabs: Array<{
+                  id: string;
+                  title: string;
+                  isSSH: boolean;
+                  connId?: string;
+                  initialCommand?: string;
+                  badge?: string | null;
+                  cwd?: string;
+                }>;
+                activeTab: string | null;
+              })
+            : null;
+          if (saved?.tabs?.length) {
+            const restored: TerminalTab[] = [];
+            for (const s of saved.tabs) {
+              if (s.isSSH && s.connId) {
+                const conn = sshConnections.find((c) => c.id === s.connId);
+                if (conn) await armSSHSession(s.id, conn);
+              }
+              restored.push({
+                id: s.id,
+                title: s.title,
+                mode: "normal",
+                terminal: new Terminal(),
+                initialCommand: s.initialCommand,
+                badge: s.badge ?? null,
+                isSSH: s.isSSH,
+                connId: s.connId,
+                cwd: s.cwd,
+              });
+            }
+            setTabs(restored);
+            const act =
+              saved.activeTab && restored.some((t) => t.id === saved.activeTab)
+                ? saved.activeTab
+                : restored[0].id;
+            setActiveTab(act);
+            setShowHome(false);
+          }
+        } catch {
+          // Corrupt snapshot — ignore and start fresh.
+        }
+      }
+      tabsHydratedRef.current = true;
+    })();
+    // Run once on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist a lightweight snapshot of open tabs (metadata only — never the
+  // xterm instance) so they can be restored next launch.
+  useEffect(() => {
+    if (!tabsHydratedRef.current) return;
+    const snap = tabs
+      .filter((t) => !t.agentId)
+      .map((t) => ({
+        id: t.id,
+        title: t.title,
+        isSSH: !!t.isSSH,
+        connId: t.connId,
+        initialCommand: t.initialCommand,
+        badge: t.badge ?? null,
+        cwd: t.cwd,
+      }));
+    localStorage.setItem("openTabs", JSON.stringify({ tabs: snap, activeTab }));
+  }, [tabs, activeTab]);
 
   // Configurable keyboard shortcuts
   useEffect(() => {
@@ -746,7 +828,9 @@ function App(): React.JSX.Element {
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <AppProvider>
         <TerminalProvider>
-          <AppContent />
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
         </TerminalProvider>
       </AppProvider>
     </ThemeProvider>

@@ -2,15 +2,28 @@ import { useEffect, useRef, useState } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
+import { SearchAddon } from "@xterm/addon-search";
 import "@xterm/xterm/css/xterm.css";
 import { Unicode11Addon } from "@xterm/addon-unicode11";
 import { SerializeAddon } from "@xterm/addon-serialize";
 import { useTerminalContext } from "@renderer/contexts/terminal-context";
 import useCopyNotification from "@renderer/hooks/useCopyNotification";
 import CopyNotification from "./terminal/copy-notification";
+import { TerminalSearchBar } from "./terminal/terminal-search-bar";
 import { useAppContext } from "@renderer/contexts/app-context";
-import { ArrowDown } from "lucide-react";
+import {
+  ArrowDown,
+  Copy,
+  ClipboardPaste,
+  TextSelect,
+  Eraser,
+  Search,
+} from "lucide-react";
 import { isMacPlatform } from "@renderer/lib/keyboard";
+
+const MIN_FONT_SIZE = 8;
+const MAX_FONT_SIZE = 32;
+const DEFAULT_FONT_SIZE = 14;
 
 // Tracks which tabs have already had their `initialCommand` sent. Lives at
 // module scope so React StrictMode's double-invocation of effects in dev does
@@ -57,17 +70,37 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     scrollback,
     defaultShell,
     defaultCwd,
+    setTerminalFontSize,
   } = useAppContext();
 
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const fitAddonRef = useRef<FitAddon | null>(null);
   const serializeAddonRef = useRef<SerializeAddon | null>(null);
+  const searchAddonRef = useRef<SearchAddon | null>(null);
   const resizeObserverRef = useRef<ResizeObserver | null>(null);
   const isInitializedRef = useRef(false);
   const activeRef = useRef(active);
+  // Current font size, mirrored to a ref so the (run-once) key handler can read
+  // the latest value for Ctrl +/- zoom without re-binding.
+  const fontSizeRef = useRef(terminalFontSize);
+  // Mirror search state so the (run-once) selection handler can suppress
+  // auto-copy while searching — the search addon selects matches itself.
+  const searchOpenRef = useRef(false);
 
   const [isScrolledUp, setIsScrolledUp] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchCount, setSearchCount] = useState<number | undefined>(undefined);
+  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    fontSizeRef.current = terminalFontSize;
+  }, [terminalFontSize]);
+
+  useEffect(() => {
+    searchOpenRef.current = searchOpen;
+  }, [searchOpen]);
 
   const { notificationState, copyText, handleComplete } = useCopyNotification();
 
@@ -186,6 +219,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     });
 
     terminal.onSelectionChange((_) => {
+      // Don't auto-copy while searching — match highlights select text too.
+      if (searchOpenRef.current) return;
       const text = terminal.getSelection();
       if (text) {
         copyText(text, null);
@@ -202,29 +237,73 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     const fitAddon = new FitAddon();
     const unicode11Addon = new Unicode11Addon();
     const serializeAddon = new SerializeAddon();
+    const searchAddon = new SearchAddon();
     terminal.loadAddon(fitAddon);
     terminal.loadAddon(new WebLinksAddon());
     terminal.loadAddon(unicode11Addon);
     terminal.loadAddon(serializeAddon);
+    terminal.loadAddon(searchAddon);
     terminal.unicode.activeVersion = "11";
+    searchAddon.onDidChangeResults((r) => {
+      setSearchCount(r ? r.resultCount : undefined);
+    });
 
-    if (isMacPlatform()) {
-      terminal.attachCustomKeyEventHandler((event) => {
-        if (event.type !== "keydown") return true;
-        if (!event.ctrlKey || event.altKey || event.metaKey) return true;
-        const code = event.code;
-        if (!/^Key[A-Z]$/.test(code)) return true;
+    terminal.attachCustomKeyEventHandler((event) => {
+      if (event.type !== "keydown") return true;
+      const mod = event.ctrlKey || event.metaKey;
 
-        const key = code.slice(3);
+      // Runtime font zoom: Ctrl/Cmd with +, -, or 0 (reset).
+      if (mod && !event.altKey) {
+        if (event.key === "=" || event.key === "+") {
+          setTerminalFontSize(Math.min(MAX_FONT_SIZE, fontSizeRef.current + 1));
+          event.preventDefault();
+          return false;
+        }
+        if (event.key === "-" || event.key === "_") {
+          setTerminalFontSize(Math.max(MIN_FONT_SIZE, fontSizeRef.current - 1));
+          event.preventDefault();
+          return false;
+        }
+        if (event.key === "0") {
+          setTerminalFontSize(DEFAULT_FONT_SIZE);
+          event.preventDefault();
+          return false;
+        }
+      }
 
+      // Open in-terminal search: Ctrl+Shift+F (or Cmd+F on macOS).
+      const isSearch =
+        (mod && event.shiftKey && (event.key === "F" || event.key === "f")) ||
+        (isMacPlatform() &&
+          event.metaKey &&
+          !event.shiftKey &&
+          (event.key === "f" || event.key === "F"));
+      if (isSearch) {
+        setSearchOpen(true);
+        event.preventDefault();
+        return false;
+      }
+
+      // macOS: map Ctrl+<letter> to the control character (so e.g. Ctrl+C
+      // still sends SIGINT when Cmd is the platform meta key).
+      if (
+        isMacPlatform() &&
+        event.ctrlKey &&
+        !event.altKey &&
+        !event.metaKey &&
+        /^Key[A-Z]$/.test(event.code)
+      ) {
+        const key = event.code.slice(3);
         event.preventDefault();
         window.electron.ipcRenderer.send("terminal-input", {
           tabId,
           data: String.fromCharCode(key.charCodeAt(0) - 64),
         });
         return false;
-      });
-    }
+      }
+
+      return true;
+    });
 
     terminal.onData((data) => {
       // Capturar comandos cuando se presiona Enter
@@ -302,6 +381,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     terminalRef.current = terminal;
     fitAddonRef.current = fitAddon;
     serializeAddonRef.current = serializeAddon;
+    searchAddonRef.current = searchAddon;
     // Make this tab serializable from anywhere (e.g. pop-out of a background tab).
     register(tabId, api);
 
@@ -317,9 +397,22 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
       terminalRef.current = null;
       fitAddonRef.current = null;
       serializeAddonRef.current = null;
+      searchAddonRef.current = null;
       isInitializedRef.current = false;
     };
   }, [tabId]);
+
+  // Re-run the search as the query changes (live find-as-you-type).
+  useEffect(() => {
+    const addon = searchAddonRef.current;
+    if (!addon) return;
+    if (searchOpen && searchQuery) {
+      addon.findNext(searchQuery);
+    } else {
+      addon.clearDecorations();
+      setSearchCount(undefined);
+    }
+  }, [searchQuery, searchOpen]);
 
   /**
    * Attach resize observer only when the tab is active.
@@ -384,13 +477,103 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     setIsScrolledUp(false);
   };
 
+  const closeCtxMenu = () => setCtxMenu(null);
+  const ctxCopy = () => {
+    const sel = terminalRef.current?.getSelection();
+    if (sel) navigator.clipboard.writeText(sel);
+    closeCtxMenu();
+  };
+  const ctxPaste = async () => {
+    const text = await navigator.clipboard.readText();
+    if (text)
+      window.electron.ipcRenderer.send("terminal-input", { tabId, data: text });
+    closeCtxMenu();
+  };
+  const ctxSelectAll = () => {
+    terminalRef.current?.selectAll();
+    closeCtxMenu();
+  };
+  const ctxClear = () => {
+    terminalRef.current?.clear();
+    closeCtxMenu();
+  };
+  const ctxFind = () => {
+    setSearchOpen(true);
+    closeCtxMenu();
+  };
+
+  const hasSelection = !!terminalRef.current?.hasSelection();
+
   return (
     <>
       <div
         ref={containerRef}
         className="terminal-container flex-1 overflow-hidden h-full w-full"
         style={{ display: active ? "block" : "none" }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setCtxMenu({ x: e.clientX, y: e.clientY });
+        }}
       />
+
+      {active && searchOpen && (
+        <TerminalSearchBar
+          query={searchQuery}
+          onQueryChange={setSearchQuery}
+          onFindNext={() =>
+            searchQuery && searchAddonRef.current?.findNext(searchQuery)
+          }
+          onFindPrev={() =>
+            searchQuery && searchAddonRef.current?.findPrevious(searchQuery)
+          }
+          onClose={() => {
+            setSearchOpen(false);
+            setSearchQuery("");
+          }}
+          resultCount={searchCount}
+        />
+      )}
+
+      {ctxMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={closeCtxMenu} />
+          <div
+            className="fixed z-50 min-w-[160px] py-1 rounded-md border border-slate-700/60 bg-slate-900/97 shadow-xl shadow-black/40 backdrop-blur-md text-sm text-gray-200"
+            style={{ top: ctxMenu.y, left: ctxMenu.x }}
+          >
+            <CtxItem
+              icon={<Copy size={13} />}
+              label="Copiar"
+              shortcut="Ctrl+Shift+C"
+              disabled={!hasSelection}
+              onClick={ctxCopy}
+            />
+            <CtxItem
+              icon={<ClipboardPaste size={13} />}
+              label="Pegar"
+              shortcut="Ctrl+Shift+V"
+              onClick={ctxPaste}
+            />
+            <CtxItem
+              icon={<TextSelect size={13} />}
+              label="Seleccionar todo"
+              onClick={ctxSelectAll}
+            />
+            <div className="my-1 border-t border-slate-700/50" />
+            <CtxItem
+              icon={<Search size={13} />}
+              label="Buscar"
+              shortcut="Ctrl+Shift+F"
+              onClick={ctxFind}
+            />
+            <CtxItem
+              icon={<Eraser size={13} />}
+              label="Limpiar"
+              onClick={ctxClear}
+            />
+          </div>
+        </>
+      )}
 
       {active && isScrolledUp && (
         <button
@@ -411,3 +594,31 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     </>
   );
 };
+
+function CtxItem({
+  icon,
+  label,
+  shortcut,
+  disabled,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  shortcut?: string;
+  disabled?: boolean;
+  onClick: () => void;
+}): React.JSX.Element {
+  return (
+    <button
+      disabled={disabled}
+      onClick={onClick}
+      className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-700/50 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+    >
+      <span className="text-gray-400 flex-shrink-0">{icon}</span>
+      <span className="flex-1">{label}</span>
+      {shortcut && (
+        <span className="text-[10px] text-gray-600 font-mono">{shortcut}</span>
+      )}
+    </button>
+  );
+}

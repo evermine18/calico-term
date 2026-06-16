@@ -134,6 +134,9 @@ type AppContextType = {
   setDefaultShell: (v: string) => void;
   defaultCwd: string;
   setDefaultCwd: (v: string) => void;
+  // Restore open tabs across app restarts (off by default)
+  restoreTabsOnStartup: boolean;
+  setRestoreTabsOnStartup: (v: boolean) => void;
   // AI advanced settings
   aiSystemPrompt: string;
   setAiSystemPrompt: (v: string) => void;
