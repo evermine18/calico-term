@@ -48,11 +48,11 @@ function toControlNode(
 }
 
 const STATUS_LABEL: Record<string, string> = {
-  connecting: "Conectando…",
-  "installing-key": "Instalando deploy key…",
-  "syncing-repo": "Sincronizando repo…",
-  running: "Ejecutando…",
-  done: "Completado",
+  connecting: "Connecting…",
+  "installing-key": "Installing deploy key…",
+  "syncing-repo": "Syncing repo…",
+  running: "Running…",
+  done: "Done",
   error: "Error",
 };
 
@@ -218,7 +218,7 @@ export default function AnsiblePanel({
         <button
           onClick={onClose}
           className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-slate-700/60 hover:text-gray-200 transition-colors"
-          title="Cerrar"
+          title="Close"
         >
           <X size={15} />
         </button>
@@ -229,7 +229,7 @@ export default function AnsiblePanel({
         <div className="w-72 flex-shrink-0 border-r border-slate-700/40 flex flex-col bg-slate-900/40">
           <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/30">
             <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
-              Fuentes
+              Sources
             </span>
             <button
               onClick={() => {
@@ -237,7 +237,7 @@ export default function AnsiblePanel({
                 setSourceFormOpen(true);
               }}
               className="text-gray-400 hover:text-accent-300 transition-colors"
-              title="Nueva fuente"
+              title="New source"
             >
               <Plus size={15} />
             </button>
@@ -245,8 +245,8 @@ export default function AnsiblePanel({
           <div className="flex-1 overflow-y-auto">
             {ansibleSources.length === 0 && (
               <p className="px-3 py-3 text-xs text-gray-600">
-                Sin fuentes. Crea una para registrar un repo Git o una carpeta
-                del control node.
+                No sources yet. Create one to register a Git repo or a folder
+                on the control node.
               </p>
             )}
             {ansibleSources.map((s) => {
@@ -292,7 +292,7 @@ export default function AnsiblePanel({
                           setSourceFormOpen(true);
                         }}
                         className="text-gray-500 hover:text-gray-200"
-                        title="Editar"
+                        title="Edit"
                       >
                         <Pencil size={12} />
                       </button>
@@ -300,7 +300,7 @@ export default function AnsiblePanel({
                         onClick={(e) => {
                           e.stopPropagation();
                           if (
-                            window.confirm(`¿Eliminar la fuente "${s.name}"?`)
+                            window.confirm(`Delete source "${s.name}"?`)
                           ) {
                             deleteAnsibleSource(s.id);
                             if (selectedSourceId === s.id)
@@ -308,14 +308,14 @@ export default function AnsiblePanel({
                           }
                         }}
                         className="text-gray-500 hover:text-red-400"
-                        title="Eliminar"
+                        title="Delete"
                       >
                         <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
                   <div className="flex items-center gap-1 mt-0.5 pl-5 text-[11px] text-gray-600 truncate">
-                    {node ? node.name : "⚠ control node no encontrado"}
+                    {node ? node.name : "⚠ control node not found"}
                     {s.origin === "git" && s.branch && (
                       <span className="flex items-center gap-0.5 text-gray-600">
                         <GitBranch size={10} /> {s.branch}
@@ -336,10 +336,10 @@ export default function AnsiblePanel({
                 </span>
                 <button
                   onClick={() => {
-                    const name = window.prompt("Nombre del playbook:");
+                    const name = window.prompt("Playbook name:");
                     if (!name) return;
                     const relativePath = window.prompt(
-                      "Ruta relativa (p. ej. site.yml o plays/deploy.yml):",
+                      "Relative path (e.g. site.yml or plays/deploy.yml):",
                       name.endsWith(".yml") ? name : `${name}.yml`,
                     );
                     if (!relativePath) return;
@@ -352,7 +352,7 @@ export default function AnsiblePanel({
                     });
                   }}
                   className="text-gray-400 hover:text-accent-300 transition-colors"
-                  title="Añadir playbook"
+                  title="Add playbook"
                 >
                   <Plus size={15} />
                 </button>
@@ -360,7 +360,7 @@ export default function AnsiblePanel({
               <div className="flex-1 overflow-y-auto">
                 {playbooks.length === 0 && (
                   <p className="px-3 py-2 text-xs text-gray-600">
-                    Sin playbooks en esta fuente.
+                    No playbooks in this source.
                   </p>
                 )}
                 {playbooks.map((p) => {
@@ -382,14 +382,14 @@ export default function AnsiblePanel({
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (window.confirm(`¿Eliminar "${p.name}"?`)) {
+                            if (window.confirm(`Delete "${p.name}"?`)) {
                               deleteAnsiblePlaybook(p.id);
                               if (selectedPlaybookId === p.id)
                                 setSelectedPlaybookId(null);
                             }
                           }}
                           className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Eliminar"
+                          title="Delete"
                         >
                           <Trash2 size={12} />
                         </button>
@@ -411,7 +411,7 @@ export default function AnsiblePanel({
           <div className="px-4 py-3 border-b border-slate-700/40 bg-slate-900/30 space-y-2.5">
             {!playbook ? (
               <p className="text-sm text-gray-500">
-                Selecciona un playbook en la izquierda para ejecutarlo.
+                Select a playbook on the left to run it.
               </p>
             ) : (
               <>
@@ -442,7 +442,7 @@ export default function AnsiblePanel({
                     <input
                       value={limit}
                       onChange={(e) => setLimit(e.target.value)}
-                      placeholder="host o grupo"
+                      placeholder="host or group"
                       className="bg-slate-800/60 border border-slate-700/50 rounded px-2 py-1 text-xs text-gray-100 font-mono w-40 focus:outline-none focus:border-accent-500/60"
                     />
                   </label>
@@ -451,7 +451,7 @@ export default function AnsiblePanel({
                     <input
                       value={extraVars}
                       onChange={(e) => setExtraVars(e.target.value)}
-                      placeholder='var=valor o "@vars.yml"'
+                      placeholder='var=value or "@vars.yml"'
                       className="bg-slate-800/60 border border-slate-700/50 rounded px-2 py-1 text-xs text-gray-100 font-mono flex-1 focus:outline-none focus:border-accent-500/60"
                     />
                   </label>
@@ -461,7 +461,7 @@ export default function AnsiblePanel({
                         ? "text-amber-300 border-amber-500/40 bg-amber-500/10"
                         : "text-gray-400 border-slate-700/50"
                     }`}
-                    title="Dry-run (--check): no aplica cambios"
+                    title="Dry-run (--check): applies no changes"
                   >
                     <input
                       type="checkbox"
@@ -477,7 +477,7 @@ export default function AnsiblePanel({
                       onClick={cancelRun}
                       className="bg-red-600/90 hover:bg-red-600 text-white gap-1"
                     >
-                      <Square size={13} /> Cancelar
+                      <Square size={13} /> Cancel
                     </Button>
                   ) : (
                     <Button
@@ -487,14 +487,14 @@ export default function AnsiblePanel({
                       className="bg-accent-600/90 hover:bg-accent-600 text-white gap-1"
                     >
                       <Play size={13} />
-                      {check ? "Dry-run" : "Ejecutar"}
+                      {check ? "Dry-run" : "Run"}
                     </Button>
                   )}
                 </div>
                 {!controlNode && (
                   <p className="text-[11px] text-red-400">
-                    El control node de esta fuente ya no existe. Edita la fuente
-                    y elige una conexión SSH válida.
+                    This source's control node no longer exists. Edit the
+                    source and pick a valid SSH connection.
                   </p>
                 )}
               </>
@@ -510,10 +510,10 @@ export default function AnsiblePanel({
               <p className="text-gray-700">
                 {running ? (
                   <span className="flex items-center gap-1.5 text-accent-400">
-                    <Loader2 size={12} className="animate-spin" /> iniciando…
+                    <Loader2 size={12} className="animate-spin" /> starting…
                   </span>
                 ) : (
-                  "La salida del playbook aparecerá aquí."
+                  "Playbook output will appear here."
                 )}
               </p>
             ) : (

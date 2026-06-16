@@ -159,31 +159,31 @@ export default function AnsibleSourceForm({
       <DialogContent className="sm:max-w-[520px] bg-slate-900 border-slate-700/60 max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-gray-100">
-            {existing ? "Editar fuente" : "Nueva fuente Ansible"}
+            {existing ? "Edit source" : "New Ansible source"}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-3 py-1">
           <div>
-            <label className={labelCls}>Nombre</label>
+            <label className={labelCls}>Name</label>
             <input
               autoFocus
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="p. ej. infra-prod"
+              placeholder="e.g. infra-prod"
               className={inputCls}
             />
           </div>
 
           <div>
-            <label className={labelCls}>Control node (conexión SSH)</label>
+            <label className={labelCls}>Control node (SSH connection)</label>
             <select
               value={sshConnectionId}
               onChange={(e) => setSshConnectionId(e.target.value)}
               className={inputCls}
             >
               {sshConnections.length === 0 && (
-                <option value="">(no hay conexiones SSH)</option>
+                <option value="">(no SSH connections)</option>
               )}
               {sshConnections.map((c) => (
                 <option key={c.id} value={c.id}>
@@ -194,7 +194,7 @@ export default function AnsibleSourceForm({
           </div>
 
           <div>
-            <label className={labelCls}>Origen de los playbooks</label>
+            <label className={labelCls}>Playbook source</label>
             <div className="flex gap-2">
               {(["git", "path"] as const).map((o) => (
                 <button
@@ -206,7 +206,7 @@ export default function AnsibleSourceForm({
                       : "border-slate-700/50 text-gray-400 hover:border-slate-600"
                   }`}
                 >
-                  {o === "git" ? "Repo Git" : "Ruta en el control node"}
+                  {o === "git" ? "Git repo" : "Path on control node"}
                 </button>
               ))}
             </div>
@@ -215,7 +215,7 @@ export default function AnsibleSourceForm({
           {origin === "git" ? (
             <>
               <div>
-                <label className={labelCls}>URL del repo</label>
+                <label className={labelCls}>Repo URL</label>
                 <input
                   value={repoUrl}
                   onChange={(e) => setRepoUrl(e.target.value)}
@@ -225,7 +225,7 @@ export default function AnsibleSourceForm({
               </div>
               <div className="flex gap-3">
                 <div className="flex-1">
-                  <label className={labelCls}>Rama</label>
+                  <label className={labelCls}>Branch</label>
                   <input
                     value={branch}
                     onChange={(e) => setBranch(e.target.value)}
@@ -234,11 +234,11 @@ export default function AnsibleSourceForm({
                   />
                 </div>
                 <div className="flex-1">
-                  <label className={labelCls}>Subcarpeta (opcional)</label>
+                  <label className={labelCls}>Subfolder (optional)</label>
                   <input
                     value={subdir}
                     onChange={(e) => setSubdir(e.target.value)}
-                    placeholder="p. ej. playbooks"
+                    placeholder="e.g. playbooks"
                     className={`${inputCls} font-mono`}
                   />
                 </div>
@@ -248,7 +248,7 @@ export default function AnsibleSourceForm({
               <div className="rounded-md border border-slate-700/50 p-2.5 space-y-2">
                 <div className="flex items-center gap-1.5 text-xs font-medium text-gray-300">
                   <KeyRound size={13} className="text-accent-400" />
-                  Deploy key (auth del control node contra el host git)
+                  Deploy key (control node auth against the git host)
                 </div>
                 <select
                   value={deployKeyId}
@@ -256,7 +256,7 @@ export default function AnsibleSourceForm({
                   className={inputCls}
                 >
                   <option value="">
-                    Ninguna (usar la config SSH del control node)
+                    None (use the control node's SSH config)
                   </option>
                   {keys.map((k) => (
                     <option key={k.id} value={k.id}>
@@ -277,7 +277,7 @@ export default function AnsibleSourceForm({
                     ) : (
                       <KeyRound size={12} />
                     )}
-                    Generar deploy key
+                    Generate deploy key
                   </Button>
                   <Button
                     size="sm"
@@ -289,14 +289,14 @@ export default function AnsibleSourceForm({
                     {testing ? (
                       <Loader2 size={12} className="animate-spin" />
                     ) : null}
-                    Probar acceso
+                    Test access
                   </Button>
                 </div>
                 {newPublicKey && (
                   <div className="space-y-1">
                     <p className="text-[11px] text-amber-300">
-                      Registra esta clave pública como deploy key en tu host git
-                      (GitHub/GitLab), luego prueba el acceso:
+                      Register this public key as a deploy key on your git host
+                      (GitHub/GitLab), then test access:
                     </p>
                     <div className="flex items-start gap-1">
                       <textarea
@@ -311,7 +311,7 @@ export default function AnsibleSourceForm({
                           setTimeout(() => setCopied(false), 1500);
                         }}
                         className="p-1 text-gray-400 hover:text-accent-300"
-                        title="Copiar"
+                        title="Copy"
                       >
                         {copied ? <Check size={14} /> : <Copy size={14} />}
                       </button>
@@ -326,15 +326,15 @@ export default function AnsibleSourceForm({
                         : "text-red-300 bg-red-500/10 border border-red-500/30"
                     }`}
                   >
-                    {testResult.ok ? "✓ Acceso OK\n" : "✗ Sin acceso\n"}
-                    {testResult.output || "(sin salida)"}
+                    {testResult.ok ? "✓ Access OK\n" : "✗ No access\n"}
+                    {testResult.output || "(no output)"}
                   </div>
                 )}
               </div>
             </>
           ) : (
             <div>
-              <label className={labelCls}>Ruta en el control node</label>
+              <label className={labelCls}>Path on control node</label>
               <input
                 value={basePath}
                 onChange={(e) => setBasePath(e.target.value)}
@@ -346,7 +346,7 @@ export default function AnsibleSourceForm({
 
           {/* Inventory */}
           <div>
-            <label className={labelCls}>Inventario</label>
+            <label className={labelCls}>Inventory</label>
             <div className="flex gap-2 mb-2">
               {(["file", "auto"] as const).map((m) => (
                 <button
@@ -359,8 +359,8 @@ export default function AnsibleSourceForm({
                   }`}
                 >
                   {m === "file"
-                    ? "Fichero del repo/carpeta"
-                    : "Auto (conexiones SSH)"}
+                    ? "File in repo/folder"
+                    : "Auto (SSH connections)"}
                 </button>
               ))}
             </div>
@@ -373,8 +373,8 @@ export default function AnsibleSourceForm({
               />
             ) : (
               <p className="text-[11px] text-gray-500">
-                Se generará un inventario a partir de tus conexiones SSH
-                guardadas, agrupando por sus tags.
+                An inventory will be generated from your saved SSH connections,
+                grouping them by their tags.
               </p>
             )}
           </div>
@@ -387,7 +387,7 @@ export default function AnsibleSourceForm({
             onClick={onClose}
             className="border-slate-700/50 text-gray-300"
           >
-            Cancelar
+            Cancel
           </Button>
           <Button
             size="sm"
@@ -395,7 +395,7 @@ export default function AnsibleSourceForm({
             onClick={save}
             className="bg-accent-600/90 hover:bg-accent-600 text-white"
           >
-            Guardar
+            Save
           </Button>
         </DialogFooter>
       </DialogContent>

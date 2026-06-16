@@ -556,32 +556,32 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
             >
               <CtxItem
                 icon={<Copy size={13} />}
-                label="Copiar"
+                label="Copy"
                 shortcut="Ctrl+Shift+C"
                 disabled={!hasSelection}
                 onClick={ctxCopy}
               />
               <CtxItem
                 icon={<ClipboardPaste size={13} />}
-                label="Pegar"
+                label="Paste"
                 shortcut="Ctrl+Shift+V"
                 onClick={ctxPaste}
               />
               <CtxItem
                 icon={<TextSelect size={13} />}
-                label="Seleccionar todo"
+                label="Select all"
                 onClick={ctxSelectAll}
               />
               <div className="my-1 border-t border-slate-700/50" />
               <CtxItem
                 icon={<Search size={13} />}
-                label="Buscar"
+                label="Search"
                 shortcut="Ctrl+Shift+F"
                 onClick={ctxFind}
               />
               <CtxItem
                 icon={<Eraser size={13} />}
-                label="Limpiar"
+                label="Clear"
                 onClick={ctxClear}
               />
             </div>

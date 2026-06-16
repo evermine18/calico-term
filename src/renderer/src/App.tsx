@@ -802,11 +802,11 @@ function AppContent(): React.JSX.Element {
                 <span className="text-slate-700">·</span>
                 <button
                   onClick={() => void reconnectSSHTab(activeTabObj)}
-                  title="La sesión SSH se ha cerrado. Click para reconectar."
+                  title="The SSH session has closed. Click to reconnect."
                   className="flex items-center gap-1 px-2 py-0.5 rounded text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:text-amber-200 transition-colors"
                 >
                   <PlugZap size={11} />
-                  <span>Reconectar</span>
+                  <span>Reconnect</span>
                 </button>
               </>
             )}

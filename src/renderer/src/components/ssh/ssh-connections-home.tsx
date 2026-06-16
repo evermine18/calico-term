@@ -92,8 +92,8 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
     }
     toast(
       added > 0
-        ? `Importadas ${added} conexión(es)${skipped ? `, ${skipped} ya existían` : ""}`
-        : `Sin novedades — ${skipped} ya existían`,
+        ? `Imported ${added} connection(s)${skipped ? `, ${skipped} already existed` : ""}`
+        : `Nothing new — ${skipped} already existed`,
       added > 0 ? "success" : "info",
     );
   };

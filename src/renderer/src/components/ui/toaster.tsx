@@ -66,7 +66,7 @@ export function ToastProvider({
             <button
               onClick={() => dismiss(t.id)}
               className="ml-1 flex-shrink-0 text-gray-600 hover:text-gray-300 transition-colors"
-              title="Cerrar"
+              title="Close"
             >
               <X size={13} />
             </button>

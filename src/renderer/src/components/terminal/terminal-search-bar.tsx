@@ -40,7 +40,7 @@ export function TerminalSearchBar({
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="Buscar... (Ctrl+Shift+F)"
+        placeholder="Search... (Ctrl+Shift+F)"
         className="bg-transparent text-sm text-gray-200 placeholder-gray-600 outline-none w-44 caret-cyan-400"
       />
 
@@ -53,21 +53,21 @@ export function TerminalSearchBar({
       <div className="flex items-center gap-0.5 border-l border-slate-700/50 pl-1.5 ml-0.5">
         <button
           onClick={onFindPrev}
-          title="Anterior (Shift+Enter)"
+          title="Previous (Shift+Enter)"
           className="w-5 h-5 flex items-center justify-center rounded text-gray-500 hover:text-cyan-400 hover:bg-slate-700/50 transition-colors"
         >
           <ChevronUp size={13} />
         </button>
         <button
           onClick={onFindNext}
-          title="Siguiente (Enter)"
+          title="Next (Enter)"
           className="w-5 h-5 flex items-center justify-center rounded text-gray-500 hover:text-cyan-400 hover:bg-slate-700/50 transition-colors"
         >
           <ChevronDown size={13} />
         </button>
         <button
           onClick={onClose}
-          title="Cerrar (Escape)"
+          title="Close (Escape)"
           className="w-5 h-5 flex items-center justify-center rounded text-gray-500 hover:text-red-400 hover:bg-red-500/10 transition-colors ml-0.5"
         >
           <X size={12} />
