@@ -110,14 +110,20 @@ export default function FileBrowserPanel({
       filename: string;
       bytes: number;
       total: number;
+      transferId?: string;
     }) => {
       if (data.sessionId !== sessionId) return;
       setTransfers((prev) =>
         prev.map((t) =>
-          t.filename === data.filename &&
-          activeTransferIds.current.has(t.id) &&
-          t.status === "transferring"
-            ? { ...t, bytes: data.bytes, total: data.total }
+          // Match by transfer id (filename is unknown up front for picker-based
+          // uploads). Adopt the resolved basename the main process reports.
+          data.transferId === t.id && t.status === "transferring"
+            ? {
+                ...t,
+                filename: data.filename || t.filename,
+                bytes: data.bytes,
+                total: data.total,
+              }
             : t,
         ),
       );
@@ -185,7 +191,7 @@ export default function FileBrowserPanel({
     const remotePath = joinPath(currentPath, entry.filename);
     const id = addTransfer("download", entry.filename);
     try {
-      await window.api.sftp.download(sessionId, remotePath);
+      await window.api.sftp.download(sessionId, remotePath, id);
       finishTransfer(id);
     } catch (err: any) {
       finishTransfer(id, err?.message ?? String(err));
@@ -193,9 +199,15 @@ export default function FileBrowserPanel({
   }
 
   async function handleUpload() {
-    const id = addTransfer("upload", "...");
+    const id = addTransfer("upload", "…");
     try {
-      await window.api.sftp.upload(sessionId, currentPath);
+      const result = await window.api.sftp.upload(sessionId, currentPath, id);
+      // User cancelled the file picker — drop the placeholder transfer.
+      if (!result) {
+        activeTransferIds.current.delete(id);
+        setTransfers((prev) => prev.filter((t) => t.id !== id));
+        return;
+      }
       finishTransfer(id);
       await navigateTo(currentPath);
     } catch (err: any) {
@@ -203,21 +215,22 @@ export default function FileBrowserPanel({
     }
   }
 
-  // Upload files dropped from the OS file manager. Electron augments dropped
-  // File objects with an absolute `path`, which we hand to the main process.
+  // Upload files dropped from the OS file manager. Electron 35 removed the
+  // `File.path` property, so resolve each dropped file's absolute path via
+  // webUtils.getPathForFile (exposed through the preload bridge).
   async function handleDrop(e: React.DragEvent) {
     e.preventDefault();
     setDragOver(false);
     const files = Array.from(e.dataTransfer.files);
     const paths = files
-      .map((f) => (f as unknown as { path?: string }).path)
+      .map((f) => window.api.sftp.getPathForFile(f))
       .filter((p): p is string => !!p);
     if (paths.length === 0) return;
     for (const localPath of paths) {
       const name = localPath.split(/[\\/]/).pop() ?? "file";
       const id = addTransfer("upload", name);
       try {
-        await window.api.sftp.uploadPath(sessionId, localPath, currentPath);
+        await window.api.sftp.uploadPath(sessionId, localPath, currentPath, id);
         finishTransfer(id);
       } catch (err: any) {
         finishTransfer(id, err?.message ?? String(err));

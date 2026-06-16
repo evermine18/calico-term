@@ -66,10 +66,23 @@ function sendProgress(
   filename: string,
   bytes: number,
   total: number,
+  transferId?: string,
 ) {
   BrowserWindow.getAllWindows().forEach((w) => {
-    w.webContents.send("sftp-progress", { sessionId, filename, bytes, total });
+    w.webContents.send("sftp-progress", {
+      sessionId,
+      filename,
+      bytes,
+      total,
+      transferId,
+    });
   });
+}
+
+// Cross-platform basename: dropped/picked local paths use "\" on Windows and
+// "/" elsewhere, so split on both. Remote (SFTP) paths always use "/".
+function basename(p: string): string {
+  return p.split(/[\\/]/).pop() || p;
 }
 
 function getSession(sessionId: string): SFTPSession {
@@ -264,6 +277,7 @@ function downloadFile(
   remotePath: string,
   localPath: string,
   filename: string,
+  transferId?: string,
 ): Promise<void> {
   const { sftp } = getSession(sessionId);
   return new Promise((resolve, reject) => {
@@ -277,7 +291,7 @@ function downloadFile(
 
       readStream.on("data", (chunk: Buffer) => {
         transferred += chunk.length;
-        sendProgress(sessionId, filename, transferred, total);
+        sendProgress(sessionId, filename, transferred, total, transferId);
       });
       readStream.on("error", (e) => {
         writeStream.destroy();
@@ -294,6 +308,7 @@ function uploadFile(
   sessionId: string,
   localPath: string,
   remotePath: string,
+  transferId?: string,
 ): Promise<void> {
   const { sftp } = getSession(sessionId);
   return new Promise((resolve, reject) => {
@@ -304,14 +319,14 @@ function uploadFile(
       /* ignore */
     }
     let transferred = 0;
-    const filename = localPath.split("/").pop() ?? localPath;
+    const filename = basename(localPath);
 
     const readStream = fs.createReadStream(localPath);
     const writeStream = sftp.createWriteStream(remotePath);
 
     readStream.on("data", (chunk: Buffer) => {
       transferred += chunk.length;
-      sendProgress(sessionId, filename, transferred, total);
+      sendProgress(sessionId, filename, transferred, total, transferId);
     });
     readStream.on("error", (e) => {
       writeStream.destroy();
@@ -616,31 +631,48 @@ export function setupSFTPHandlers(): void {
 
   ipcMain.handle(
     "sftp-download",
-    async (_event, sessionId: string, remotePath: string) => {
-      const filename = remotePath.split("/").pop() ?? "file";
+    async (
+      _event,
+      sessionId: string,
+      remotePath: string,
+      transferId?: string,
+    ) => {
+      const filename = basename(remotePath);
       const win = BrowserWindow.getFocusedWindow();
       const result = await dialog.showSaveDialog(win!, {
         defaultPath: filename,
       });
       if (result.canceled || !result.filePath) return;
-      await downloadFile(sessionId, remotePath, result.filePath, filename);
+      await downloadFile(
+        sessionId,
+        remotePath,
+        result.filePath,
+        filename,
+        transferId,
+      );
     },
   );
 
   ipcMain.handle(
     "sftp-upload",
-    async (_event, sessionId: string, remotePath: string) => {
+    async (
+      _event,
+      sessionId: string,
+      remotePath: string,
+      transferId?: string,
+    ) => {
       const win = BrowserWindow.getFocusedWindow();
       const result = await dialog.showOpenDialog(win!, {
         properties: ["openFile"],
       });
-      if (result.canceled || !result.filePaths[0]) return;
+      if (result.canceled || !result.filePaths[0]) return undefined;
       const localPath = result.filePaths[0];
-      const filename = localPath.split("/").pop() ?? "file";
+      const filename = basename(localPath);
       const dest = remotePath.endsWith("/")
         ? remotePath + filename
         : remotePath + "/" + filename;
-      await uploadFile(sessionId, localPath, dest);
+      await uploadFile(sessionId, localPath, dest, transferId);
+      return { filename };
     },
   );
 
@@ -648,12 +680,18 @@ export function setupSFTPHandlers(): void {
   // already knows the dropped file's path and shouldn't open a dialog.
   ipcMain.handle(
     "sftp-upload-path",
-    async (_event, sessionId: string, localPath: string, remoteDir: string) => {
-      const filename = localPath.split(/[\\/]/).pop() ?? "file";
+    async (
+      _event,
+      sessionId: string,
+      localPath: string,
+      remoteDir: string,
+      transferId?: string,
+    ) => {
+      const filename = basename(localPath);
       const dest = remoteDir.endsWith("/")
         ? remoteDir + filename
         : remoteDir + "/" + filename;
-      await uploadFile(sessionId, localPath, dest);
+      await uploadFile(sessionId, localPath, dest, transferId);
       return { filename };
     },
   );

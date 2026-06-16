@@ -206,13 +206,23 @@ declare global {
           }[]
         >;
         realpath: (sessionId: string, remotePath: string) => Promise<string>;
-        download: (sessionId: string, remotePath: string) => Promise<void>;
-        upload: (sessionId: string, remotePath: string) => Promise<void>;
+        download: (
+          sessionId: string,
+          remotePath: string,
+          transferId?: string,
+        ) => Promise<void>;
+        upload: (
+          sessionId: string,
+          remotePath: string,
+          transferId?: string,
+        ) => Promise<{ filename: string } | undefined>;
         uploadPath: (
           sessionId: string,
           localPath: string,
           remoteDir: string,
+          transferId?: string,
         ) => Promise<{ filename: string }>;
+        getPathForFile: (file: File) => string;
         delete: (
           sessionId: string,
           entryPath: string,
@@ -230,6 +240,7 @@ declare global {
             filename: string;
             bytes: number;
             total: number;
+            transferId?: string;
           }) => void,
         ) => () => void;
         readText: (sessionId: string, remotePath: string) => Promise<string>;

@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from "electron";
+import { contextBridge, ipcRenderer, webUtils } from "electron";
 import { electronAPI } from "@electron-toolkit/preload";
 import { clipboard } from "electron";
 
@@ -13,12 +13,25 @@ const api = {
       ipcRenderer.invoke("sftp-list", sessionId, dirPath),
     realpath: (sessionId: string, remotePath: string) =>
       ipcRenderer.invoke("sftp-realpath", sessionId, remotePath),
-    download: (sessionId: string, remotePath: string) =>
-      ipcRenderer.invoke("sftp-download", sessionId, remotePath),
-    upload: (sessionId: string, remotePath: string) =>
-      ipcRenderer.invoke("sftp-upload", sessionId, remotePath),
-    uploadPath: (sessionId: string, localPath: string, remoteDir: string) =>
-      ipcRenderer.invoke("sftp-upload-path", sessionId, localPath, remoteDir),
+    download: (sessionId: string, remotePath: string, transferId?: string) =>
+      ipcRenderer.invoke("sftp-download", sessionId, remotePath, transferId),
+    upload: (sessionId: string, remotePath: string, transferId?: string) =>
+      ipcRenderer.invoke("sftp-upload", sessionId, remotePath, transferId),
+    uploadPath: (
+      sessionId: string,
+      localPath: string,
+      remoteDir: string,
+      transferId?: string,
+    ) =>
+      ipcRenderer.invoke(
+        "sftp-upload-path",
+        sessionId,
+        localPath,
+        remoteDir,
+        transferId,
+      ),
+    // Electron 35 removed File.path; resolve a dropped file's absolute path here.
+    getPathForFile: (file: File): string => webUtils.getPathForFile(file),
     delete: (sessionId: string, entryPath: string, isDirectory: boolean) =>
       ipcRenderer.invoke("sftp-delete", sessionId, entryPath, isDirectory),
     mkdir: (sessionId: string, dirPath: string) =>
@@ -31,6 +44,7 @@ const api = {
         filename: string;
         bytes: number;
         total: number;
+        transferId?: string;
       }) => void,
     ): (() => void) => {
       const wrapped = (_e: unknown, data: unknown) => cb(data as any);
