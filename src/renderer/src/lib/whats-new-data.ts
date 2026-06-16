@@ -6,6 +6,10 @@ import {
   Activity,
   Settings2,
   PictureInPicture2,
+  PlugZap,
+  ServerCog,
+  Search,
+  AppWindow,
   type LucideIcon,
 } from "lucide-react";
 
@@ -26,11 +30,68 @@ export interface WhatsNewVersion {
 
 // Bump APP_VERSION when shipping a release whose changes should re-trigger
 // the What's New dialog. Must match `version` in package.json.
-export const APP_VERSION = "2.1.0";
+export const APP_VERSION = "2.2.0";
 
 export const WHATS_NEW_STORAGE_KEY = "calico-term:whats-new-seen-version";
 
 export const WHATS_NEW: WhatsNewVersion[] = [
+  {
+    version: "2.2.0",
+    date: "2026-06-16",
+    tagline:
+      "Let coding agents drive your terminals over MCP, run Ansible playbooks, and more.",
+    sections: [
+      {
+        id: "mcp",
+        title: "MCP Server",
+        icon: PlugZap,
+        accent: "bg-violet-500/15 text-violet-300 border-violet-500/30",
+        items: [
+          "Calico Term now runs a local MCP server so coding agents can drive your terminals.",
+          "Exposes tools to list terminals, read output, execute commands, and send keystrokes.",
+          "Copy-paste connection setup for Claude Code, Codex, Gemini CLI, and OpenCode.",
+          "Every agent action waits for your approval — with an opt-in accept-all per session.",
+          "Token-secured on a configurable port; regenerate the token anytime.",
+        ],
+      },
+      {
+        id: "ansible",
+        title: "Ansible Runner",
+        icon: ServerCog,
+        accent: "bg-rose-500/15 text-rose-300 border-rose-500/30",
+        items: [
+          "Manage Ansible sources from a git repo or an existing path on an SSH control node.",
+          "Register playbooks with default limits, extra vars, and check mode.",
+          "Start, monitor, and cancel runs with live output.",
+          "Auto-detected or file-based inventory, with managed deploy keys for git auth.",
+        ],
+      },
+      {
+        id: "terminal-sftp",
+        title: "Terminal & SFTP",
+        icon: Search,
+        accent: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+        items: [
+          "Search inside the terminal with a dedicated search bar and keyboard shortcuts.",
+          "Right-click context menu: copy, paste, select all, search, and clear.",
+          "Adjust the terminal font size on the fly with keyboard shortcuts.",
+          "Drag files from your file manager straight into the SFTP browser to upload.",
+        ],
+      },
+      {
+        id: "windows-sessions",
+        title: "Windows & Sessions",
+        icon: AppWindow,
+        accent: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+        items: [
+          "Launch Calico again to open a new window — all windows share the same vault and settings.",
+          "Optionally restore your open tabs on startup.",
+          "Import hosts straight from your ~/.ssh/config, skipping duplicates.",
+          "New toast notifications give non-blocking feedback for your actions.",
+        ],
+      },
+    ],
+  },
   {
     version: "2.1.0",
     date: "2026-06-11",
