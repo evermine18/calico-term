@@ -167,7 +167,7 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
           {/* Hero icon */}
           <div className="mb-8 flex flex-col items-center gap-4 relative">
             <div
-              className="w-16 h-16 rounded-2xl bg-slate-900/80 border border-accent-500/20 flex items-center justify-center"
+              className="w-16 h-16 rounded-2xl bg-panel/80 border border-accent-500/20 flex items-center justify-center"
               style={{
                 boxShadow:
                   "0 0 30px rgba(var(--accent-rgb),0.12), inset 0 1px 0 rgba(var(--accent-rgb),0.1)",
@@ -181,12 +181,12 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
               />
             </div>
             <div className="text-center">
-              <h2 className="text-base font-semibold tracking-widest text-gray-300">
+              <h2 className="text-base font-semibold tracking-widest text-ink-muted">
                 <span className="text-accent-400">calico</span>
-                <span className="text-slate-600 mx-1">/</span>
+                <span className="text-ink-subtle mx-1">/</span>
                 <span>term</span>
               </h2>
-              <p className="text-xs text-gray-600 mt-1 tracking-wide">
+              <p className="text-xs text-ink-subtle mt-1 tracking-wide">
                 open a terminal or connect to a saved ssh server
               </p>
             </div>
@@ -195,7 +195,7 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
           {/* SSH Connections */}
           <div className="w-full max-w-2xl">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs uppercase tracking-widest text-gray-500 font-semibold">
+              <span className="text-xs uppercase tracking-widest text-ink-subtle font-semibold">
                 SSH Connections
               </span>
               <div className="flex items-center gap-2">
@@ -203,8 +203,8 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
                   onClick={handleImportConfig}
                   title="Importar hosts desde ~/.ssh/config"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
-                  bg-slate-800/60 text-gray-400 border border-slate-700/50
-                  hover:bg-slate-700/60 hover:text-accent-300 hover:border-accent-500/40 transition-all duration-150"
+                  bg-elevated/60 text-ink-muted border border-hairline/50
+                  hover:bg-elevated/60 hover:text-accent-300 hover:border-accent-500/40 transition-all duration-150"
                 >
                   <FileDown size={13} />
                   Import ~/.ssh/config
@@ -224,14 +224,14 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
             {visibleConnections.length === 0 ? (
               <div
                 className="flex flex-col items-center justify-center gap-3 py-10 rounded-xl
-                border border-dashed border-slate-700/60 text-gray-500"
+                border border-dashed border-hairline/60 text-ink-subtle"
               >
                 <Server size={28} className="opacity-40" />
                 <p className="text-sm">No saved connections yet</p>
                 <button
                   onClick={openAdd}
                   className="flex items-center gap-1.5 px-4 py-2 rounded-md text-sm font-medium
-                  bg-slate-800/60 border border-slate-700/50 text-gray-400
+                  bg-elevated/60 border border-hairline/50 text-ink-muted
                   hover:bg-accent-500/10 hover:text-accent-300 hover:border-accent-500/40
                   transition-all duration-150"
                 >
@@ -259,7 +259,7 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
                 <button
                   onClick={openAdd}
                   className="flex items-center justify-center gap-2 h-10 rounded-xl
-                  border border-dashed border-slate-700/60 text-gray-600
+                  border border-dashed border-hairline/60 text-ink-subtle
                   hover:border-accent-600/40 hover:text-accent-500/70
                   transition-all duration-150 text-sm"
                 >
@@ -271,9 +271,9 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
           </div>
 
           {/* Hint */}
-          <p className="mt-8 text-[11px] text-gray-700 tracking-wide">
+          <p className="mt-8 text-[11px] text-ink-subtle tracking-wide">
             press{" "}
-            <kbd className="px-1.5 py-0.5 bg-slate-800/50 border border-slate-700/40 rounded text-accent-400/60 text-[10px]">
+            <kbd className="px-1.5 py-0.5 bg-elevated/50 border border-hairline/40 rounded text-accent-400/60 text-[10px]">
               +
             </kbd>{" "}
             in the tab bar to open a local terminal
@@ -315,12 +315,12 @@ function TagGroup({
   const hasMore = connections.length > 3;
 
   return (
-    <div className="rounded-xl border border-slate-700/50 overflow-hidden">
+    <div className="rounded-xl border border-hairline/50 overflow-hidden">
       {/* Accordion header */}
       <button
         onClick={onToggle}
         className="w-full flex items-center gap-3 px-4 py-2.5
-          bg-slate-800/60 hover:bg-slate-800/90 transition-colors duration-150 text-left"
+          bg-elevated/60 hover:bg-elevated/90 transition-colors duration-150 text-left"
       >
         {/* Color dot */}
         <span
@@ -350,13 +350,13 @@ function TagGroup({
 
         {/* Mini preview — only when collapsed */}
         {!isOpen && (
-          <span className="flex-1 min-w-0 text-xs text-gray-600 truncate">
+          <span className="flex-1 min-w-0 text-xs text-ink-subtle truncate">
             {preview}
             {hasMore ? " …" : ""}
           </span>
         )}
 
-        <span className="ml-auto flex-shrink-0 text-gray-500">
+        <span className="ml-auto flex-shrink-0 text-ink-subtle">
           {isOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         </span>
       </button>
@@ -403,8 +403,8 @@ function SSHConnectionCard({
   return (
     <div
       className="group relative flex items-center gap-3 p-3.5 rounded-xl
-        bg-slate-800/50 border border-slate-700/50
-        hover:bg-slate-800/80 hover:border-slate-600/60
+        bg-elevated/50 border border-hairline/50
+        hover:bg-elevated/80 hover:border-hairline/60
         transition-all duration-150 cursor-pointer"
       onClick={() => onConnect(conn)}
     >
@@ -416,7 +416,7 @@ function SSHConnectionCard({
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <p className="text-sm font-medium text-gray-200 truncate">
+          <p className="text-sm font-medium text-ink-muted truncate">
             {conn.name}
           </p>
           {conn.hasPassword && (
@@ -427,7 +427,7 @@ function SSHConnectionCard({
             />
           )}
         </div>
-        <p className="text-xs text-gray-500 font-mono truncate mt-0.5">
+        <p className="text-xs text-ink-subtle font-mono truncate mt-0.5">
           {conn.username}@{conn.host}
           {conn.port !== 22 ? `:${conn.port}` : ""}
         </p>
@@ -458,14 +458,14 @@ function SSHConnectionCard({
         <button
           title="Edit"
           onClick={() => onEdit(conn)}
-          className="p-1.5 rounded-md text-gray-500 hover:text-accent-400 hover:bg-slate-700/60 transition-colors"
+          className="p-1.5 rounded-md text-ink-subtle hover:text-accent-400 hover:bg-elevated/60 transition-colors"
         >
           <Pencil size={13} />
         </button>
         <button
           title="Delete"
           onClick={() => onDelete(conn.id)}
-          className="p-1.5 rounded-md text-gray-500 hover:text-red-400 hover:bg-slate-700/60 transition-colors"
+          className="p-1.5 rounded-md text-ink-subtle hover:text-danger hover:bg-elevated/60 transition-colors"
         >
           <Trash2 size={13} />
         </button>

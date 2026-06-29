@@ -2,13 +2,48 @@ import { Bot, CircleX, Copy, RefreshCw, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import "highlight.js/styles/github-dark.css";
-import { useState } from "react";
+import githubDark from "highlight.js/styles/github-dark.css?url";
+import githubLight from "highlight.js/styles/github.css?url";
+import { useEffect, useState } from "react";
 import type { Components } from "react-markdown";
 import type { ToolCall } from "./conversation-types";
 import ToolCallCard from "./tool-call-card";
 
 const EXECUTABLE_LANGS = new Set(["bash", "sh", "zsh", "shell"]);
+
+const HLJS_LINK_ID = "hljs-theme";
+
+/**
+ * Keeps a single <link id="hljs-theme"> in <head> pointing at the github-dark or
+ * github (light) highlight.js stylesheet, following the app's resolved UI mode
+ * (the `dark` class on <html>). Shared across all rendered messages — the link
+ * is created once (guarded by id) and never removed on a single message unmount.
+ */
+function useHighlightTheme(): void {
+  useEffect(() => {
+    const apply = (): void => {
+      const isDark = document.documentElement.classList.contains("dark");
+      let link = document.getElementById(
+        HLJS_LINK_ID,
+      ) as HTMLLinkElement | null;
+      if (!link) {
+        link = document.createElement("link");
+        link.id = HLJS_LINK_ID;
+        link.rel = "stylesheet";
+        document.head.appendChild(link);
+      }
+      const href = isDark ? githubDark : githubLight;
+      if (link.getAttribute("href") !== href) link.setAttribute("href", href);
+    };
+    apply();
+    const observer = new MutationObserver(apply);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
+}
 
 interface AssistantMessageProps {
   message: string;
@@ -51,12 +86,12 @@ function CodeBlock({
   };
 
   return (
-    <div className="my-3 rounded-md overflow-hidden border border-slate-700/50">
-      <div className="flex items-center justify-between bg-slate-950 px-3 py-1.5">
+    <div className="my-3 rounded-md overflow-hidden border border-hairline/50">
+      <div className="flex items-center justify-between bg-surface px-3 py-1.5">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-mono text-slate-500">{lang}</span>
+          <span className="text-[10px] font-mono text-ink-subtle">{lang}</span>
           {isLong && (
-            <span className="text-[10px] text-slate-600">
+            <span className="text-[10px] text-ink-subtle">
               {lineCount} lines
             </span>
           )}
@@ -65,7 +100,7 @@ function CodeBlock({
           {isLong && (
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="text-[10px] px-2 py-0.5 rounded transition-colors text-slate-500 hover:text-slate-300"
+              className="text-[10px] px-2 py-0.5 rounded transition-colors text-ink-subtle hover:text-ink-muted"
               title={collapsed ? "Expand" : "Collapse"}
             >
               {collapsed ? "Show" : "Hide"}
@@ -75,8 +110,8 @@ function CodeBlock({
             onClick={handleCopyCode}
             className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded transition-colors ${
               copied
-                ? "bg-green-500/20 text-green-400"
-                : "text-slate-500 hover:text-slate-300"
+                ? "bg-success/20 text-success"
+                : "text-ink-subtle hover:text-ink-muted"
             }`}
             title="Copy code"
           >
@@ -88,7 +123,7 @@ function CodeBlock({
               onClick={handleRun}
               className={`flex items-center gap-1 text-[10px] px-2 py-0.5 rounded transition-colors ${
                 ran
-                  ? "bg-green-500/20 text-green-400"
+                  ? "bg-success/20 text-success"
                   : "bg-accent-500/15 text-accent-400 hover:bg-accent-500/30"
               }`}
               title="Run in terminal"
@@ -99,7 +134,7 @@ function CodeBlock({
           )}
         </div>
       </div>
-      <pre className={`bg-slate-950 text-gray-100 px-3 py-3 overflow-x-auto text-xs font-mono leading-5 m-0 ${
+      <pre className={`bg-field text-ink px-3 py-3 overflow-x-auto text-xs font-mono leading-5 m-0 ${
         collapsed ? "max-h-[300px]" : ""
       }`}>
         <code>{code}</code>
@@ -119,6 +154,8 @@ export default function AssistantMessage({
   onApproveTool,
   onDenyTool,
 }: AssistantMessageProps) {
+  useHighlightTheme();
+
   const handleCopy = () => {
     window.api.clipboard.writeText(message);
   };
@@ -141,7 +178,7 @@ export default function AssistantMessage({
         return <CodeBlock lang={lang} code={code} onExecute={onExecute} />;
       }
       return (
-        <code className="bg-slate-900 rounded px-1 py-0.5 font-mono text-xs text-accent-300">
+        <code className="bg-panel rounded px-1 py-0.5 font-mono text-xs text-accent-300">
           {children}
         </code>
       );
@@ -180,7 +217,7 @@ export default function AssistantMessage({
     },
     blockquote({ children }) {
       return (
-        <blockquote className="border-l-2 border-accent-500/50 pl-3 italic text-slate-400 my-2 text-sm">
+        <blockquote className="border-l-2 border-accent-500/50 pl-3 italic text-ink-muted my-2 text-sm">
           {children}
         </blockquote>
       );
@@ -206,7 +243,7 @@ export default function AssistantMessage({
           <Bot size={16} className="text-accent-400" />
         </div>
 
-        <div className="bg-slate-800/60 backdrop-blur-sm border border-slate-700/40 text-gray-100 rounded-2xl rounded-bl-sm px-3 py-2.5 w-full min-w-0 max-w-full overflow-hidden">
+        <div className="bg-elevated/60 backdrop-blur-sm border border-hairline/40 text-ink rounded-2xl rounded-bl-sm px-3 py-2.5 w-full min-w-0 max-w-full overflow-hidden">
           {isTyping ? (
             <div className="flex items-center space-x-2 py-1">
               <div className="flex space-x-1">
@@ -214,12 +251,12 @@ export default function AssistantMessage({
                 <div className="w-2 h-2 bg-accent-400 rounded-full" style={{ animation: 'bounce-delayed 1.4s infinite ease-in-out 150ms' }} />
                 <div className="w-2 h-2 bg-accent-400 rounded-full" style={{ animation: 'bounce-delayed 1.4s infinite ease-in-out 300ms' }} />
               </div>
-              <span className="text-sm text-gray-400">Thinking...</span>
+              <span className="text-sm text-ink-muted">Thinking...</span>
             </div>
           ) : (
             <>
               {error ? (
-                <div className="text-red-400 mb-2">
+                <div className="text-danger mb-2">
                   <div className="flex items-center justify-between">
                     <span>
                       <CircleX className="inline mr-1" size={18} />
@@ -228,7 +265,7 @@ export default function AssistantMessage({
                     {onRetry && (
                       <button
                         onClick={onRetry}
-                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-accent-300 transition-colors ml-2"
+                        className="flex items-center gap-1 text-xs text-ink-muted hover:text-accent-300 transition-colors ml-2"
                         title="Retry"
                       >
                         <RefreshCw size={13} />
@@ -236,7 +273,7 @@ export default function AssistantMessage({
                       </button>
                     )}
                   </div>
-                  <p className="text-xs text-red-300/80 mt-1 font-mono">{message}</p>
+                  <p className="text-xs text-danger/80 mt-1 font-mono">{message}</p>
                 </div>
               ) : null}
 
@@ -264,11 +301,11 @@ export default function AssistantMessage({
               )}
 
               <div className="flex items-center justify-between mt-2">
-                <span className="text-xs text-gray-500">{timestamp}</span>
+                <span className="text-xs text-ink-subtle">{timestamp}</span>
                 {message && !error && (
                   <button
                     onClick={handleCopy}
-                    className="text-gray-600 hover:text-accent-400 transition-colors"
+                    className="text-ink-subtle hover:text-accent-400 transition-colors"
                     title="Copy full response"
                   >
                     <Copy size={12} />

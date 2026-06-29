@@ -31,7 +31,7 @@ export function WorkspaceSwitcher() {
     <Popover open={workspaceSwitcherOpen} onOpenChange={setWorkspaceSwitcherOpen}>
       <PopoverTrigger asChild>
         <button
-          className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-800/60 border border-slate-700/40 text-[11px] text-gray-300 hover:bg-slate-700/60 transition-colors"
+          className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-elevated/60 border border-hairline/40 text-[11px] text-ink-muted hover:bg-elevated/60 transition-colors"
           title="Switch workspace"
         >
           <span
@@ -43,24 +43,24 @@ export function WorkspaceSwitcher() {
           />
           <span className="font-medium tracking-wide">{active.name}</span>
           {active.environment === "prod" && (
-            <span className="px-1 rounded text-[9px] font-mono bg-red-500/20 text-red-300">
+            <span className="px-1 rounded text-[9px] font-mono bg-danger0/20 text-danger">
               PROD
             </span>
           )}
-          <ChevronsUpDown size={11} className="text-gray-500" />
+          <ChevronsUpDown size={11} className="text-ink-subtle" />
         </button>
       </PopoverTrigger>
       <PopoverContent
-        className="w-64 p-0 bg-slate-900 border-slate-700/50"
+        className="w-64 p-0 bg-panel border-hairline/50"
         align="start"
       >
         <Command className="bg-transparent">
           <CommandInput
             placeholder="Search workspaces…"
-            className="text-gray-200"
+            className="text-ink"
           />
           <CommandList>
-            <CommandEmpty className="py-4 text-center text-xs text-gray-500">
+            <CommandEmpty className="py-4 text-center text-xs text-ink-subtle">
               No workspaces.
             </CommandEmpty>
             <CommandGroup>
@@ -72,7 +72,7 @@ export function WorkspaceSwitcher() {
                     setActiveWorkspaceId(w.id);
                     setWorkspaceSwitcherOpen(false);
                   }}
-                  className="flex items-center gap-2 text-gray-200 data-[selected=true]:bg-accent-500/15 data-[selected=true]:text-accent-100"
+                  className="flex items-center gap-2 text-ink data-[selected=true]:bg-accent-500/15 data-[selected=true]:text-accent-100"
                 >
                   <span
                     className="w-2.5 h-2.5 rounded-full"
@@ -80,7 +80,7 @@ export function WorkspaceSwitcher() {
                   />
                   <span className="flex-1 truncate">{w.name}</span>
                   {w.environment === "prod" && (
-                    <span className="text-[9px] font-mono text-red-400">
+                    <span className="text-[9px] font-mono text-danger">
                       PROD
                     </span>
                   )}
@@ -92,7 +92,7 @@ export function WorkspaceSwitcher() {
             </CommandGroup>
           </CommandList>
         </Command>
-        <div className="border-t border-slate-700/40 px-2 py-1.5 text-[10px] text-gray-500 flex items-center gap-1.5">
+        <div className="border-t border-hairline/40 px-2 py-1.5 text-[10px] text-ink-subtle flex items-center gap-1.5">
           <Layers size={10} />
           Manage in Settings → Workspaces
         </div>

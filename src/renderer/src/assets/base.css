@@ -215,6 +215,99 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/* ── Light/Dark semantic layer: surfaces, text, state & terminal ─────────
+   Values in :root are LIGHT; .dark overrides with the current slate look.
+   These power the app-wide light mode; accent-* stay theme-driven. */
+:root {
+  /* Surfaces & text (LIGHT) */
+  --surface: #f8fafc;     /* app/terminal/chat backdrop */
+  --panel: #ffffff;       /* chrome: header, tabs, sidebar, dialogs */
+  --elevated: #f1f5f9;    /* raised: buttons, cards, menus, hover */
+  --field: #ffffff;       /* inputs, code blocks */
+  --hairline: #cbd5e1;    /* borders (opacity applied per-use) */
+  --ink: #0f172a;         /* primary text */
+  --ink-muted: #475569;   /* secondary text */
+  --ink-subtle: #94a3b8;  /* tertiary text / placeholders */
+  --on-accent: #ffffff;   /* text/icons on solid accent or state buttons (mode-agnostic) */
+
+  /* Semantic state (LIGHT — darker for contrast on white) */
+  --success: #059669;
+  --warning: #d97706;
+  --info: #2563eb;
+  --danger: #dc2626;
+
+  /* xterm terminal (LIGHT) */
+  --term-bg: #ffffff;
+  --term-fg: #1e293b;
+  --term-cursor-accent: #ffffff;
+  --term-selection-fg: #ffffff;
+  --term-black: #1e293b;
+  --term-red: #dc2626;
+  --term-green: #059669;
+  --term-yellow: #d97706;
+  --term-magenta: #9333ea;
+  --term-white: #94a3b8;
+  --term-bright-black: #475569;
+  --term-bright-red: #ef4444;
+  --term-bright-green: #10b981;
+  --term-bright-yellow: #f59e0b;
+  --term-bright-magenta: #a855f7;
+  --term-bright-white: #cbd5e1;
+}
+
+.dark {
+  /* Surfaces & text (DARK — preserves the current slate look) */
+  --surface: #020617;     /* slate-950 */
+  --panel: #0f172a;       /* slate-900 */
+  --elevated: #1e293b;    /* slate-800 */
+  --field: #020617;       /* slate-950 */
+  --hairline: #334155;    /* slate-700 */
+  --ink: #f8fafc;
+  --ink-muted: #cbd5e1;   /* slate-300 */
+  --ink-subtle: #94a3b8;  /* slate-400 */
+  --on-accent: #ffffff;
+
+  /* Semantic state (DARK — bright, legible on dark) */
+  --success: #34d399;
+  --warning: #fbbf24;
+  --info: #60a5fa;
+  --danger: #f87171;
+
+  /* xterm terminal (DARK — current hardcoded values) */
+  --term-bg: #020617;
+  --term-fg: #e2e8f0;
+  --term-cursor-accent: #020617;
+  --term-selection-fg: #020617;
+  --term-black: #1e293b;
+  --term-red: #ef4444;
+  --term-green: #10b981;
+  --term-yellow: #f59e0b;
+  --term-magenta: #a855f7;
+  --term-white: #cbd5e1;
+  --term-bright-black: #475569;
+  --term-bright-red: #f87171;
+  --term-bright-green: #34d399;
+  --term-bright-yellow: #fbbf24;
+  --term-bright-magenta: #c084fc;
+  --term-bright-white: #f1f5f9;
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-elevated: var(--elevated);
+  --color-field: var(--field);
+  --color-hairline: var(--hairline);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-ink-subtle: var(--ink-subtle);
+  --color-on-accent: var(--on-accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-info: var(--info);
+  --color-danger: var(--danger);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

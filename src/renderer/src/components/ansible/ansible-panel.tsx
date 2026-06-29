@@ -206,10 +206,10 @@ export default function AnsiblePanel({
   };
 
   return (
-    <div className="absolute inset-0 z-20 flex flex-col bg-slate-950/98 backdrop-blur-sm">
+    <div className="absolute inset-0 z-20 flex flex-col bg-surface/98 backdrop-blur-sm">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-700/40 bg-slate-900/80">
-        <div className="flex items-center gap-2 text-gray-200">
+      <div className="flex items-center justify-between px-4 py-2.5 border-b border-hairline/40 bg-panel/80">
+        <div className="flex items-center gap-2 text-ink-muted">
           <ScrollText size={16} className="text-accent-400" />
           <span className="text-sm font-semibold tracking-wide">
             Ansible Runner
@@ -217,7 +217,7 @@ export default function AnsiblePanel({
         </div>
         <button
           onClick={onClose}
-          className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-slate-700/60 hover:text-gray-200 transition-colors"
+          className="flex items-center justify-center w-7 h-7 rounded text-ink-subtle hover:bg-elevated/60 hover:text-ink-muted transition-colors"
           title="Close"
         >
           <X size={15} />
@@ -226,9 +226,9 @@ export default function AnsiblePanel({
 
       <div className="flex-1 flex min-h-0">
         {/* Left: sources + playbooks */}
-        <div className="w-72 flex-shrink-0 border-r border-slate-700/40 flex flex-col bg-slate-900/40">
-          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/30">
-            <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+        <div className="w-72 flex-shrink-0 border-r border-hairline/40 flex flex-col bg-panel/40">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-hairline/30">
+            <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">
               Sources
             </span>
             <button
@@ -236,7 +236,7 @@ export default function AnsiblePanel({
                 setEditingSourceId(null);
                 setSourceFormOpen(true);
               }}
-              className="text-gray-400 hover:text-accent-300 transition-colors"
+              className="text-ink-muted hover:text-accent-300 transition-colors"
               title="New source"
             >
               <Plus size={15} />
@@ -244,7 +244,7 @@ export default function AnsiblePanel({
           </div>
           <div className="flex-1 overflow-y-auto">
             {ansibleSources.length === 0 && (
-              <p className="px-3 py-3 text-xs text-gray-600">
+              <p className="px-3 py-3 text-xs text-ink-subtle">
                 No sources yet. Create one to register a Git repo or a folder
                 on the control node.
               </p>
@@ -263,8 +263,8 @@ export default function AnsiblePanel({
                   }}
                   className={`group px-3 py-2 cursor-pointer border-l-2 ${
                     active
-                      ? "border-accent-500 bg-slate-800/60"
-                      : "border-transparent hover:bg-slate-800/30"
+                      ? "border-accent-500 bg-elevated/60"
+                      : "border-transparent hover:bg-elevated/30"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
@@ -277,10 +277,10 @@ export default function AnsiblePanel({
                       ) : (
                         <Server
                           size={13}
-                          className="text-gray-400 flex-shrink-0"
+                          className="text-ink-muted flex-shrink-0"
                         />
                       )}
-                      <span className="text-sm text-gray-200 truncate">
+                      <span className="text-sm text-ink-muted truncate">
                         {s.name}
                       </span>
                     </div>
@@ -291,7 +291,7 @@ export default function AnsiblePanel({
                           setEditingSourceId(s.id);
                           setSourceFormOpen(true);
                         }}
-                        className="text-gray-500 hover:text-gray-200"
+                        className="text-ink-subtle hover:text-ink-muted"
                         title="Edit"
                       >
                         <Pencil size={12} />
@@ -307,17 +307,17 @@ export default function AnsiblePanel({
                               setSelectedSourceId(null);
                           }
                         }}
-                        className="text-gray-500 hover:text-red-400"
+                        className="text-ink-subtle hover:text-danger"
                         title="Delete"
                       >
                         <Trash2 size={12} />
                       </button>
                     </div>
                   </div>
-                  <div className="flex items-center gap-1 mt-0.5 pl-5 text-[11px] text-gray-600 truncate">
+                  <div className="flex items-center gap-1 mt-0.5 pl-5 text-[11px] text-ink-subtle truncate">
                     {node ? node.name : "⚠ control node not found"}
                     {s.origin === "git" && s.branch && (
-                      <span className="flex items-center gap-0.5 text-gray-600">
+                      <span className="flex items-center gap-0.5 text-ink-subtle">
                         <GitBranch size={10} /> {s.branch}
                       </span>
                     )}
@@ -329,9 +329,9 @@ export default function AnsiblePanel({
 
           {/* Playbooks of the selected source */}
           {source && (
-            <div className="border-t border-slate-700/40 flex flex-col max-h-[45%]">
-              <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700/30">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">
+            <div className="border-t border-hairline/40 flex flex-col max-h-[45%]">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-hairline/30">
+                <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">
                   Playbooks
                 </span>
                 <button
@@ -351,7 +351,7 @@ export default function AnsiblePanel({
                       defaultCheck: true,
                     });
                   }}
-                  className="text-gray-400 hover:text-accent-300 transition-colors"
+                  className="text-ink-muted hover:text-accent-300 transition-colors"
                   title="Add playbook"
                 >
                   <Plus size={15} />
@@ -359,7 +359,7 @@ export default function AnsiblePanel({
               </div>
               <div className="flex-1 overflow-y-auto">
                 {playbooks.length === 0 && (
-                  <p className="px-3 py-2 text-xs text-gray-600">
+                  <p className="px-3 py-2 text-xs text-ink-subtle">
                     No playbooks in this source.
                   </p>
                 )}
@@ -371,12 +371,12 @@ export default function AnsiblePanel({
                       onClick={() => setSelectedPlaybookId(p.id)}
                       className={`group px-3 py-1.5 cursor-pointer border-l-2 ${
                         active
-                          ? "border-accent-500 bg-slate-800/60"
-                          : "border-transparent hover:bg-slate-800/30"
+                          ? "border-accent-500 bg-elevated/60"
+                          : "border-transparent hover:bg-elevated/30"
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-gray-200 truncate">
+                        <span className="text-sm text-ink-muted truncate">
                           {p.name}
                         </span>
                         <button
@@ -388,13 +388,13 @@ export default function AnsiblePanel({
                                 setSelectedPlaybookId(null);
                             }
                           }}
-                          className="text-gray-500 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="text-ink-subtle hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
                           title="Delete"
                         >
                           <Trash2 size={12} />
                         </button>
                       </div>
-                      <div className="pl-0 text-[11px] text-gray-600 font-mono truncate">
+                      <div className="pl-0 text-[11px] text-ink-subtle font-mono truncate">
                         {p.relativePath}
                       </div>
                     </div>
@@ -408,27 +408,27 @@ export default function AnsiblePanel({
         {/* Right: run console */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Run controls */}
-          <div className="px-4 py-3 border-b border-slate-700/40 bg-slate-900/30 space-y-2.5">
+          <div className="px-4 py-3 border-b border-hairline/40 bg-panel/30 space-y-2.5">
             {!playbook ? (
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-ink-subtle">
                 Select a playbook on the left to run it.
               </p>
             ) : (
               <>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-200 font-medium">
+                  <span className="text-sm text-ink-muted font-medium">
                     {playbook.name}
                   </span>
-                  <span className="text-xs text-gray-600 font-mono">
+                  <span className="text-xs text-ink-subtle font-mono">
                     {playbook.relativePath}
                   </span>
                   {phase && (
                     <span
                       className={`ml-auto text-[11px] px-2 py-0.5 rounded-full border ${
                         phase === "error"
-                          ? "text-red-300 border-red-500/40 bg-red-500/10"
+                          ? "text-danger border-danger/40 bg-danger/10"
                           : phase === "done"
-                            ? "text-emerald-300 border-emerald-500/40 bg-emerald-500/10"
+                            ? "text-success border-success/40 bg-success/10"
                             : "text-accent-300 border-accent-500/40 bg-accent-500/10"
                       }`}
                     >
@@ -437,29 +437,29 @@ export default function AnsiblePanel({
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <label className="flex items-center gap-1.5 text-xs text-gray-400">
+                  <label className="flex items-center gap-1.5 text-xs text-ink-muted">
                     <span>--limit</span>
                     <input
                       value={limit}
                       onChange={(e) => setLimit(e.target.value)}
                       placeholder="host or group"
-                      className="bg-slate-800/60 border border-slate-700/50 rounded px-2 py-1 text-xs text-gray-100 font-mono w-40 focus:outline-none focus:border-accent-500/60"
+                      className="bg-elevated/60 border border-hairline/50 rounded px-2 py-1 text-xs text-ink font-mono w-40 focus:outline-none focus:border-accent-500/60"
                     />
                   </label>
-                  <label className="flex items-center gap-1.5 text-xs text-gray-400 flex-1 min-w-[180px]">
+                  <label className="flex items-center gap-1.5 text-xs text-ink-muted flex-1 min-w-[180px]">
                     <span>-e</span>
                     <input
                       value={extraVars}
                       onChange={(e) => setExtraVars(e.target.value)}
                       placeholder='var=value or "@vars.yml"'
-                      className="bg-slate-800/60 border border-slate-700/50 rounded px-2 py-1 text-xs text-gray-100 font-mono flex-1 focus:outline-none focus:border-accent-500/60"
+                      className="bg-elevated/60 border border-hairline/50 rounded px-2 py-1 text-xs text-ink font-mono flex-1 focus:outline-none focus:border-accent-500/60"
                     />
                   </label>
                   <label
                     className={`flex items-center gap-1.5 text-xs cursor-pointer px-2 py-1 rounded border ${
                       check
-                        ? "text-amber-300 border-amber-500/40 bg-amber-500/10"
-                        : "text-gray-400 border-slate-700/50"
+                        ? "text-warning border-warning/40 bg-warning/10"
+                        : "text-ink-muted border-hairline/50"
                     }`}
                     title="Dry-run (--check): applies no changes"
                   >
@@ -467,7 +467,7 @@ export default function AnsiblePanel({
                       type="checkbox"
                       checked={check}
                       onChange={(e) => setCheck(e.target.checked)}
-                      className="accent-amber-500"
+                      className="accent-warning"
                     />
                     dry-run
                   </label>
@@ -475,7 +475,7 @@ export default function AnsiblePanel({
                     <Button
                       size="sm"
                       onClick={cancelRun}
-                      className="bg-red-600/90 hover:bg-red-600 text-white gap-1"
+                      className="bg-danger/90 hover:bg-danger text-on-accent gap-1"
                     >
                       <Square size={13} /> Cancel
                     </Button>
@@ -484,7 +484,7 @@ export default function AnsiblePanel({
                       size="sm"
                       onClick={startRun}
                       disabled={!controlNode}
-                      className="bg-accent-600/90 hover:bg-accent-600 text-white gap-1"
+                      className="bg-accent-600/90 hover:bg-accent-600 text-on-accent gap-1"
                     >
                       <Play size={13} />
                       {check ? "Dry-run" : "Run"}
@@ -492,7 +492,7 @@ export default function AnsiblePanel({
                   )}
                 </div>
                 {!controlNode && (
-                  <p className="text-[11px] text-red-400">
+                  <p className="text-[11px] text-danger">
                     This source's control node no longer exists. Edit the
                     source and pick a valid SSH connection.
                   </p>
@@ -504,10 +504,10 @@ export default function AnsiblePanel({
           {/* Console */}
           <div
             ref={consoleRef}
-            className="flex-1 overflow-y-auto bg-slate-950 px-4 py-3 font-mono text-xs leading-relaxed"
+            className="flex-1 overflow-y-auto bg-surface px-4 py-3 font-mono text-xs leading-relaxed"
           >
             {lines.length === 0 ? (
-              <p className="text-gray-700">
+              <p className="text-ink-subtle">
                 {running ? (
                   <span className="flex items-center gap-1.5 text-accent-400">
                     <Loader2 size={12} className="animate-spin" /> starting…
@@ -522,10 +522,10 @@ export default function AnsiblePanel({
                   key={i}
                   className={`whitespace-pre-wrap break-all ${
                     l.stream === "stderr"
-                      ? "text-red-300"
+                      ? "text-danger"
                       : l.stream === "meta"
-                        ? "text-emerald-400"
-                        : "text-gray-300"
+                        ? "text-success"
+                        : "text-ink-muted"
                   }`}
                 >
                   {l.text}

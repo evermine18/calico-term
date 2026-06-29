@@ -75,14 +75,14 @@ export default function FileEntryRow({
 
   const Icon = entry.isSymlink ? Link : entry.isDirectory ? Folder : File;
   const iconColor = entry.isSymlink
-    ? "text-cyan-400/60"
+    ? "text-accent-400/60"
     : entry.isDirectory
       ? "text-accent-400/80"
-      : "text-gray-500";
+      : "text-ink-subtle";
 
   return (
     <div
-      className="group flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-800/60 cursor-pointer select-none"
+      className="group flex items-center gap-2 px-2 py-1 rounded hover:bg-elevated/60 cursor-pointer select-none"
       onDoubleClick={() => !renaming && onDoubleClick()}
     >
       <Icon size={13} className={`flex-shrink-0 ${iconColor}`} />
@@ -99,30 +99,30 @@ export default function FileEntryRow({
               e.stopPropagation();
             }}
             onBlur={commitRename}
-            className="flex-1 bg-slate-700/60 border border-accent-500/40 rounded px-1.5 py-0.5 text-[12px] text-gray-200 outline-none min-w-0"
+            className="flex-1 bg-elevated/60 border border-accent-500/40 rounded px-1.5 py-0.5 text-[12px] text-ink-muted outline-none min-w-0"
           />
           <button
             onClick={commitRename}
-            className="text-green-400/70 hover:text-green-400 p-0.5"
+            className="text-success/70 hover:text-success p-0.5"
           >
             <Check size={11} />
           </button>
           <button
             onClick={cancelRename}
-            className="text-gray-500 hover:text-gray-300 p-0.5"
+            className="text-ink-subtle hover:text-ink-muted p-0.5"
           >
             <X size={11} />
           </button>
         </div>
       ) : (
         <>
-          <span className="flex-1 truncate text-[12px] text-gray-300 min-w-0">
+          <span className="flex-1 truncate text-[12px] text-ink-muted min-w-0">
             {entry.filename}
           </span>
-          <span className="flex-shrink-0 text-[10px] text-gray-600 hidden group-hover:hidden w-10 text-right">
+          <span className="flex-shrink-0 text-[10px] text-ink-subtle hidden group-hover:hidden w-10 text-right">
             {entry.isDirectory ? "" : formatSize(entry.attrs.size)}
           </span>
-          <span className="flex-shrink-0 text-[10px] text-gray-600 group-hover:hidden">
+          <span className="flex-shrink-0 text-[10px] text-ink-subtle group-hover:hidden">
             {formatDate(entry.attrs.mtime)}
           </span>
 
@@ -134,7 +134,7 @@ export default function FileEntryRow({
                   e.stopPropagation();
                   onSync();
                 }}
-                className="p-1 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+                className="p-1 rounded text-ink-subtle hover:text-accent-300 hover:bg-elevated/50 transition-colors"
                 title="Sync directory"
               >
                 <FolderTree size={11} />
@@ -146,7 +146,7 @@ export default function FileEntryRow({
                   e.stopPropagation();
                   onEdit();
                 }}
-                className="p-1 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+                className="p-1 rounded text-ink-subtle hover:text-accent-300 hover:bg-elevated/50 transition-colors"
                 title="Edit remote"
               >
                 <FileText size={11} />
@@ -158,7 +158,7 @@ export default function FileEntryRow({
                   e.stopPropagation();
                   onTail();
                 }}
-                className="p-1 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+                className="p-1 rounded text-ink-subtle hover:text-accent-300 hover:bg-elevated/50 transition-colors"
                 title="Tail -F"
               >
                 <Eye size={11} />
@@ -170,7 +170,7 @@ export default function FileEntryRow({
                   e.stopPropagation();
                   onDiff();
                 }}
-                className="p-1 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+                className="p-1 rounded text-ink-subtle hover:text-accent-300 hover:bg-elevated/50 transition-colors"
                 title="Compare with local"
               >
                 <GitCompare size={11} />
@@ -182,7 +182,7 @@ export default function FileEntryRow({
                   e.stopPropagation();
                   onDownload();
                 }}
-                className="p-1 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+                className="p-1 rounded text-ink-subtle hover:text-accent-300 hover:bg-elevated/50 transition-colors"
                 title="Download"
               >
                 <Download size={11} />
@@ -193,7 +193,7 @@ export default function FileEntryRow({
                 e.stopPropagation();
                 setRenaming(true);
               }}
-              className="p-1 rounded text-gray-500 hover:text-accent-300 hover:bg-slate-700/50 transition-colors"
+              className="p-1 rounded text-ink-subtle hover:text-accent-300 hover:bg-elevated/50 transition-colors"
               title="Rename"
             >
               <Pencil size={11} />
@@ -203,7 +203,7 @@ export default function FileEntryRow({
                 e.stopPropagation();
                 onDelete();
               }}
-              className="p-1 rounded text-gray-500 hover:text-red-400 hover:bg-slate-700/50 transition-colors"
+              className="p-1 rounded text-ink-subtle hover:text-danger hover:bg-elevated/50 transition-colors"
               title="Delete"
             >
               <Trash2 size={11} />

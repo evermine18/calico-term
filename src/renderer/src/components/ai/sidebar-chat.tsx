@@ -509,7 +509,7 @@ export default function AISidebarChat() {
   if (isLoading) {
     return (
       <div
-        className="absolute right-0 top-0 bottom-0 h-full bg-slate-900/95 backdrop-blur-md border-l border-slate-700/50 flex flex-col z-10 shadow-2xl"
+        className="absolute right-0 top-0 bottom-0 h-full bg-panel/95 backdrop-blur-md border-l border-hairline/50 flex flex-col z-10 shadow-2xl"
         style={{ width }}
       >
         <div
@@ -517,26 +517,26 @@ export default function AISidebarChat() {
           className="absolute left-0 top-0 h-full w-1 cursor-ew-resize bg-transparent hover:bg-accent-500/30 active:bg-accent-500/50 z-1 transition-colors"
         />
         {/* Skeleton header */}
-        <div className="border-b border-slate-700/50 bg-slate-900/95 backdrop-blur-xl">
+        <div className="border-b border-hairline/50 bg-panel/95 backdrop-blur-xl">
           <div className="flex items-center justify-between px-4 pt-4 pb-3">
             <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 bg-slate-800 rounded-lg animate-pulse" />
+              <div className="w-9 h-9 bg-elevated rounded-lg animate-pulse" />
               <div>
-                <div className="w-24 h-4 bg-slate-800 rounded animate-pulse mb-1" />
-                <div className="w-12 h-3 bg-slate-800 rounded animate-pulse" />
+                <div className="w-24 h-4 bg-elevated rounded animate-pulse mb-1" />
+                <div className="w-12 h-3 bg-elevated rounded animate-pulse" />
               </div>
             </div>
           </div>
         </div>
         
         {/* Skeleton messages */}
-        <div className="flex-1 overflow-y-auto p-4 bg-slate-950">
+        <div className="flex-1 overflow-y-auto p-4 bg-surface">
           <div className="flex flex-col gap-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className={`flex ${i % 2 === 0 ? "justify-end" : "justify-start"}`}>
                 <div className={`space-y-2 ${i % 2 === 0 ? "max-w-[85%]" : "max-w-[90%]"}`}>
-                  <div className={`h-8 bg-slate-800 rounded-2xl animate-pulse ${i % 2 === 0 ? "rounded-br-sm" : "rounded-bl-sm"}`} style={{ width: `${60 + Math.random() * 40}%` }} />
-                  <div className="h-3 bg-slate-800 rounded animate-pulse ml-2" style={{ width: "40px" }} />
+                  <div className={`h-8 bg-elevated rounded-2xl animate-pulse ${i % 2 === 0 ? "rounded-br-sm" : "rounded-bl-sm"}`} style={{ width: `${60 + Math.random() * 40}%` }} />
+                  <div className="h-3 bg-elevated rounded animate-pulse ml-2" style={{ width: "40px" }} />
                 </div>
               </div>
             ))}
@@ -544,8 +544,8 @@ export default function AISidebarChat() {
         </div>
         
         {/* Skeleton input */}
-        <div className="p-4 border-t bg-slate-900/95 border-slate-700/50">
-          <div className="h-11 bg-slate-800 rounded-lg animate-pulse" />
+        <div className="p-4 border-t bg-panel/95 border-hairline/50">
+          <div className="h-11 bg-elevated rounded-lg animate-pulse" />
         </div>
       </div>
     );
@@ -553,7 +553,7 @@ export default function AISidebarChat() {
 
   return (
     <div
-      className="absolute right-0 top-0 bottom-0 h-full bg-slate-900/95 backdrop-blur-md border-l border-slate-700/50 flex flex-col z-10 shadow-2xl"
+      className="absolute right-0 top-0 bottom-0 h-full bg-panel/95 backdrop-blur-md border-l border-hairline/50 flex flex-col z-10 shadow-2xl"
       style={{ width }}
     >
       <div
@@ -589,7 +589,7 @@ export default function AISidebarChat() {
         </div>
       ) : (
         <>
-        <div className="flex-1 overflow-y-auto p-4 bg-slate-950 relative" ref={chatContainerRef} onScroll={handleScroll}>
+        <div className="flex-1 overflow-y-auto p-4 bg-surface relative" ref={chatContainerRef} onScroll={handleScroll}>
           <div className="flex flex-col gap-3">
             {messages.map((message) =>
               message.type === "user" ? (

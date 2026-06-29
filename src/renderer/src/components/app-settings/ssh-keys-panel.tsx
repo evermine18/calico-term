@@ -60,8 +60,8 @@ export function SSHKeysPanel() {
     <div className="space-y-3">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-300 text-sm font-semibold">SSH Keys</p>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <p className="text-ink-muted text-sm font-semibold">SSH Keys</p>
+          <p className="text-xs text-ink-muted mt-0.5">
             Generate or import private keys. Stored encrypted in the app data
             directory.
           </p>
@@ -70,7 +70,7 @@ export function SSHKeysPanel() {
           <Button
             size="sm"
             onClick={() => setMode("import")}
-            className="gap-1.5 bg-slate-800/60 border border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 text-gray-400"
+            className="gap-1.5 bg-elevated/60 border border-hairline/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 text-ink-muted"
           >
             <Upload size={14} />
             Import
@@ -78,7 +78,7 @@ export function SSHKeysPanel() {
           <Button
             size="sm"
             onClick={() => setMode("generate")}
-            className="gap-1.5 bg-accent-600/90 hover:bg-accent-500 text-white"
+            className="gap-1.5 bg-accent-600/90 hover:bg-accent-500 text-on-accent"
           >
             <Plus size={14} />
             Generate
@@ -89,9 +89,9 @@ export function SSHKeysPanel() {
       <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-accent-600/40 scrollbar-track-transparent">
         {keys.length === 0 && (
           <div className="flex flex-col items-center justify-center py-10 text-center">
-            <KeyRound size={32} className="text-slate-600 mb-3" />
-            <p className="text-sm text-gray-500">No keys yet</p>
-            <p className="text-xs text-gray-600 mt-1">
+            <KeyRound size={32} className="text-ink-subtle mb-3" />
+            <p className="text-sm text-ink-subtle">No keys yet</p>
+            <p className="text-xs text-ink-subtle mt-1">
               Generate or import a key to start authenticating.
             </p>
           </div>
@@ -99,12 +99,12 @@ export function SSHKeysPanel() {
         {keys.map((k) => (
           <div
             key={k.id}
-            className="flex items-center gap-2.5 p-2.5 rounded-md bg-slate-800/60 border border-slate-700/50"
+            className="flex items-center gap-2.5 p-2.5 rounded-md bg-elevated/60 border border-hairline/50"
           >
             <KeyRound size={14} className="text-accent-500/70 shrink-0" />
             <div className="flex-1 min-w-0">
-              <div className="text-sm text-gray-200 truncate">{k.name}</div>
-              <div className="text-xs text-gray-500 font-mono truncate">
+              <div className="text-sm text-ink-muted truncate">{k.name}</div>
+              <div className="text-xs text-ink-subtle font-mono truncate">
                 {k.type}
                 {k.bits ? `-${k.bits}` : ""}
                 {" · "}
@@ -117,7 +117,7 @@ export function SSHKeysPanel() {
               variant="ghost"
               size="icon"
               title="Copy public key"
-              className="h-8 w-8 text-gray-400 hover:text-accent-300 hover:bg-accent-500/20"
+              className="h-8 w-8 text-ink-muted hover:text-accent-300 hover:bg-accent-500/20"
             >
               {copiedId === k.id ? <Check size={14} /> : <Copy size={14} />}
             </Button>
@@ -126,7 +126,7 @@ export function SSHKeysPanel() {
               variant="ghost"
               size="icon"
               title="Delete key"
-              className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-red-500/20"
+              className="h-8 w-8 text-ink-muted hover:text-danger hover:bg-danger/20"
             >
               <Trash2 size={14} />
             </Button>
@@ -210,23 +210,23 @@ function KeyDialog({
 
   return (
     <Dialog open={mode !== null} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[480px] bg-slate-900 border-slate-700/40 shadow-xl">
+      <DialogContent className="sm:max-w-[480px] bg-panel border-hairline/40 shadow-xl">
         <DialogHeader>
-          <DialogTitle className="text-gray-100 flex items-center gap-2">
+          <DialogTitle className="text-ink flex items-center gap-2">
             <KeyRound size={16} className="text-accent-400" />
             {mode === "generate" ? "Generate SSH Key" : "Import SSH Key"}
           </DialogTitle>
         </DialogHeader>
         <div className="grid gap-4 py-2">
           <div className="grid gap-1.5">
-            <Label className="text-gray-300 text-sm">
-              Name <span className="text-red-400">*</span>
+            <Label className="text-ink-muted text-sm">
+              Name <span className="text-danger">*</span>
             </Label>
             <Input
               placeholder="e.g. prod-bastion"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="bg-slate-800/60 border-slate-700 text-gray-100"
+              className="bg-elevated/60 border-hairline text-ink"
             />
           </div>
 
@@ -234,15 +234,15 @@ function KeyDialog({
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div className="grid gap-1.5">
-                  <Label className="text-gray-300 text-sm">Type</Label>
+                  <Label className="text-ink-muted text-sm">Type</Label>
                   <Select
                     value={type}
                     onValueChange={(v) => setType(v as "ed25519" | "rsa")}
                   >
-                    <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                    <SelectTrigger className="bg-elevated/60 border-hairline text-ink">
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-900 border-slate-700/50">
+                    <SelectContent className="bg-panel border-hairline/50">
                       <SelectItem value="ed25519">ed25519 (recommended)</SelectItem>
                       <SelectItem value="rsa">RSA</SelectItem>
                     </SelectContent>
@@ -250,15 +250,15 @@ function KeyDialog({
                 </div>
                 {type === "rsa" && (
                   <div className="grid gap-1.5">
-                    <Label className="text-gray-300 text-sm">Bits</Label>
+                    <Label className="text-ink-muted text-sm">Bits</Label>
                     <Select
                       value={String(bits)}
                       onValueChange={(v) => setBits(parseInt(v, 10))}
                     >
-                      <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+                      <SelectTrigger className="bg-elevated/60 border-hairline text-ink">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700/50">
+                      <SelectContent className="bg-panel border-hairline/50">
                         <SelectItem value="2048">2048</SelectItem>
                         <SelectItem value="3072">3072</SelectItem>
                         <SelectItem value="4096">4096</SelectItem>
@@ -268,15 +268,15 @@ function KeyDialog({
                 )}
               </div>
               <div className="grid gap-1.5">
-                <Label className="text-gray-300 text-sm">
+                <Label className="text-ink-muted text-sm">
                   Comment{" "}
-                  <span className="text-gray-500 font-normal">(optional)</span>
+                  <span className="text-ink-subtle font-normal">(optional)</span>
                 </Label>
                 <Input
                   placeholder="user@host"
                   value={comment}
                   onChange={(e) => setComment(e.target.value)}
-                  className="bg-slate-800/60 border-slate-700 text-gray-100"
+                  className="bg-elevated/60 border-hairline text-ink"
                 />
               </div>
             </>
@@ -284,24 +284,24 @@ function KeyDialog({
 
           {mode === "import" && (
             <div className="grid gap-1.5">
-              <Label className="text-gray-300 text-sm">
+              <Label className="text-ink-muted text-sm">
                 Private key (PEM){" "}
-                <span className="text-red-400">*</span>
+                <span className="text-danger">*</span>
               </Label>
               <Textarea
                 rows={6}
                 placeholder="-----BEGIN OPENSSH PRIVATE KEY-----..."
                 value={privatePem}
                 onChange={(e) => setPrivatePem(e.target.value)}
-                className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-xs"
+                className="bg-elevated/60 border-hairline text-ink font-mono text-xs"
               />
             </div>
           )}
 
           <div className="grid gap-1.5">
-            <Label className="text-gray-300 text-sm">
+            <Label className="text-ink-muted text-sm">
               Passphrase{" "}
-              <span className="text-gray-500 font-normal">(optional)</span>
+              <span className="text-ink-subtle font-normal">(optional)</span>
             </Label>
             <div className="flex items-center gap-2">
               <Input
@@ -309,13 +309,13 @@ function KeyDialog({
                 autoComplete="new-password"
                 value={passphrase}
                 onChange={(e) => setPassphrase(e.target.value)}
-                className="bg-slate-800/60 border-slate-700 text-gray-100"
+                className="bg-elevated/60 border-hairline text-ink"
               />
               <Button
                 variant="outline"
                 size="icon"
                 onClick={() => setShowPass((v) => !v)}
-                className="bg-slate-800/60 border-slate-700/50"
+                className="bg-elevated/60 border-hairline/50"
               >
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </Button>
@@ -323,7 +323,7 @@ function KeyDialog({
           </div>
 
           {error && (
-            <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-md px-3 py-2">
+            <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-md px-3 py-2">
               {error}
             </p>
           )}
@@ -333,14 +333,14 @@ function KeyDialog({
             variant="outline"
             onClick={onClose}
             disabled={submitting}
-            className="border-slate-700 text-gray-300 hover:bg-slate-800"
+            className="border-hairline text-ink-muted hover:bg-elevated"
           >
             Cancel
           </Button>
           <Button
             onClick={submit}
             disabled={submitting}
-            className="bg-accent-600 hover:bg-accent-500 text-white"
+            className="bg-accent-600 hover:bg-accent-500 text-on-accent"
           >
             {submitting
               ? "Working…"

@@ -26,12 +26,12 @@ export default function TransferItem({ transfer }: { transfer: SFTPTransfer }) {
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-2 mb-0.5">
-          <span className="truncate text-gray-400">{transfer.filename}</span>
-          <span className="flex-shrink-0 text-gray-600">
+          <span className="truncate text-ink-muted">{transfer.filename}</span>
+          <span className="flex-shrink-0 text-ink-subtle">
             {transfer.status === "done" ? (
-              <CheckCircle size={11} className="text-green-500/70" />
+              <CheckCircle size={11} className="text-success/70" />
             ) : transfer.status === "error" ? (
-              <AlertCircle size={11} className="text-red-500/70" />
+              <AlertCircle size={11} className="text-danger/70" />
             ) : transfer.total > 0 ? (
               `${formatBytes(transfer.bytes)} / ${formatBytes(transfer.total)}`
             ) : (
@@ -40,7 +40,7 @@ export default function TransferItem({ transfer }: { transfer: SFTPTransfer }) {
           </span>
         </div>
         {transfer.status !== "done" && transfer.status !== "error" && (
-          <div className="h-0.5 bg-slate-700/60 rounded-full overflow-hidden">
+          <div className="h-0.5 bg-elevated/60 rounded-full overflow-hidden">
             <div
               className="h-full bg-accent-500/70 rounded-full transition-all duration-200"
               style={{ width: `${percent}%` }}
@@ -48,7 +48,7 @@ export default function TransferItem({ transfer }: { transfer: SFTPTransfer }) {
           </div>
         )}
         {transfer.status === "error" && transfer.error && (
-          <span className="text-red-400/70 text-[10px]">{transfer.error}</span>
+          <span className="text-danger/70 text-[10px]">{transfer.error}</span>
         )}
       </div>
     </div>

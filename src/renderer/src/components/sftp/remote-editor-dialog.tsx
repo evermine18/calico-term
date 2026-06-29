@@ -229,21 +229,21 @@ export default function RemoteEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[920px] max-h-[85vh] bg-slate-900 border-slate-700/40 shadow-xl flex flex-col">
+      <DialogContent className="sm:max-w-[920px] max-h-[85vh] bg-panel border-hairline/40 shadow-xl flex flex-col">
         <DialogHeader>
-          <DialogTitle className="text-gray-100 flex items-center gap-2 text-sm">
+          <DialogTitle className="text-ink flex items-center gap-2 text-sm">
             <FileText size={14} className="text-accent-400" />
             <span className="font-mono truncate">{remotePath}</span>
-            {dirty && <span className="text-amber-400 text-xs">●</span>}
+            {dirty && <span className="text-warning text-xs">●</span>}
           </DialogTitle>
         </DialogHeader>
 
         {loading ? (
-          <div className="flex items-center justify-center py-16 text-gray-500 text-sm gap-2">
+          <div className="flex items-center justify-center py-16 text-ink-subtle text-sm gap-2">
             <Loader2 className="animate-spin" size={14} /> Loading…
           </div>
         ) : (
-          <div className="flex-1 min-h-[460px] border border-slate-700/50 rounded-md overflow-hidden bg-[#0f172a]">
+          <div className="flex-1 min-h-[460px] border border-hairline/50 rounded-md overflow-hidden bg-[#0f172a]">
             <Editor
               height="60vh"
               language={detectLanguage(remotePath)}
@@ -268,27 +268,27 @@ export default function RemoteEditorDialog({
         )}
 
         {error && (
-          <p className="text-xs text-red-400 bg-red-500/10 border border-red-500/20 rounded-md px-3 py-2">
+          <p className="text-xs text-danger bg-danger/10 border border-danger/20 rounded-md px-3 py-2">
             {error}
           </p>
         )}
 
         <DialogFooter className="gap-2">
-          <span className="text-xs text-gray-500 mr-auto">
+          <span className="text-xs text-ink-subtle mr-auto">
             ⌘S / Ctrl+S to save
           </span>
           <Button
             variant="outline"
             onClick={onClose}
             disabled={saving}
-            className="border-slate-700 text-gray-300 hover:bg-slate-800"
+            className="border-hairline text-ink-muted hover:bg-elevated"
           >
             Close
           </Button>
           <Button
             onClick={save}
             disabled={!dirty || saving || loading}
-            className="bg-accent-600 hover:bg-accent-500 text-white gap-1.5"
+            className="bg-accent-600 hover:bg-accent-500 text-on-accent gap-1.5"
           >
             <Save size={14} />
             {saving ? "Saving…" : "Save"}

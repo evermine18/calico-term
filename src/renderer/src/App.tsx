@@ -456,9 +456,9 @@ function AppContent(): React.JSX.Element {
   };
 
   return (
-    <div className="h-screen flex flex-col relative bg-slate-950 text-gray-100">
+    <div className="h-screen flex flex-col relative bg-surface text-ink">
       {/* Header with window controls */}
-      <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/40 px-4 py-1.5 flex items-center gap-2 shadow-xl">
+      <div className="bg-panel/95 backdrop-blur-xl border-b border-hairline/40 px-4 py-1.5 flex items-center gap-2 shadow-xl">
         {window.platform?.os === "darwin" && (
           <div className="ml-16 flex-shrink-0" />
         )}
@@ -471,13 +471,13 @@ function AppContent(): React.JSX.Element {
                 filter: "drop-shadow(0 0 5px rgba(var(--accent-rgb),0.7))",
               }}
             />
-            <span className="text-sm font-semibold tracking-widest text-gray-300 select-none">
+            <span className="text-sm font-semibold tracking-widest text-ink-muted select-none">
               <span className="text-accent-400">calico</span>
-              <span className="text-slate-500 mx-0.5">/</span>
-              <span className="text-gray-400">term</span>
+              <span className="text-ink-subtle mx-0.5">/</span>
+              <span className="text-ink-muted">term</span>
             </span>
           </div>
-          <div className="flex items-center gap-2 text-gray-400 text-xs">
+          <div className="flex items-center gap-2 text-ink-muted text-xs">
             <span className="selectable-section">
               <WorkspaceSwitcher />
             </span>
@@ -486,8 +486,8 @@ function AppContent(): React.JSX.Element {
                 onClick={() => setAnsiblePanelOpen(!ansiblePanelOpen)}
                 className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-all duration-150 ${
                   ansiblePanelOpen
-                    ? "bg-slate-700/60 text-accent-300"
-                    : "text-gray-500 hover:bg-slate-700/60 hover:text-accent-300"
+                    ? "bg-elevated/60 text-accent-300"
+                    : "text-ink-subtle hover:bg-elevated/60 hover:text-accent-300"
                 }`}
                 title="Ansible Runner"
               >
@@ -501,21 +501,21 @@ function AppContent(): React.JSX.Element {
           <div className="flex items-center gap-0.5 flex-shrink-0">
             <button
               onClick={() => window.api.windowControls.minimize()}
-              className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-slate-700/60 hover:text-gray-300 transition-all duration-150"
+              className="flex items-center justify-center w-7 h-7 rounded text-ink-subtle hover:bg-elevated/60 hover:text-ink-muted transition-all duration-150"
               title="Minimize"
             >
               <Minus size={12} />
             </button>
             <button
               onClick={() => window.api.windowControls.maximize()}
-              className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-slate-700/60 hover:text-gray-300 transition-all duration-150"
+              className="flex items-center justify-center w-7 h-7 rounded text-ink-subtle hover:bg-elevated/60 hover:text-ink-muted transition-all duration-150"
               title="Maximize"
             >
               <Square size={10} />
             </button>
             <button
               onClick={() => window.api.windowControls.close()}
-              className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-red-500/20 hover:text-red-400 transition-all duration-150"
+              className="flex items-center justify-center w-7 h-7 rounded text-ink-subtle hover:bg-danger/20 hover:text-danger transition-all duration-150"
               title="Close"
             >
               <X size={12} />
@@ -538,7 +538,7 @@ function AppContent(): React.JSX.Element {
         onDetachTab={handleDetachTab}
       />
       {/* Terminal Content */}
-      <div className="flex-1 bg-slate-950 relative overflow-hidden pb-8">
+      <div className="flex-1 bg-surface relative overflow-hidden pb-8">
         {sftpOpen && activeSSHConn && (
           <FileBrowserPanel
             sessionId={activeTabObj!.id}
@@ -591,7 +591,7 @@ function AppContent(): React.JSX.Element {
 
         {/* Home overlay — shown when no tabs, or user toggled home */}
         {(tabs.length === 0 || showHome) && (
-          <div className="absolute inset-0 bg-slate-950 z-10">
+          <div className="absolute inset-0 bg-surface z-10">
             <SSHConnectionsHome
               onConnect={async (conn) => {
                 // Prod confirmation: any workspace marked `prod` that owns this connection
@@ -648,28 +648,28 @@ function AppContent(): React.JSX.Element {
           }
         }}
       >
-        <DialogContent className="sm:max-w-[460px] bg-slate-900 border-red-500/40">
+        <DialogContent className="sm:max-w-[460px] bg-panel border-danger/40">
           <DialogHeader>
-            <DialogTitle className="text-red-300 flex items-center gap-2">
+            <DialogTitle className="text-danger flex items-center gap-2">
               <ShieldAlert size={16} />
               Production guardrail
             </DialogTitle>
           </DialogHeader>
           {guardrailPrompt && (
             <div className="space-y-3 py-1">
-              <p className="text-sm text-gray-300">
+              <p className="text-sm text-ink-muted">
                 The command you are about to execute matched:
               </p>
-              <div className="text-xs text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded px-2 py-1.5">
+              <div className="text-xs text-warning bg-warning/10 border border-warning/20 rounded px-2 py-1.5">
                 {guardrailPrompt.description}
               </div>
-              <pre className="text-xs font-mono text-gray-100 bg-slate-800/80 border border-slate-700/40 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
+              <pre className="text-xs font-mono text-ink bg-elevated/80 border border-hairline/40 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
                 {guardrailPrompt.command || "(empty)"}
               </pre>
-              <p className="text-xs text-gray-400">
+              <p className="text-xs text-ink-muted">
                 This tab belongs to a workspace marked{" "}
-                <span className="text-red-400 font-bold">PROD</span>. Type{" "}
-                <span className="font-mono text-red-300">yes</span> below to
+                <span className="text-danger font-bold">PROD</span>. Type{" "}
+                <span className="font-mono text-danger">yes</span> below to
                 confirm.
               </p>
               <Input
@@ -677,7 +677,7 @@ function AppContent(): React.JSX.Element {
                 value={guardrailConfirm}
                 onChange={(e) => setGuardrailConfirm(e.target.value)}
                 placeholder="yes"
-                className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono"
+                className="bg-elevated/60 border-hairline text-ink font-mono"
               />
             </div>
           )}
@@ -691,7 +691,7 @@ function AppContent(): React.JSX.Element {
                 }
                 setGuardrailPrompt(null);
               }}
-              className="border-slate-700/50 text-gray-300"
+              className="border-hairline/50 text-ink-muted"
             >
               Cancel
             </Button>
@@ -704,7 +704,7 @@ function AppContent(): React.JSX.Element {
                 }
                 setGuardrailPrompt(null);
               }}
-              className="bg-red-600/90 hover:bg-red-600 text-white"
+              className="bg-danger/90 hover:bg-danger text-on-accent"
             >
               Execute
             </Button>
@@ -719,7 +719,7 @@ function AppContent(): React.JSX.Element {
           if (!o) resolveMcp("deny");
         }}
       >
-        <DialogContent className="sm:max-w-[480px] bg-slate-900 border-accent-500/40">
+        <DialogContent className="sm:max-w-[480px] bg-panel border-accent-500/40">
           <DialogHeader>
             <DialogTitle className="text-accent-300 flex items-center gap-2">
               <PlugZap size={16} />
@@ -728,18 +728,18 @@ function AppContent(): React.JSX.Element {
           </DialogHeader>
           {mcpPrompt && (
             <div className="space-y-3 py-1">
-              <p className="text-sm text-gray-300">
+              <p className="text-sm text-ink-muted">
                 A connected agent (via MCP) wants to run{" "}
                 <span className="font-mono text-accent-300">
                   {mcpPrompt.tool}
                 </span>{" "}
                 on tab{" "}
-                <span className="font-semibold text-gray-100">
+                <span className="font-semibold text-ink">
                   {mcpPrompt.title}
                 </span>
                 .
               </p>
-              <pre className="text-xs font-mono text-gray-100 bg-slate-800/80 border border-slate-700/40 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap break-all">
+              <pre className="text-xs font-mono text-ink bg-elevated/80 border border-hairline/40 rounded p-2 max-h-40 overflow-auto whitespace-pre-wrap break-all">
                 {mcpPrompt.detail || "(empty)"}
               </pre>
             </div>
@@ -749,7 +749,7 @@ function AppContent(): React.JSX.Element {
               variant="outline"
               size="sm"
               onClick={() => resolveMcp("deny")}
-              className="border-slate-700/50 text-gray-300"
+              className="border-hairline/50 text-ink-muted"
             >
               Deny
             </Button>
@@ -766,7 +766,7 @@ function AppContent(): React.JSX.Element {
             <Button
               size="sm"
               onClick={() => resolveMcp("allow")}
-              className="bg-accent-600/90 hover:bg-accent-600 text-white"
+              className="bg-accent-600/90 hover:bg-accent-600 text-on-accent"
             >
               Allow
             </Button>
@@ -775,17 +775,17 @@ function AppContent(): React.JSX.Element {
       </Dialog>
 
       {/* Status Bar */}
-      <div className="bg-slate-900/90 backdrop-blur-md border-t border-slate-700/30 px-4 py-1.5 flex items-center justify-between text-[11px] text-gray-500 tracking-wide">
+      <div className="bg-panel/90 backdrop-blur-md border-t border-hairline/30 px-4 py-1.5 flex items-center justify-between text-[11px] text-ink-subtle tracking-wide">
         <div className="flex items-center gap-3">
           <WorkspaceChip />
           {activeTab && (
-            <span className="text-gray-600 truncate max-w-[200px]">
+            <span className="text-ink-subtle truncate max-w-[200px]">
               {tabs.find((t) => t.id === activeTab)?.title}
             </span>
           )}
           {activeSSHConn && (
             <>
-              <span className="text-slate-700">·</span>
+              <span className="text-ink-subtle">·</span>
               <MetricsStatusInline
                 sample={metrics.latest}
                 error={metrics.error}
@@ -799,11 +799,11 @@ function AppContent(): React.JSX.Element {
             activeTabObj.connId &&
             disconnectedTabs.has(activeTabObj.id) && (
               <>
-                <span className="text-slate-700">·</span>
+                <span className="text-ink-subtle">·</span>
                 <button
                   onClick={() => void reconnectSSHTab(activeTabObj)}
                   title="The SSH session has closed. Click to reconnect."
-                  className="flex items-center gap-1 px-2 py-0.5 rounded text-amber-300 bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 hover:text-amber-200 transition-colors"
+                  className="flex items-center gap-1 px-2 py-0.5 rounded text-warning bg-warning/10 border border-warning/30 hover:bg-warning/20 hover:text-warning transition-colors"
                 >
                   <PlugZap size={11} />
                   <span>Reconnect</span>
@@ -811,11 +811,11 @@ function AppContent(): React.JSX.Element {
               </>
             )}
         </div>
-        <div className="flex items-center gap-3 text-gray-600">
+        <div className="flex items-center gap-3 text-ink-subtle">
           <span>UTF-8</span>
-          <span className="text-slate-700">·</span>
+          <span className="text-ink-subtle">·</span>
           <span>LF</span>
-          <span className="text-slate-700">·</span>
+          <span className="text-ink-subtle">·</span>
           <span>zsh</span>
         </div>
       </div>

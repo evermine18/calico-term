@@ -67,12 +67,12 @@ function ActionPreview({ name, args }: { name: string; args: unknown }) {
     const cmd = String(a.command ?? "");
     return (
       <div>
-        <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+        <div className="text-[10px] uppercase tracking-wide text-ink-subtle mb-1">
           will run in your active terminal
         </div>
-        <div className="flex items-start gap-2 bg-black/60 rounded px-2.5 py-2 border border-slate-800">
-          <span className="text-green-400 font-mono text-xs select-none">$</span>
-          <code className="text-xs font-mono text-slate-100 whitespace-pre-wrap break-all flex-1">
+        <div className="flex items-start gap-2 bg-black/60 rounded px-2.5 py-2 border border-hairline">
+          <span className="text-success font-mono text-xs select-none">$</span>
+          <code className="text-xs font-mono text-ink whitespace-pre-wrap break-all flex-1">
             {cmd}
           </code>
         </div>
@@ -89,20 +89,20 @@ function ActionPreview({ name, args }: { name: string; args: unknown }) {
       content.length > 600 ? content.slice(0, 600) + "\n…" : content;
     return (
       <div>
-        <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+        <div className="text-[10px] uppercase tracking-wide text-ink-subtle mb-1">
           will write file
         </div>
-        <div className="bg-slate-950 rounded px-2.5 py-2 border border-slate-800 space-y-1.5">
-          <div className="flex items-center gap-2 text-xs font-mono text-amber-300">
+        <div className="bg-surface rounded px-2.5 py-2 border border-hairline space-y-1.5">
+          <div className="flex items-center gap-2 text-xs font-mono text-warning">
             <FilePlus size={11} className="flex-shrink-0" />
             <span className="break-all">{path}</span>
           </div>
-          <div className="text-[10px] text-slate-500">
+          <div className="text-[10px] text-ink-subtle">
             {lines} line{lines === 1 ? "" : "s"} · {bytes} byte
             {bytes === 1 ? "" : "s"}
           </div>
           {preview && (
-            <pre className="text-[11px] font-mono text-slate-300 bg-black/40 rounded px-2 py-1 overflow-x-auto max-h-32">
+            <pre className="text-[11px] font-mono text-ink-muted bg-black/40 rounded px-2 py-1 overflow-x-auto max-h-32">
               {preview}
             </pre>
           )}
@@ -114,10 +114,10 @@ function ActionPreview({ name, args }: { name: string; args: unknown }) {
   if (name === "read_file") {
     return (
       <div>
-        <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+        <div className="text-[10px] uppercase tracking-wide text-ink-subtle mb-1">
           will read file
         </div>
-        <div className="flex items-center gap-2 bg-slate-950 rounded px-2.5 py-2 border border-slate-800 text-xs font-mono text-slate-200">
+        <div className="flex items-center gap-2 bg-surface rounded px-2.5 py-2 border border-hairline text-xs font-mono text-ink">
           <FileText size={11} className="text-accent-400 flex-shrink-0" />
           <span className="break-all">{String(a.path ?? "")}</span>
         </div>
@@ -135,10 +135,10 @@ function ActionPreview({ name, args }: { name: string; args: unknown }) {
           : "will list remote directory";
     return (
       <div>
-        <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+        <div className="text-[10px] uppercase tracking-wide text-ink-subtle mb-1">
           {verb}
         </div>
-        <div className="flex items-center gap-2 bg-slate-950 rounded px-2.5 py-2 border border-slate-800 text-xs font-mono text-slate-200">
+        <div className="flex items-center gap-2 bg-surface rounded px-2.5 py-2 border border-hairline text-xs font-mono text-ink">
           <Server size={11} className="text-accent-400 flex-shrink-0" />
           <span className="break-all">{path}</span>
         </div>
@@ -173,13 +173,13 @@ export default function ToolCallCard({
     switch (call.status) {
       case "pending":
         return (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/15 text-warning">
             awaiting
           </span>
         );
       case "awaiting_approval":
         return (
-          <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40">
+          <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-warning/20 text-warning border border-warning/40">
             <AlertTriangle size={9} />
             needs approval
           </span>
@@ -193,21 +193,21 @@ export default function ToolCallCard({
         );
       case "done":
         return (
-          <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-green-500/15 text-green-300">
+          <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-success/15 text-success">
             <Check size={9} />
             done
           </span>
         );
       case "error":
         return (
-          <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-red-500/15 text-red-300">
+          <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-danger/15 text-danger">
             <AlertTriangle size={9} />
             error
           </span>
         );
       case "denied":
         return (
-          <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-700/40 text-slate-400">
+          <span className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-elevated/40 text-ink-muted">
             <X size={9} />
             denied
           </span>
@@ -218,46 +218,46 @@ export default function ToolCallCard({
   })();
 
   const cardBorder = awaitingApproval
-    ? "border-amber-500/40"
-    : "border-slate-700/40";
+    ? "border-warning/40"
+    : "border-hairline/40";
 
   return (
     <div
-      className={`my-2 rounded-md border ${cardBorder} bg-slate-950/40 overflow-hidden`}
+      className={`my-2 rounded-md border ${cardBorder} bg-surface/40 overflow-hidden`}
     >
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-slate-900/60 transition-colors"
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-left hover:bg-panel/60 transition-colors"
       >
         <ChevronRight
           size={12}
-          className={`text-slate-500 transition-transform ${
+          className={`text-ink-subtle transition-transform ${
             isExpanded ? "rotate-90" : ""
           }`}
         />
         <Icon size={12} className="text-accent-400 flex-shrink-0" />
-        <span className="text-xs font-medium text-slate-200 flex-shrink-0">
+        <span className="text-xs font-medium text-ink flex-shrink-0">
           {label}
         </span>
         {summary && (
-          <span className="text-xs text-slate-500 font-mono truncate flex-1 min-w-0">
+          <span className="text-xs text-ink-subtle font-mono truncate flex-1 min-w-0">
             {summary}
           </span>
         )}
         <div className="flex-shrink-0">{statusBadge}</div>
       </button>
       {isExpanded && (
-        <div className="px-2.5 pb-2 pt-1 space-y-2 border-t border-slate-800">
+        <div className="px-2.5 pb-2 pt-1 space-y-2 border-t border-hairline">
           <ActionPreview name={call.name} args={call.args} />
           <div>
             <button
               onClick={() => setShowRaw((v) => !v)}
-              className="text-[10px] uppercase tracking-wide text-slate-500 hover:text-slate-300 transition-colors"
+              className="text-[10px] uppercase tracking-wide text-ink-subtle hover:text-ink-muted transition-colors"
             >
               {showRaw ? "hide" : "show"} raw arguments
             </button>
             {showRaw && (
-              <pre className="mt-1 text-xs font-mono bg-slate-950 text-slate-300 rounded px-2 py-1 overflow-x-auto max-h-32">
+              <pre className="mt-1 text-xs font-mono bg-surface text-ink-muted rounded px-2 py-1 overflow-x-auto max-h-32">
                 {JSON.stringify(call.args, null, 2)}
               </pre>
             )}
@@ -266,7 +266,7 @@ export default function ToolCallCard({
             <div className="flex flex-wrap items-center gap-1.5 pt-1">
               <button
                 onClick={() => onDeny!(call.id, call.name)}
-                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-slate-700 text-slate-300 hover:bg-slate-800 transition-colors"
+                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded border border-hairline text-ink-muted hover:bg-elevated transition-colors"
               >
                 <X size={11} />
                 Deny
@@ -280,7 +280,7 @@ export default function ToolCallCard({
               </button>
               <button
                 onClick={() => onApprove!(call.id, call.name, true)}
-                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-amber-500/15 border border-amber-500/40 text-amber-200 hover:bg-amber-500/25 transition-colors ml-auto"
+                className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-warning/15 border border-warning/40 text-warning hover:bg-warning/25 transition-colors ml-auto"
                 title={`Auto-approve every "${label}" call for the rest of this conversation`}
               >
                 <ShieldCheck size={11} />
@@ -290,14 +290,14 @@ export default function ToolCallCard({
           )}
           {call.result !== undefined && (
             <div>
-              <div className="text-[10px] uppercase tracking-wide text-slate-500 mb-1">
+              <div className="text-[10px] uppercase tracking-wide text-ink-subtle mb-1">
                 result {call.isError ? "(error)" : ""}
               </div>
               <pre
                 className={`text-xs font-mono rounded px-2 py-1 overflow-x-auto max-h-48 ${
                   call.isError
-                    ? "bg-red-950/40 text-red-300"
-                    : "bg-slate-950 text-slate-300"
+                    ? "bg-danger/40 text-danger"
+                    : "bg-surface text-ink-muted"
                 }`}
               >
                 {call.result}

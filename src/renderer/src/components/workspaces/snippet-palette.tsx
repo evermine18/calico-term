@@ -65,7 +65,7 @@ export function SnippetPalette() {
     >
       <CommandInput placeholder="Search snippets…" />
       <CommandList>
-        <CommandEmpty className="py-6 text-center text-xs text-gray-500">
+        <CommandEmpty className="py-6 text-center text-xs text-ink-subtle">
           {workspaces.some((w) => (w.snippets ?? []).length)
             ? "No matching snippet."
             : "No snippets yet — add some in Settings → Workspaces."}
@@ -84,19 +84,19 @@ export function SnippetPalette() {
                   className="mt-0.5 text-accent-400 shrink-0"
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-gray-100 truncate">
+                  <div className="text-sm text-ink truncate">
                     {s.name}
                   </div>
-                  <div className="font-mono text-[11px] text-gray-500 truncate">
+                  <div className="font-mono text-[11px] text-ink-subtle truncate">
                     {s.command}
                   </div>
                   {s.description && (
-                    <div className="text-[10px] text-gray-600 truncate">
+                    <div className="text-[10px] text-ink-subtle truncate">
                       {s.description}
                     </div>
                   )}
                 </div>
-                <div className="flex items-center gap-1 text-[10px] text-gray-500 shrink-0">
+                <div className="flex items-center gap-1 text-[10px] text-ink-subtle shrink-0">
                   <Layers size={10} />
                   <span
                     className="px-1 rounded"

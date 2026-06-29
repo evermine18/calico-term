@@ -202,11 +202,11 @@ export function WorkspacesPanel() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-300 text-sm font-semibold flex items-center gap-1.5">
+          <p className="text-ink-muted text-sm font-semibold flex items-center gap-1.5">
             <Layers size={14} />
             Workspaces
           </p>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-ink-subtle mt-0.5">
             Group SSH connections by environment. The active workspace colours
             the header stripe and filters Home.
           </p>
@@ -217,7 +217,7 @@ export function WorkspacesPanel() {
             variant="outline"
             onClick={handleImport}
             disabled={busy}
-            className="bg-slate-800/60 border-slate-700/50 text-gray-300 hover:bg-slate-700/60 gap-1"
+            className="bg-elevated/60 border-hairline/50 text-ink-muted hover:bg-elevated/60 gap-1"
           >
             {busy ? <Loader2 size={13} className="animate-spin" /> : <Upload size={13} />}
             Import
@@ -225,7 +225,7 @@ export function WorkspacesPanel() {
           <Button
             size="sm"
             onClick={createNew}
-            className="bg-accent-500/90 hover:bg-accent-500 text-white gap-1"
+            className="bg-accent-500/90 hover:bg-accent-500 text-on-accent gap-1"
           >
             <Plus size={13} />
             New
@@ -234,7 +234,7 @@ export function WorkspacesPanel() {
       </div>
 
       {message && (
-        <div className="text-[11px] text-gray-400 bg-slate-800/50 border border-slate-700/40 rounded px-2 py-1.5 break-all">
+        <div className="text-[11px] text-ink-muted bg-elevated/50 border border-hairline/40 rounded px-2 py-1.5 break-all">
           {message}
         </div>
       )}
@@ -249,7 +249,7 @@ export function WorkspacesPanel() {
               className={`rounded-md border ${
                 isActive
                   ? "bg-accent-500/5 border-accent-500/30"
-                  : "bg-slate-800/40 border-slate-700/40"
+                  : "bg-elevated/40 border-hairline/40"
               }`}
             >
               <div className="flex items-center gap-2 p-2">
@@ -258,11 +258,11 @@ export function WorkspacesPanel() {
                   style={{ backgroundColor: w.color }}
                 />
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-gray-200 truncate">{w.name}</div>
-                  <div className="text-[10px] text-gray-500 flex items-center gap-2">
+                  <div className="text-sm text-ink truncate">{w.name}</div>
+                  <div className="text-[10px] text-ink-subtle flex items-center gap-2">
                     <span>{w.sshConnectionIds.length} connections</span>
                     {w.environment === "prod" && (
-                      <span className="text-red-400 flex items-center gap-0.5">
+                      <span className="text-danger flex items-center gap-0.5">
                         <ShieldAlert size={9} /> PROD
                       </span>
                     )}
@@ -278,21 +278,21 @@ export function WorkspacesPanel() {
                 )}
                 <button
                   onClick={() => setExportTarget(w.id)}
-                  className="text-gray-500 hover:text-gray-300 p-1"
+                  className="text-ink-subtle hover:text-ink-muted p-1"
                   title="Export"
                 >
                   <Download size={13} />
                 </button>
                 <button
                   onClick={() => setEditingId(isEditing ? null : w.id)}
-                  className="text-[11px] text-gray-400 hover:text-accent-300 px-1.5 py-0.5"
+                  className="text-[11px] text-ink-muted hover:text-accent-300 px-1.5 py-0.5"
                 >
                   {isEditing ? "Done" : "Edit"}
                 </button>
                 {w.id !== "ws-personal" && (
                   <button
                     onClick={() => openDeleteDialog(w.id)}
-                    className="text-gray-500 hover:text-red-400 p-1"
+                    className="text-ink-subtle hover:text-danger p-1"
                     title="Delete"
                   >
                     <Trash2 size={13} />
@@ -301,32 +301,32 @@ export function WorkspacesPanel() {
               </div>
 
               {isEditing && editing && editing.id === w.id && (
-                <div className="border-t border-slate-700/40 p-3 space-y-3">
+                <div className="border-t border-hairline/40 p-3 space-y-3">
                   <div className="grid grid-cols-2 gap-2">
                     <div className="grid gap-1">
-                      <Label className="text-[11px] text-gray-400">Name</Label>
+                      <Label className="text-[11px] text-ink-muted">Name</Label>
                       <Input
                         value={editing.name}
                         onChange={(e) =>
                           updateWorkspace({ ...editing, name: e.target.value })
                         }
-                        className="h-8 bg-slate-800/60 border-slate-700/50 text-gray-100 text-sm"
+                        className="h-8 bg-elevated/60 border-hairline/50 text-ink text-sm"
                       />
                     </div>
                     <div className="grid gap-1">
-                      <Label className="text-[11px] text-gray-400">Color</Label>
+                      <Label className="text-[11px] text-ink-muted">Color</Label>
                       <input
                         type="color"
                         value={editing.color}
                         onChange={(e) =>
                           updateWorkspace({ ...editing, color: e.target.value })
                         }
-                        className="h-8 w-full rounded-md border border-slate-700/50 bg-slate-800/60 cursor-pointer"
+                        className="h-8 w-full rounded-md border border-hairline/50 bg-elevated/60 cursor-pointer"
                       />
                     </div>
                   </div>
                   <div className="grid gap-1">
-                    <Label className="text-[11px] text-gray-400">
+                    <Label className="text-[11px] text-ink-muted">
                       Environment
                     </Label>
                     <Select
@@ -338,10 +338,10 @@ export function WorkspacesPanel() {
                         })
                       }
                     >
-                      <SelectTrigger className="h-8 bg-slate-800/60 border-slate-700/50 text-gray-100">
+                      <SelectTrigger className="h-8 bg-elevated/60 border-hairline/50 text-ink">
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700/50">
+                      <SelectContent className="bg-panel border-hairline/50">
                         <SelectItem value="dev">Development</SelectItem>
                         <SelectItem value="staging">Staging</SelectItem>
                         <SelectItem value="prod">Production</SelectItem>
@@ -350,12 +350,12 @@ export function WorkspacesPanel() {
                     </Select>
                   </div>
                   <div className="grid gap-1">
-                    <Label className="text-[11px] text-gray-400">
+                    <Label className="text-[11px] text-ink-muted">
                       SSH Connections
                     </Label>
-                    <div className="max-h-40 overflow-y-auto rounded border border-slate-700/40 bg-slate-900/40 divide-y divide-slate-800/40">
+                    <div className="max-h-40 overflow-y-auto rounded border border-hairline/40 bg-panel/40 divide-y divide-hairline/40">
                       {sshConnections.length === 0 && (
-                        <div className="px-2 py-3 text-[11px] text-gray-500 text-center">
+                        <div className="px-2 py-3 text-[11px] text-ink-subtle text-center">
                           No SSH connections yet.
                         </div>
                       )}
@@ -369,7 +369,7 @@ export function WorkspacesPanel() {
                         return (
                           <label
                             key={c.id}
-                            className="flex items-center gap-2 px-2 py-1.5 text-[12px] text-gray-300 hover:bg-slate-800/40 cursor-pointer"
+                            className="flex items-center gap-2 px-2 py-1.5 text-[12px] text-ink-muted hover:bg-elevated/40 cursor-pointer"
                           >
                             <input
                               type="checkbox"
@@ -382,20 +382,20 @@ export function WorkspacesPanel() {
                             <span className="flex-1 truncate">{c.name}</span>
                             {otherCount > 0 && (
                               <span
-                                className="text-[9px] px-1 rounded bg-slate-700/40 text-gray-400"
+                                className="text-[9px] px-1 rounded bg-elevated/40 text-ink-muted"
                                 title="Also assigned to other workspaces"
                               >
                                 +{otherCount}
                               </span>
                             )}
-                            <span className="text-[10px] text-gray-500 font-mono">
+                            <span className="text-[10px] text-ink-subtle font-mono">
                               {c.username}@{c.host}
                             </span>
                           </label>
                         );
                       })}
                     </div>
-                    <p className="text-[10px] text-gray-500 pt-0.5">
+                    <p className="text-[10px] text-ink-subtle pt-0.5">
                       A connection can belong to multiple workspaces.
                     </p>
                   </div>
@@ -403,7 +403,7 @@ export function WorkspacesPanel() {
                   {/* Snippets */}
                   <div className="grid gap-1">
                     <div className="flex items-center justify-between">
-                      <Label className="text-[11px] text-gray-400 flex items-center gap-1.5">
+                      <Label className="text-[11px] text-ink-muted flex items-center gap-1.5">
                         <TerminalSquare size={11} /> Snippets
                       </Label>
                       <button
@@ -421,25 +421,25 @@ export function WorkspacesPanel() {
                       </button>
                     </div>
                     {(editing.snippets ?? []).length === 0 ? (
-                      <div className="px-2 py-2 text-[10px] text-gray-500 text-center border border-dashed border-slate-700/40 rounded">
+                      <div className="px-2 py-2 text-[10px] text-ink-subtle text-center border border-dashed border-hairline/40 rounded">
                         No snippets. Invoke via the snippet palette shortcut.
                       </div>
                     ) : (
-                      <div className="rounded border border-slate-700/40 bg-slate-900/40 divide-y divide-slate-800/40">
+                      <div className="rounded border border-hairline/40 bg-panel/40 divide-y divide-hairline/40">
                         {(editing.snippets ?? []).map((s) => (
                           <div
                             key={s.id}
                             className="flex items-start gap-2 px-2 py-1.5"
                           >
                             <div className="flex-1 min-w-0">
-                              <div className="text-[12px] text-gray-200 truncate">
+                              <div className="text-[12px] text-ink truncate">
                                 {s.name}
                               </div>
-                              <div className="text-[10px] text-gray-500 font-mono truncate">
+                              <div className="text-[10px] text-ink-subtle font-mono truncate">
                                 {s.command}
                               </div>
                               {s.description && (
-                                <div className="text-[10px] text-gray-600 truncate">
+                                <div className="text-[10px] text-ink-subtle truncate">
                                   {s.description}
                                 </div>
                               )}
@@ -448,7 +448,7 @@ export function WorkspacesPanel() {
                               onClick={() =>
                                 deleteSnippet(editing.id, s.id)
                               }
-                              className="text-gray-500 hover:text-red-400 p-0.5"
+                              className="text-ink-subtle hover:text-danger p-0.5"
                               title="Remove"
                             >
                               <X size={12} />
@@ -461,10 +461,10 @@ export function WorkspacesPanel() {
 
                   {/* Env vars hint */}
                   <div className="grid gap-1">
-                    <Label className="text-[11px] text-gray-400 flex items-center gap-1.5">
+                    <Label className="text-[11px] text-ink-muted flex items-center gap-1.5">
                       <Variable size={11} /> Environment variables
                     </Label>
-                    <p className="text-[10px] text-gray-500">
+                    <p className="text-[10px] text-ink-subtle">
                       Tabs whose connection belongs to this workspace inherit
                       its env scope. Manage values in Settings → Env (scope
                       "Workspace: {editing.name}").
@@ -482,9 +482,9 @@ export function WorkspacesPanel() {
         open={!!snippetForm}
         onOpenChange={(o) => !o && setSnippetForm(null)}
       >
-        <DialogContent className="sm:max-w-[420px] bg-slate-900 border-slate-700/40">
+        <DialogContent className="sm:max-w-[420px] bg-panel border-hairline/40">
           <DialogHeader>
-            <DialogTitle className="text-gray-100 flex items-center gap-2">
+            <DialogTitle className="text-ink flex items-center gap-2">
               <TerminalSquare size={15} className="text-accent-400" />
               New snippet
             </DialogTitle>
@@ -492,18 +492,18 @@ export function WorkspacesPanel() {
           {snippetForm && (
             <div className="grid gap-3 py-1">
               <div className="grid gap-1">
-                <Label className="text-[11px] text-gray-400">Name</Label>
+                <Label className="text-[11px] text-ink-muted">Name</Label>
                 <Input
                   value={snippetForm.name}
                   onChange={(e) =>
                     setSnippetForm({ ...snippetForm, name: e.target.value })
                   }
                   placeholder="deploy"
-                  className="h-8 bg-slate-800/60 border-slate-700/50 text-gray-100 text-sm"
+                  className="h-8 bg-elevated/60 border-hairline/50 text-ink text-sm"
                 />
               </div>
               <div className="grid gap-1">
-                <Label className="text-[11px] text-gray-400">Command</Label>
+                <Label className="text-[11px] text-ink-muted">Command</Label>
                 <Input
                   value={snippetForm.command}
                   onChange={(e) =>
@@ -513,11 +513,11 @@ export function WorkspacesPanel() {
                     })
                   }
                   placeholder="kubectl apply -f ."
-                  className="h-8 bg-slate-800/60 border-slate-700/50 text-gray-100 text-sm font-mono"
+                  className="h-8 bg-elevated/60 border-hairline/50 text-ink text-sm font-mono"
                 />
               </div>
               <div className="grid gap-1">
-                <Label className="text-[11px] text-gray-400">
+                <Label className="text-[11px] text-ink-muted">
                   Description (optional)
                 </Label>
                 <Input
@@ -528,7 +528,7 @@ export function WorkspacesPanel() {
                       description: e.target.value,
                     })
                   }
-                  className="h-8 bg-slate-800/60 border-slate-700/50 text-gray-100 text-sm"
+                  className="h-8 bg-elevated/60 border-hairline/50 text-ink text-sm"
                 />
               </div>
             </div>
@@ -538,14 +538,14 @@ export function WorkspacesPanel() {
               variant="outline"
               size="sm"
               onClick={() => setSnippetForm(null)}
-              className="border-slate-700/50 text-gray-300"
+              className="border-hairline/50 text-ink-muted"
             >
               Cancel
             </Button>
             <Button
               size="sm"
               onClick={addSnippetToWorkspace}
-              className="bg-accent-500/90 hover:bg-accent-500 text-white"
+              className="bg-accent-500/90 hover:bg-accent-500 text-on-accent"
               disabled={
                 !snippetForm?.name.trim() || !snippetForm?.command.trim()
               }
@@ -561,23 +561,23 @@ export function WorkspacesPanel() {
         open={!!deleteTarget}
         onOpenChange={(o) => !o && setDeleteTarget(null)}
       >
-        <DialogContent className="sm:max-w-[460px] bg-slate-900 border-slate-700/40">
+        <DialogContent className="sm:max-w-[460px] bg-panel border-hairline/40">
           <DialogHeader>
-            <DialogTitle className="text-gray-100 flex items-center gap-2">
-              <Trash2 size={15} className="text-red-400" />
+            <DialogTitle className="text-ink flex items-center gap-2">
+              <Trash2 size={15} className="text-danger" />
               Delete workspace
             </DialogTitle>
           </DialogHeader>
           {deleteTargetWs && (
             <div className="space-y-3 py-1">
-              <p className="text-sm text-gray-300">
+              <p className="text-sm text-ink-muted">
                 Workspace <span className="font-mono">{deleteTargetWs.name}</span>{" "}
                 holds {deleteTargetWs.sshConnectionIds.length} connection
                 {deleteTargetWs.sshConnectionIds.length === 1 ? "" : "s"}. What
                 should happen to them?
               </p>
               <div className="space-y-1.5">
-                <label className="flex items-start gap-2 p-2 rounded border border-slate-700/40 bg-slate-800/40 cursor-pointer hover:bg-slate-800/70">
+                <label className="flex items-start gap-2 p-2 rounded border border-hairline/40 bg-elevated/40 cursor-pointer hover:bg-elevated/70">
                   <input
                     type="radio"
                     name="del-mode"
@@ -586,17 +586,17 @@ export function WorkspacesPanel() {
                     className="mt-1 accent-accent-500"
                   />
                   <div>
-                    <div className="text-sm text-gray-200">
+                    <div className="text-sm text-ink">
                       Keep in other workspaces (Personal as fallback)
                     </div>
-                    <div className="text-[11px] text-gray-500">
+                    <div className="text-[11px] text-ink-subtle">
                       Connections stay; if not in any other workspace they
                       remain reachable via Personal.
                     </div>
                   </div>
                 </label>
                 {otherWorkspaces.length > 0 && (
-                  <label className="flex items-start gap-2 p-2 rounded border border-slate-700/40 bg-slate-800/40 cursor-pointer hover:bg-slate-800/70">
+                  <label className="flex items-start gap-2 p-2 rounded border border-hairline/40 bg-elevated/40 cursor-pointer hover:bg-elevated/70">
                     <input
                       type="radio"
                       name="del-mode"
@@ -605,15 +605,15 @@ export function WorkspacesPanel() {
                       className="mt-1 accent-accent-500"
                     />
                     <div className="flex-1">
-                      <div className="text-sm text-gray-200">
+                      <div className="text-sm text-ink">
                         Move to another workspace
                       </div>
                       {deleteMode === "move" && (
                         <Select value={moveTo} onValueChange={setMoveTo}>
-                          <SelectTrigger className="h-7 mt-1.5 bg-slate-900 border-slate-700/50 text-gray-100 text-sm">
+                          <SelectTrigger className="h-7 mt-1.5 bg-panel border-hairline/50 text-ink text-sm">
                             <SelectValue />
                           </SelectTrigger>
-                          <SelectContent className="bg-slate-900 border-slate-700/50">
+                          <SelectContent className="bg-panel border-hairline/50">
                             {otherWorkspaces.map((w) => (
                               <SelectItem key={w.id} value={w.id}>
                                 {w.name}
@@ -625,7 +625,7 @@ export function WorkspacesPanel() {
                     </div>
                   </label>
                 )}
-                <label className="flex items-start gap-2 p-2 rounded border border-red-500/30 bg-red-500/5 cursor-pointer hover:bg-red-500/10">
+                <label className="flex items-start gap-2 p-2 rounded border border-danger0/30 bg-danger0/5 cursor-pointer hover:bg-danger0/10">
                   <input
                     type="radio"
                     name="del-mode"
@@ -634,10 +634,10 @@ export function WorkspacesPanel() {
                     className="mt-1 accent-red-500"
                   />
                   <div>
-                    <div className="text-sm text-red-300">
+                    <div className="text-sm text-danger">
                       Delete connections too
                     </div>
-                    <div className="text-[11px] text-red-400/70">
+                    <div className="text-[11px] text-danger/70">
                       Permanently removes the connections and their stored
                       passwords.
                     </div>
@@ -651,14 +651,14 @@ export function WorkspacesPanel() {
               variant="outline"
               size="sm"
               onClick={() => setDeleteTarget(null)}
-              className="border-slate-700/50 text-gray-300"
+              className="border-hairline/50 text-ink-muted"
             >
               Cancel
             </Button>
             <Button
               size="sm"
               onClick={confirmDelete}
-              className="bg-red-600/90 hover:bg-red-600 text-white"
+              className="bg-danger/90 hover:bg-danger text-on-accent"
             >
               Delete workspace
             </Button>
@@ -668,7 +668,7 @@ export function WorkspacesPanel() {
 
       {exportTarget && (
         <div className="rounded-md border border-accent-500/30 bg-accent-500/5 p-3 space-y-2">
-          <div className="text-[11px] text-gray-300">
+          <div className="text-[11px] text-ink-muted">
             Optional passphrase (PBKDF2 + AES-GCM). Leave blank to export
             without encryption. Secrets are never included; only connection
             metadata.
@@ -679,13 +679,13 @@ export function WorkspacesPanel() {
               placeholder="Passphrase (optional)"
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
-              className="h-8 bg-slate-800/60 border-slate-700/50 text-gray-100 text-sm"
+              className="h-8 bg-elevated/60 border-hairline/50 text-ink text-sm"
             />
             <Button
               size="sm"
               onClick={handleExport}
               disabled={busy}
-              className="bg-accent-500/90 hover:bg-accent-500 text-white"
+              className="bg-accent-500/90 hover:bg-accent-500 text-on-accent"
             >
               {busy ? <Loader2 size={13} className="animate-spin" /> : "Export"}
             </Button>
@@ -696,7 +696,7 @@ export function WorkspacesPanel() {
                 setExportTarget(null);
                 setPassphrase("");
               }}
-              className="bg-slate-800/60 border-slate-700/50 text-gray-300"
+              className="bg-elevated/60 border-hairline/50 text-ink-muted"
             >
               Cancel
             </Button>

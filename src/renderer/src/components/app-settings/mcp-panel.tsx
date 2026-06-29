@@ -29,11 +29,11 @@ function Toggle({
       type="button"
       onClick={() => onChange(!checked)}
       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-        checked ? "bg-accent-500" : "bg-slate-700"
+        checked ? "bg-accent-500" : "bg-elevated"
       }`}
     >
       <span
-        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+        className={`inline-block h-3.5 w-3.5 transform rounded-full bg-panel transition-transform ${
           checked ? "translate-x-4.5" : "translate-x-0.5"
         }`}
       />
@@ -77,7 +77,7 @@ export function McpPanel() {
   };
 
   if (!status) {
-    return <div className="text-sm text-gray-500 px-1 py-4">Loading…</div>;
+    return <div className="text-sm text-ink-subtle px-1 py-4">Loading…</div>;
   }
 
   const connect = mcpConnect(agentId, status.url, status.token);
@@ -88,11 +88,11 @@ export function McpPanel() {
   return (
     <div className="space-y-5">
       <div className="space-y-1">
-        <p className="text-gray-300 text-sm font-semibold flex items-center gap-2">
+        <p className="text-ink-muted text-sm font-semibold flex items-center gap-2">
           <PlugZap size={15} className="text-accent-400" />
           MCP Server
         </p>
-        <p className="text-xs text-gray-400">
+        <p className="text-xs text-ink-muted">
           Expose your open terminals to external AI agents (Claude Code, Codex,
           …) over a local Model Context Protocol server. Agents can list tabs,
           read output, and — with your approval — run commands in a specific
@@ -101,12 +101,12 @@ export function McpPanel() {
       </div>
 
       {/* Enable */}
-      <div className="flex items-center justify-between p-3 rounded-md bg-slate-800/60 border border-slate-700/50">
+      <div className="flex items-center justify-between p-3 rounded-md bg-elevated/60 border border-hairline/50">
         <div className="min-w-0">
-          <div className="text-sm text-gray-200">Enable server</div>
-          <div className="text-xs text-gray-500">
+          <div className="text-sm text-ink-muted">Enable server</div>
+          <div className="text-xs text-ink-subtle">
             {status.running ? (
-              <span className="text-green-400">
+              <span className="text-success">
                 ● Listening on {status.url}
               </span>
             ) : (
@@ -121,13 +121,13 @@ export function McpPanel() {
       </div>
 
       {/* Accept-all */}
-      <div className="flex items-center justify-between p-3 rounded-md bg-slate-800/60 border border-slate-700/50">
+      <div className="flex items-center justify-between p-3 rounded-md bg-elevated/60 border border-hairline/50">
         <div className="min-w-0 pr-3">
-          <div className="text-sm text-gray-200 flex items-center gap-1.5">
-            <ShieldAlert size={13} className="text-amber-400" />
+          <div className="text-sm text-ink-muted flex items-center gap-1.5">
+            <ShieldAlert size={13} className="text-warning" />
             Allow “Allow all this session”
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-ink-subtle">
             When on, the approval dialog offers a button to auto-approve every
             agent action until the server restarts. Off = every command asks.
           </div>
@@ -140,7 +140,7 @@ export function McpPanel() {
 
       {/* Port */}
       <div className="grid gap-2">
-        <Label className="text-gray-300 text-sm">Port</Label>
+        <Label className="text-ink-muted text-sm">Port</Label>
         <div className="flex items-center gap-2">
           <Input
             type="number"
@@ -148,7 +148,7 @@ export function McpPanel() {
             max={65535}
             value={portInput}
             onChange={(e) => setPortInput(e.target.value)}
-            className="bg-slate-800/60 border-slate-700/50 text-gray-100 w-40 font-mono"
+            className="bg-elevated/60 border-hairline/50 text-ink w-40 font-mono"
           />
           <Button
             size="sm"
@@ -158,7 +158,7 @@ export function McpPanel() {
               const p = parseInt(portInput, 10);
               if (p >= 1024 && p <= 65535) apply({ port: p });
             }}
-            className="border-slate-700/50 text-gray-300"
+            className="border-hairline/50 text-ink-muted"
           >
             Apply
           </Button>
@@ -167,19 +167,19 @@ export function McpPanel() {
 
       {/* Token */}
       <div className="grid gap-2">
-        <Label className="text-gray-300 text-sm">Access token</Label>
+        <Label className="text-ink-muted text-sm">Access token</Label>
         <div className="flex items-center gap-2">
           <Input
             type={showToken ? "text" : "password"}
             readOnly
             value={status.token}
-            className="bg-slate-800/60 border-slate-700/50 text-gray-100 font-mono text-xs"
+            className="bg-elevated/60 border-hairline/50 text-ink font-mono text-xs"
           />
           <Button
             size="icon"
             variant="outline"
             onClick={() => setShowToken((v) => !v)}
-            className="bg-slate-800/60 border-slate-700/50 shrink-0"
+            className="bg-elevated/60 border-hairline/50 shrink-0"
           >
             {showToken ? <EyeOff size={15} /> : <Eye size={15} />}
           </Button>
@@ -187,7 +187,7 @@ export function McpPanel() {
             size="icon"
             variant="outline"
             onClick={() => copy("token", status.token)}
-            className="bg-slate-800/60 border-slate-700/50 shrink-0"
+            className="bg-elevated/60 border-hairline/50 shrink-0"
           >
             {copied === "token" ? <Check size={15} /> : <Copy size={15} />}
           </Button>
@@ -196,7 +196,7 @@ export function McpPanel() {
             variant="outline"
             onClick={regenerate}
             title="Regenerate token"
-            className="bg-slate-800/60 border-slate-700/50 shrink-0"
+            className="bg-elevated/60 border-hairline/50 shrink-0"
           >
             <RefreshCw size={15} />
           </Button>
@@ -204,8 +204,8 @@ export function McpPanel() {
       </div>
 
       {/* Connect an agent */}
-      <div className="grid gap-2 pt-3 border-t border-slate-700/40">
-        <Label className="text-gray-300 text-sm">Connect an agent</Label>
+      <div className="grid gap-2 pt-3 border-t border-hairline/40">
+        <Label className="text-ink-muted text-sm">Connect an agent</Label>
 
         {/* Agent picker */}
         <div className="flex flex-wrap gap-1.5">
@@ -219,8 +219,8 @@ export function McpPanel() {
                 onClick={() => setAgentId(a.id)}
                 className={`flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs transition-colors ${
                   active
-                    ? "border-slate-600 bg-slate-700/70 text-gray-100"
-                    : "border-slate-700/50 bg-slate-800/40 text-gray-400 hover:text-gray-200"
+                    ? "border-hairline bg-elevated/70 text-ink"
+                    : "border-hairline/50 bg-elevated/40 text-ink-muted hover:text-ink-muted"
                 }`}
               >
                 <span
@@ -236,31 +236,31 @@ export function McpPanel() {
 
         {connect && (
           <>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-ink-muted">
               {connect.kind === "command"
                 ? "Run this once in a terminal to register Calico Term as an MCP server:"
                 : `Add this to ${connect.configPath}:`}
             </p>
             <div className="flex items-start gap-2">
-              <pre className="flex-1 text-xs font-mono text-accent-200 bg-slate-800/80 border border-slate-700/40 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
+              <pre className="flex-1 text-xs font-mono text-accent-200 bg-elevated/80 border border-hairline/40 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
                 {connect.snippet}
               </pre>
               <Button
                 size="icon"
                 variant="outline"
                 onClick={() => copy("cmd", connect.snippet)}
-                className="bg-slate-800/60 border-slate-700/50 shrink-0"
+                className="bg-elevated/60 border-hairline/50 shrink-0"
               >
                 {copied === "cmd" ? <Check size={15} /> : <Copy size={15} />}
               </Button>
             </div>
             {connect.note && (
-              <p className="text-[11px] text-amber-300/80">{connect.note}</p>
+              <p className="text-[11px] text-warning/80">{connect.note}</p>
             )}
           </>
         )}
 
-        <p className="text-[11px] text-gray-500">
+        <p className="text-[11px] text-ink-subtle">
           The server binds to localhost only and requires the token above.
           Anyone who has the token can drive your terminals — keep it private
           and regenerate it if leaked.

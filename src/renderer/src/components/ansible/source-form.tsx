@@ -11,8 +11,8 @@ import { Button } from "@renderer/components/ui/button";
 import { KeyRound, Loader2, Copy, Check } from "lucide-react";
 
 const inputCls =
-  "w-full bg-slate-800/60 border border-slate-700/50 rounded px-2.5 py-1.5 text-sm text-gray-100 focus:outline-none focus:border-accent-500/60";
-const labelCls = "block text-xs font-medium text-gray-400 mb-1";
+  "w-full bg-elevated/60 border border-hairline/50 rounded px-2.5 py-1.5 text-sm text-ink focus:outline-none focus:border-accent-500/60";
+const labelCls = "block text-xs font-medium text-ink-muted mb-1";
 
 // Build the control-node shape for the "test access" probe.
 function toControlNode(
@@ -156,9 +156,9 @@ export default function AnsibleSourceForm({
 
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[520px] bg-slate-900 border-slate-700/60 max-h-[85vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[520px] bg-panel border-hairline/60 max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-gray-100">
+          <DialogTitle className="text-ink">
             {existing ? "Edit source" : "New Ansible source"}
           </DialogTitle>
         </DialogHeader>
@@ -203,7 +203,7 @@ export default function AnsibleSourceForm({
                   className={`flex-1 text-sm py-1.5 rounded border transition-colors ${
                     origin === o
                       ? "border-accent-500 bg-accent-500/10 text-accent-200"
-                      : "border-slate-700/50 text-gray-400 hover:border-slate-600"
+                      : "border-hairline/50 text-ink-muted hover:border-hairline"
                   }`}
                 >
                   {o === "git" ? "Git repo" : "Path on control node"}
@@ -245,8 +245,8 @@ export default function AnsibleSourceForm({
               </div>
 
               {/* Deploy key management */}
-              <div className="rounded-md border border-slate-700/50 p-2.5 space-y-2">
-                <div className="flex items-center gap-1.5 text-xs font-medium text-gray-300">
+              <div className="rounded-md border border-hairline/50 p-2.5 space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-medium text-ink-muted">
                   <KeyRound size={13} className="text-accent-400" />
                   Deploy key (control node auth against the git host)
                 </div>
@@ -270,7 +270,7 @@ export default function AnsibleSourceForm({
                     variant="outline"
                     onClick={generateDeployKey}
                     disabled={generating}
-                    className="border-slate-700/50 text-gray-300 gap-1 text-xs"
+                    className="border-hairline/50 text-ink-muted gap-1 text-xs"
                   >
                     {generating ? (
                       <Loader2 size={12} className="animate-spin" />
@@ -284,7 +284,7 @@ export default function AnsibleSourceForm({
                     variant="outline"
                     onClick={testAccess}
                     disabled={testing || !repoUrl.trim()}
-                    className="border-slate-700/50 text-gray-300 gap-1 text-xs"
+                    className="border-hairline/50 text-ink-muted gap-1 text-xs"
                   >
                     {testing ? (
                       <Loader2 size={12} className="animate-spin" />
@@ -294,7 +294,7 @@ export default function AnsibleSourceForm({
                 </div>
                 {newPublicKey && (
                   <div className="space-y-1">
-                    <p className="text-[11px] text-amber-300">
+                    <p className="text-[11px] text-warning">
                       Register this public key as a deploy key on your git host
                       (GitHub/GitLab), then test access:
                     </p>
@@ -302,7 +302,7 @@ export default function AnsibleSourceForm({
                       <textarea
                         readOnly
                         value={newPublicKey}
-                        className="flex-1 bg-slate-800/80 border border-slate-700/50 rounded px-2 py-1 text-[11px] text-gray-200 font-mono h-16 resize-none"
+                        className="flex-1 bg-elevated/80 border border-hairline/50 rounded px-2 py-1 text-[11px] text-ink-muted font-mono h-16 resize-none"
                       />
                       <button
                         onClick={() => {
@@ -310,7 +310,7 @@ export default function AnsibleSourceForm({
                           setCopied(true);
                           setTimeout(() => setCopied(false), 1500);
                         }}
-                        className="p-1 text-gray-400 hover:text-accent-300"
+                        className="p-1 text-ink-muted hover:text-accent-300"
                         title="Copy"
                       >
                         {copied ? <Check size={14} /> : <Copy size={14} />}
@@ -322,8 +322,8 @@ export default function AnsibleSourceForm({
                   <div
                     className={`text-[11px] rounded px-2 py-1 font-mono whitespace-pre-wrap break-all ${
                       testResult.ok
-                        ? "text-emerald-300 bg-emerald-500/10 border border-emerald-500/30"
-                        : "text-red-300 bg-red-500/10 border border-red-500/30"
+                        ? "text-success bg-success/10 border border-success/30"
+                        : "text-danger bg-danger/10 border border-danger/30"
                     }`}
                   >
                     {testResult.ok ? "✓ Access OK\n" : "✗ No access\n"}
@@ -355,7 +355,7 @@ export default function AnsibleSourceForm({
                   className={`flex-1 text-sm py-1.5 rounded border transition-colors ${
                     inventoryMode === m
                       ? "border-accent-500 bg-accent-500/10 text-accent-200"
-                      : "border-slate-700/50 text-gray-400 hover:border-slate-600"
+                      : "border-hairline/50 text-ink-muted hover:border-hairline"
                   }`}
                 >
                   {m === "file"
@@ -372,7 +372,7 @@ export default function AnsibleSourceForm({
                 className={`${inputCls} font-mono`}
               />
             ) : (
-              <p className="text-[11px] text-gray-500">
+              <p className="text-[11px] text-ink-subtle">
                 An inventory will be generated from your saved SSH connections,
                 grouping them by their tags.
               </p>
@@ -385,7 +385,7 @@ export default function AnsibleSourceForm({
             variant="outline"
             size="sm"
             onClick={onClose}
-            className="border-slate-700/50 text-gray-300"
+            className="border-hairline/50 text-ink-muted"
           >
             Cancel
           </Button>
@@ -393,7 +393,7 @@ export default function AnsibleSourceForm({
             size="sm"
             disabled={!canSave}
             onClick={save}
-            className="bg-accent-600/90 hover:bg-accent-600 text-white"
+            className="bg-accent-600/90 hover:bg-accent-600 text-on-accent"
           >
             Save
           </Button>

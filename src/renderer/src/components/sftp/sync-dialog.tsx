@@ -99,9 +99,9 @@ export default function SyncDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !running && onClose()}>
-      <DialogContent className="sm:max-w-[520px] bg-slate-900 border-slate-700/40 shadow-xl">
+      <DialogContent className="sm:max-w-[520px] bg-panel border-hairline/40 shadow-xl">
         <DialogHeader>
-          <DialogTitle className="text-gray-100 flex items-center gap-2 text-sm">
+          <DialogTitle className="text-ink flex items-center gap-2 text-sm">
             <FolderTree size={14} className="text-accent-400" />
             Sync directory
           </DialogTitle>
@@ -109,28 +109,28 @@ export default function SyncDialog({
 
         <div className="grid gap-3 py-1">
           <div className="grid gap-1.5">
-            <Label className="text-gray-300 text-sm">Remote</Label>
+            <Label className="text-ink-muted text-sm">Remote</Label>
             <Input
               value={remoteDir}
               readOnly
-              className="bg-slate-800/60 border-slate-700 text-gray-300 font-mono text-xs"
+              className="bg-elevated/60 border-hairline text-ink-muted font-mono text-xs"
             />
           </div>
 
           <div className="grid gap-1.5">
-            <Label className="text-gray-300 text-sm">Local</Label>
+            <Label className="text-ink-muted text-sm">Local</Label>
             <div className="flex gap-2">
               <Input
                 value={localDir}
                 onChange={(e) => setLocalDir(e.target.value)}
                 placeholder="/path/to/local"
-                className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-xs"
+                className="bg-elevated/60 border-hairline text-ink font-mono text-xs"
               />
               <Button
                 variant="outline"
                 onClick={pickLocal}
                 disabled={running}
-                className="border-slate-700/50 bg-slate-800/60 gap-1.5"
+                className="border-hairline/50 bg-elevated/60 gap-1.5"
               >
                 <FolderOpen size={14} />
                 Pick
@@ -139,16 +139,16 @@ export default function SyncDialog({
           </div>
 
           <div className="grid gap-1.5">
-            <Label className="text-gray-300 text-sm">Direction</Label>
+            <Label className="text-ink-muted text-sm">Direction</Label>
             <Select
               value={direction}
               onValueChange={(v) => setDirection(v as typeof direction)}
               disabled={running}
             >
-              <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+              <SelectTrigger className="bg-elevated/60 border-hairline text-ink">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700/50">
+              <SelectContent className="bg-panel border-hairline/50">
                 <SelectItem value="download">
                   Remote → Local (download new/changed)
                 </SelectItem>
@@ -161,20 +161,20 @@ export default function SyncDialog({
 
           {(running || progress) && (
             <div className="grid gap-1.5">
-              <div className="flex justify-between text-xs text-gray-400">
+              <div className="flex justify-between text-xs text-ink-muted">
                 <span>
                   {progress?.filesDone ?? 0} / {progress?.filesTotal ?? 0}
                 </span>
                 <span>{pct}%</span>
               </div>
-              <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+              <div className="h-1.5 rounded-full bg-elevated overflow-hidden">
                 <div
                   className="h-full bg-accent-500 transition-all"
                   style={{ width: `${pct}%` }}
                 />
               </div>
               {progress?.current && (
-                <p className="text-[10px] text-gray-500 font-mono truncate">
+                <p className="text-[10px] text-ink-subtle font-mono truncate">
                   {progress.current}
                 </p>
               )}
@@ -182,12 +182,12 @@ export default function SyncDialog({
           )}
 
           {result && (
-            <p className="text-xs text-green-400">
+            <p className="text-xs text-success">
               Done — {result.filesTransferred} file
               {result.filesTransferred !== 1 ? "s" : ""} transferred.
             </p>
           )}
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-danger">{error}</p>}
         </div>
 
         <DialogFooter className="gap-2">
@@ -195,14 +195,14 @@ export default function SyncDialog({
             variant="outline"
             onClick={onClose}
             disabled={running}
-            className="border-slate-700 text-gray-300 hover:bg-slate-800"
+            className="border-hairline text-ink-muted hover:bg-elevated"
           >
             Close
           </Button>
           <Button
             onClick={run}
             disabled={running || !localDir.trim()}
-            className="bg-accent-600 hover:bg-accent-500 text-white gap-1.5"
+            className="bg-accent-600 hover:bg-accent-500 text-on-accent gap-1.5"
           >
             {direction === "download" ? (
               <ArrowDownToLine size={14} />

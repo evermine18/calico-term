@@ -52,9 +52,9 @@ function DetachedContent(): React.JSX.Element {
     : undefined;
 
   return (
-    <div className="h-screen flex flex-col bg-slate-950 text-gray-100">
+    <div className="h-screen flex flex-col bg-surface text-ink">
       {/* Minimal title bar */}
-      <div className="bg-slate-900/95 backdrop-blur-xl border-b border-slate-700/40 px-4 py-1.5 flex items-center gap-2 shadow-xl">
+      <div className="bg-panel/95 backdrop-blur-xl border-b border-hairline/40 px-4 py-1.5 flex items-center gap-2 shadow-xl">
         <div className="drag-region flex flex-1 items-center gap-2 min-w-0">
           {agent ? (
             <span
@@ -72,7 +72,7 @@ function DetachedContent(): React.JSX.Element {
               className="text-accent-400 flex-shrink-0"
             />
           )}
-          <span className="text-sm font-medium text-gray-300 truncate select-none">
+          <span className="text-sm font-medium text-ink-muted truncate select-none">
             {title}
           </span>
         </div>
@@ -80,21 +80,21 @@ function DetachedContent(): React.JSX.Element {
           <div className="flex items-center gap-0.5 flex-shrink-0">
             <button
               onClick={() => window.api.windowControls.minimize()}
-              className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-slate-700/60 hover:text-gray-300 transition-all duration-150"
+              className="flex items-center justify-center w-7 h-7 rounded text-ink-subtle hover:bg-elevated/60 hover:text-ink-muted transition-all duration-150"
               title="Minimize"
             >
               <Minus size={12} />
             </button>
             <button
               onClick={() => window.api.windowControls.maximize()}
-              className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-slate-700/60 hover:text-gray-300 transition-all duration-150"
+              className="flex items-center justify-center w-7 h-7 rounded text-ink-subtle hover:bg-elevated/60 hover:text-ink-muted transition-all duration-150"
               title="Maximize"
             >
               <Square size={10} />
             </button>
             <button
               onClick={() => window.api.windowControls.close()}
-              className="flex items-center justify-center w-7 h-7 rounded text-gray-500 hover:bg-red-500/20 hover:text-red-400 transition-all duration-150"
+              className="flex items-center justify-center w-7 h-7 rounded text-ink-subtle hover:bg-danger/20 hover:text-danger transition-all duration-150"
               title="Close"
             >
               <X size={12} />
@@ -104,7 +104,7 @@ function DetachedContent(): React.JSX.Element {
       </div>
 
       {/* Terminal */}
-      <div className="flex-1 bg-slate-950 relative overflow-hidden">
+      <div className="flex-1 bg-surface relative overflow-hidden">
         {loaded && tabId && (
           <div className="absolute inset-0">
             <TerminalPanel

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Terminal } from "@xterm/xterm";
+import { Terminal, ITheme } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import { SearchAddon } from "@xterm/addon-search";
@@ -32,6 +32,44 @@ const DEFAULT_FONT_SIZE = 14;
 // the local shell's stdin and re-run when the SSH session exits, producing a
 // spurious auto-reconnect after logout.
 const initialCommandSentTabs = new Set<string>();
+
+// Read a CSS custom property off the document root at call time.
+const cssVar = (v: string) =>
+  getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+// Build the xterm theme from the current CSS variables. Called on mount and
+// again whenever the UI light/dark mode (or accent) changes so the terminal
+// repaints with the active palette. Background/foreground/ANSI colors come from
+// the `--term-*` tokens; cursor/selection/blue/cyan track the themeable accent.
+function buildXtermTheme(): ITheme {
+  const accent400 = cssVar("--accent-400") || "#22d3ee";
+  const accent500 = cssVar("--accent-500") || "#06b6d4";
+  const accent300 = cssVar("--accent-300") || "#67e8f9";
+  return {
+    background: cssVar("--term-bg"),
+    foreground: cssVar("--term-fg"),
+    cursor: accent500,
+    cursorAccent: cssVar("--term-cursor-accent"),
+    selectionBackground: accent500,
+    selectionForeground: cssVar("--term-selection-fg"),
+    black: cssVar("--term-black"),
+    red: cssVar("--term-red"),
+    green: cssVar("--term-green"),
+    yellow: cssVar("--term-yellow"),
+    blue: accent500,
+    magenta: cssVar("--term-magenta"),
+    cyan: accent400,
+    white: cssVar("--term-white"),
+    brightBlack: cssVar("--term-bright-black"),
+    brightRed: cssVar("--term-bright-red"),
+    brightGreen: cssVar("--term-bright-green"),
+    brightYellow: cssVar("--term-bright-yellow"),
+    brightBlue: accent400,
+    brightMagenta: cssVar("--term-bright-magenta"),
+    brightCyan: accent300,
+    brightWhite: cssVar("--term-bright-white"),
+  };
+}
 
 interface TerminalPanelProps {
   tabId: string;
@@ -177,42 +215,13 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
 
     isInitializedRef.current = true;
 
-    const cssVar = (v: string) =>
-      getComputedStyle(document.documentElement).getPropertyValue(v).trim();
-    const accent400 = cssVar("--accent-400") || "#22d3ee";
-    const accent500 = cssVar("--accent-500") || "#06b6d4";
-    const accent300 = cssVar("--accent-300") || "#67e8f9";
-
     const terminal = new Terminal({
       cursorBlink,
       cursorStyle,
       allowProposedApi: true,
       scrollback,
       macOptionIsMeta: true,
-      theme: {
-        background: "#020617",
-        foreground: "#e2e8f0",
-        cursor: accent500,
-        cursorAccent: "#020617",
-        selectionBackground: accent500,
-        selectionForeground: "#020617",
-        black: "#1e293b",
-        red: "#ef4444",
-        green: "#10b981",
-        yellow: "#f59e0b",
-        blue: accent500,
-        magenta: "#a855f7",
-        cyan: accent400,
-        white: "#cbd5e1",
-        brightBlack: "#475569",
-        brightRed: "#f87171",
-        brightGreen: "#34d399",
-        brightYellow: "#fbbf24",
-        brightBlue: accent400,
-        brightMagenta: "#c084fc",
-        brightCyan: accent300,
-        brightWhite: "#f1f5f9",
-      },
+      theme: buildXtermTheme(),
       fontFamily: terminalFontFamily,
       fontSize: terminalFontSize,
       lineHeight: terminalLineHeight,
@@ -403,6 +412,24 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
     };
   }, [tabId]);
 
+  // Live theme updates: when the UI light/dark mode toggles, the theme provider
+  // swaps the `class` on <html>, which flips the `--term-*` (and accent) CSS
+  // vars. A MutationObserver fires reliably regardless of React effect ordering,
+  // so we rebuild the xterm theme and force a repaint here.
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const terminal = terminalRef.current;
+      if (!terminal) return;
+      terminal.options.theme = buildXtermTheme();
+      terminal.refresh(0, terminal.rows - 1);
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+    return () => observer.disconnect();
+  }, []);
+
   // Re-run the search as the query changes (live find-as-you-type).
   useEffect(() => {
     const addon = searchAddonRef.current;
@@ -551,7 +578,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
               }}
             />
             <div
-              className="fixed z-50 min-w-[160px] py-1 rounded-md border border-slate-700/60 bg-slate-900/97 shadow-xl shadow-black/40 backdrop-blur-md text-sm text-gray-200"
+              className="fixed z-50 min-w-[160px] py-1 rounded-md border border-hairline/60 bg-panel/97 shadow-xl shadow-black/40 backdrop-blur-md text-sm text-ink-muted"
               style={{ top: ctxMenu.y, left: ctxMenu.x }}
             >
               <CtxItem
@@ -572,7 +599,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
                 label="Select all"
                 onClick={ctxSelectAll}
               />
-              <div className="my-1 border-t border-slate-700/50" />
+              <div className="my-1 border-t border-hairline/50" />
               <CtxItem
                 icon={<Search size={13} />}
                 label="Search"
@@ -593,8 +620,8 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
         <button
           onClick={handleScrollToBottom}
           title="Ir al final"
-          className="absolute bottom-3 right-3 z-20 w-7 h-7 flex items-center justify-center rounded-full bg-slate-800/90 border border-slate-600/60 text-cyan-400 hover:bg-slate-700/90 hover:border-cyan-500/50 shadow-lg transition-all duration-150"
-          style={{ boxShadow: "0 0 8px rgba(6,182,212,0.2)" }}
+          className="absolute bottom-3 right-3 z-20 w-7 h-7 flex items-center justify-center rounded-full bg-elevated/90 border border-hairline/60 text-accent-400 hover:bg-elevated/90 hover:border-accent-500/50 shadow-lg transition-all duration-150"
+          style={{ boxShadow: "0 0 8px rgba(var(--accent-rgb),0.2)" }}
         >
           <ArrowDown size={13} />
         </button>
@@ -626,12 +653,12 @@ function CtxItem({
     <button
       disabled={disabled}
       onClick={onClick}
-      className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-slate-700/50 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
+      className="w-full flex items-center gap-2 px-3 py-1.5 text-left hover:bg-elevated/50 disabled:opacity-40 disabled:hover:bg-transparent transition-colors"
     >
-      <span className="text-gray-400 flex-shrink-0">{icon}</span>
+      <span className="text-ink-muted flex-shrink-0">{icon}</span>
       <span className="flex-1">{label}</span>
       {shortcut && (
-        <span className="text-[10px] text-gray-600 font-mono">{shortcut}</span>
+        <span className="text-[10px] text-ink-subtle font-mono">{shortcut}</span>
       )}
     </button>
   );

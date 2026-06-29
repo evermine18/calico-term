@@ -38,8 +38,8 @@ export function AuditPanel() {
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-gray-300 text-sm font-semibold">Audit log</p>
-        <p className="text-xs text-gray-400 mt-0.5">
+        <p className="text-ink-muted text-sm font-semibold">Audit log</p>
+        <p className="text-xs text-ink-muted mt-0.5">
           Append-only command history kept in the userData directory. Export is
           signed with a per-installation ed25519 key.
         </p>
@@ -49,7 +49,7 @@ export function AuditPanel() {
         <Button
           onClick={handleExport}
           size="sm"
-          className="gap-1.5 bg-accent-600/90 hover:bg-accent-500 text-white"
+          className="gap-1.5 bg-accent-600/90 hover:bg-accent-500 text-on-accent"
         >
           <Download size={13} />
           Export signed
@@ -58,7 +58,7 @@ export function AuditPanel() {
           onClick={copyPub}
           size="sm"
           variant="outline"
-          className="gap-1.5 border-slate-700/50 bg-slate-800/60"
+          className="gap-1.5 border-hairline/50 bg-elevated/60"
         >
           <KeyRound size={13} />
           Copy public key
@@ -67,7 +67,7 @@ export function AuditPanel() {
           onClick={handleClear}
           size="sm"
           variant="outline"
-          className="gap-1.5 border-slate-700/50 bg-slate-800/60 hover:bg-red-500/10 hover:text-red-400"
+          className="gap-1.5 border-hairline/50 bg-elevated/60 hover:bg-danger/10 hover:text-danger"
         >
           <Trash2 size={13} />
           Clear log
@@ -83,8 +83,8 @@ export function AuditPanel() {
       <div className="space-y-1 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-accent-600/40 scrollbar-track-transparent">
         {entries.length === 0 && (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <FileSignature size={26} className="text-slate-600 mb-2" />
-            <p className="text-sm text-gray-500">No audit entries yet</p>
+            <FileSignature size={26} className="text-ink-subtle mb-2" />
+            <p className="text-sm text-ink-subtle">No audit entries yet</p>
           </div>
         )}
         {entries
@@ -93,12 +93,12 @@ export function AuditPanel() {
           .map((e, i) => (
             <div
               key={`${e.ts}-${i}`}
-              className="flex items-baseline gap-2 px-2 py-1 rounded bg-slate-800/40 text-[11px]"
+              className="flex items-baseline gap-2 px-2 py-1 rounded bg-elevated/40 text-[11px]"
             >
-              <span className="text-gray-500 font-mono shrink-0">
+              <span className="text-ink-subtle font-mono shrink-0">
                 {new Date(e.ts).toLocaleTimeString()}
               </span>
-              <span className="text-gray-200 font-mono truncate flex-1">
+              <span className="text-ink-muted font-mono truncate flex-1">
                 {e.command}
               </span>
               {e.hostId && (

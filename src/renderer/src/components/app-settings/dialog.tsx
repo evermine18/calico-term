@@ -58,7 +58,11 @@ import {
   ShieldAlert,
   Sparkles,
   PlugZap,
+  Sun,
+  Moon,
+  Monitor,
 } from "lucide-react";
+import { useTheme } from "@renderer/components/theme-provider";
 import { ThemePicker } from "./theme-picker";
 import { SSHKeysPanel } from "./ssh-keys-panel";
 import { EnvVaultPanel } from "./env-vault-panel";
@@ -214,6 +218,8 @@ export default function SettingsDialog({
     shortcuts,
     setShortcuts,
   } = useAppContext();
+  // Light/Dark/System mode — separate system from the accent `theme`/`setTheme` above
+  const { theme: mode, setTheme: setMode } = useTheme();
   const [localSettings, setLocalSettings] = useState({
     apiUrl: apiUrl || "",
     selectedModel: selectedModel || "",
@@ -504,9 +510,9 @@ export default function SettingsDialog({
     <>
       <Dialog open={open} onOpenChange={setOpen}>
         {children && <DialogTrigger>{children}</DialogTrigger>}
-        <DialogContent className="w-[calc(100vw-3rem)] max-w-[1400px] sm:max-w-[1200px] h-[calc(100vh-3rem)] max-h-[900px] overflow-hidden bg-slate-900 border-slate-700/40 shadow-xl flex flex-col">
-          <DialogHeader className="border-b border-slate-700/40 pb-4 shrink-0">
-            <DialogTitle className="text-gray-100 flex items-center gap-2">
+        <DialogContent className="w-[calc(100vw-3rem)] max-w-[1400px] sm:max-w-[1200px] h-[calc(100vh-3rem)] max-h-[900px] overflow-hidden bg-panel border-hairline/40 shadow-xl flex flex-col">
+          <DialogHeader className="border-b border-hairline/40 pb-4 shrink-0">
+            <DialogTitle className="text-ink flex items-center gap-2">
               <div className="w-8 h-8 bg-accent-500/20 border border-accent-500/30 rounded-lg flex items-center justify-center">
                 <svg
                   className="w-4 h-4 text-accent-400"
@@ -529,14 +535,14 @@ export default function SettingsDialog({
             orientation="vertical"
             className="flex flex-row flex-1 min-h-0 gap-4"
           >
-            <TabsList className="shrink-0 w-48 flex-col items-stretch justify-start bg-slate-800/40 border border-slate-700/40 rounded-lg p-2 gap-0.5 self-stretch min-h-0 overflow-y-auto scrollbar-hover-only">
+            <TabsList className="shrink-0 w-48 flex-col items-stretch justify-start bg-elevated/40 border border-hairline/40 rounded-lg p-2 gap-0.5 self-stretch min-h-0 overflow-y-auto scrollbar-hover-only">
               {SETTINGS_GROUPS.map((group, groupIdx) => {
                 const showHeader = group.items.length > 1;
                 return (
                   <div key={group.label} className="flex flex-col gap-0.5">
                     {showHeader && (
                       <div
-                        className={`px-2 pb-1 text-[10px] uppercase tracking-wider text-gray-500 ${groupIdx === 0 ? "pt-1" : "pt-3"}`}
+                        className={`px-2 pb-1 text-[10px] uppercase tracking-wider text-ink-subtle ${groupIdx === 0 ? "pt-1" : "pt-3"}`}
                       >
                         {group.label}
                       </div>
@@ -562,19 +568,60 @@ export default function SettingsDialog({
                 value="appearance"
                 className="flex-1 overflow-y-auto px-1 mt-4"
               >
-                <div className="space-y-4">
-                  <div>
-                    <p className="text-gray-300 text-sm font-semibold">
-                      Color Theme
-                    </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      Changes apply instantly — no need to save.
-                    </p>
+                <div className="space-y-6">
+                  {/* Light / Dark / System mode */}
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-ink-muted text-sm font-semibold">
+                        Theme mode
+                      </p>
+                      <p className="text-xs text-ink-muted mt-1">
+                        Switch between light, dark, or follow your system.
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      {(
+                        [
+                          { value: "light", label: "Light", icon: Sun },
+                          { value: "dark", label: "Dark", icon: Moon },
+                          { value: "system", label: "System", icon: Monitor },
+                        ] as const
+                      ).map(({ value, label, icon: Icon }) => {
+                        const active = mode === value;
+                        return (
+                          <button
+                            key={value}
+                            type="button"
+                            onClick={() => setMode(value)}
+                            className={`flex flex-1 items-center justify-center gap-2 rounded-md border px-3 py-2 text-sm transition-colors ${
+                              active
+                                ? "bg-accent-500/20 text-accent-300 border-accent-500/40"
+                                : "bg-elevated text-ink-muted border-hairline hover:text-ink"
+                            }`}
+                          >
+                            <Icon size={15} />
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <ThemePicker
-                    value={localTheme}
-                    onChange={handleThemeChange}
-                  />
+
+                  {/* Color Theme (accent) */}
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-ink-muted text-sm font-semibold">
+                        Color Theme
+                      </p>
+                      <p className="text-xs text-ink-muted mt-1">
+                        Changes apply instantly — no need to save.
+                      </p>
+                    </div>
+                    <ThemePicker
+                      value={localTheme}
+                      onChange={handleThemeChange}
+                    />
+                  </div>
                 </div>
               </TabsContent>
 
@@ -586,7 +633,7 @@ export default function SettingsDialog({
                 <div className="grid gap-2.5">
                   <Label
                     htmlFor="ai-provider"
-                    className="text-gray-300 text-sm"
+                    className="text-ink-muted text-sm"
                   >
                     Provider
                   </Label>
@@ -605,11 +652,11 @@ export default function SettingsDialog({
                   >
                     <SelectTrigger
                       id="ai-provider"
-                      className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20"
+                      className="bg-elevated/60 border-hairline/50 text-ink focus:border-accent-500/50 focus:ring-accent-500/20"
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-700/50">
+                    <SelectContent className="bg-elevated border-hairline/50">
                       <SelectItem value="openai">OpenAI</SelectItem>
                       <SelectItem value="anthropic">Anthropic</SelectItem>
                       <SelectItem value="ollama">Ollama (local)</SelectItem>
@@ -621,7 +668,7 @@ export default function SettingsDialog({
                 </div>
 
                 <div className="grid gap-2.5">
-                  <Label htmlFor="api-url" className="text-gray-300 text-sm">
+                  <Label htmlFor="api-url" className="text-ink-muted text-sm">
                     Base API URL
                   </Label>
                   <Input
@@ -641,13 +688,13 @@ export default function SettingsDialog({
                           ? "http://localhost:11434"
                           : "https://api.openai.com"
                     }
-                    className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20 placeholder:text-gray-500"
+                    className="bg-elevated/60 border-hairline/50 text-ink focus:border-accent-500/50 focus:ring-accent-500/20 placeholder:text-ink-subtle"
                   />
                 </div>
 
                 {localSettings.aiProvider !== "ollama" && (
                   <div className="grid gap-2.5">
-                    <Label htmlFor="api-key" className="text-gray-300 text-sm">
+                    <Label htmlFor="api-key" className="text-ink-muted text-sm">
                       API Key
                     </Label>
                     <div className="flex items-center gap-2">
@@ -666,13 +713,13 @@ export default function SettingsDialog({
                                 ? "API key"
                                 : "sk-…"
                         }
-                        className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20 placeholder:text-gray-500"
+                        className="bg-elevated/60 border-hairline/50 text-ink focus:border-accent-500/50 focus:ring-accent-500/20 placeholder:text-ink-subtle"
                       />
                       <Button
                         variant="outline"
                         size="icon"
                         onClick={() => setShowApiKey(!showApiKey)}
-                        className="bg-slate-800/60 border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50"
+                        className="bg-elevated/60 border-hairline/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50"
                       >
                         {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                       </Button>
@@ -685,10 +732,10 @@ export default function SettingsDialog({
                   <div
                     className={`flex items-start gap-2 rounded-md px-3 py-2 text-xs border ${
                       apiStatus === "loading"
-                        ? "bg-slate-800/40 border-slate-700/40 text-gray-400"
+                        ? "bg-elevated/40 border-hairline/40 text-ink-muted"
                         : apiStatus === "success"
-                          ? "bg-green-500/10 border-green-500/20 text-green-400"
-                          : "bg-red-500/10 border-red-500/20 text-red-400"
+                          ? "bg-success/10 border-success/20 text-success"
+                          : "bg-danger/10 border-danger/20 text-danger"
                     }`}
                   >
                     {apiStatus === "loading" && (
@@ -719,7 +766,7 @@ export default function SettingsDialog({
                 )}
 
                 <div className="grid gap-2.5">
-                  <Label htmlFor="model" className="text-gray-300 text-sm">
+                  <Label htmlFor="model" className="text-ink-muted text-sm">
                     Model
                   </Label>
                   <ModelsSelector
@@ -748,12 +795,12 @@ export default function SettingsDialog({
                 </div>
 
                 {/* System prompt */}
-                <div className="space-y-2 pt-3 border-t border-slate-700/40">
-                  <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
+                <div className="space-y-2 pt-3 border-t border-hairline/40">
+                  <div className="flex items-center gap-2 text-ink-muted text-sm font-semibold">
                     <div className="w-1 h-4 bg-accent-500 rounded-full"></div>
                     System Prompt
                   </div>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-ink-muted">
                     Leave blank to use the built-in DevOps/SRE assistant prompt.
                   </p>
                   <Textarea
@@ -766,14 +813,14 @@ export default function SettingsDialog({
                     }
                     placeholder="You are a helpful assistant..."
                     rows={4}
-                    className="bg-slate-800/60 border-slate-700/50 text-gray-100 placeholder:text-gray-500 focus:border-accent-500/50 focus:ring-accent-500/20 resize-none text-sm"
+                    className="bg-elevated/60 border-hairline/50 text-ink placeholder:text-ink-subtle focus:border-accent-500/50 focus:ring-accent-500/20 resize-none text-sm"
                   />
                 </div>
 
                 {/* Temperature & Max Tokens */}
-                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-700/40">
+                <div className="grid grid-cols-2 gap-3 pt-3 border-t border-hairline/40">
                   <div className="grid gap-2">
-                    <Label className="text-gray-300 text-sm">
+                    <Label className="text-ink-muted text-sm">
                       Temperature
                       <span className="ml-2 text-accent-400 font-mono">
                         {localSettings.aiTemperature.toFixed(1)}
@@ -793,15 +840,15 @@ export default function SettingsDialog({
                       }
                       className="w-full accent-accent-500 cursor-pointer"
                     />
-                    <div className="flex justify-between text-[10px] text-gray-500">
+                    <div className="flex justify-between text-[10px] text-ink-subtle">
                       <span>Precise</span>
                       <span>Creative</span>
                     </div>
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-gray-300 text-sm">
+                    <Label className="text-ink-muted text-sm">
                       Max Tokens{" "}
-                      <span className="text-gray-500 font-normal">
+                      <span className="text-ink-subtle font-normal">
                         (0 = API default)
                       </span>
                     </Label>
@@ -817,7 +864,7 @@ export default function SettingsDialog({
                           aiMaxTokens: parseInt(e.target.value, 10) || 0,
                         })
                       }
-                      className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20"
+                      className="bg-elevated/60 border-hairline/50 text-ink focus:border-accent-500/50 focus:ring-accent-500/20"
                     />
                   </div>
                 </div>
@@ -830,12 +877,12 @@ export default function SettingsDialog({
               >
                 {/* Font settings */}
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
+                  <div className="flex items-center gap-2 text-ink-muted text-sm font-semibold">
                     <div className="w-1 h-4 bg-accent-500 rounded-full"></div>
                     Font
                   </div>
                   <div className="grid gap-2.5">
-                    <Label className="text-gray-300 text-sm">Font Family</Label>
+                    <Label className="text-ink-muted text-sm">Font Family</Label>
                     <Select
                       value={localSettings.terminalFontFamily}
                       onValueChange={(v) =>
@@ -845,7 +892,7 @@ export default function SettingsDialog({
                         })
                       }
                     >
-                      <SelectTrigger className="bg-slate-800/60 border-slate-700/50 text-gray-100 hover:bg-slate-800 focus:border-accent-500/50 h-auto py-2">
+                      <SelectTrigger className="bg-elevated/60 border-hairline/50 text-ink hover:bg-elevated focus:border-accent-500/50 h-auto py-2">
                         <SelectValue>
                           <span
                             style={{
@@ -860,7 +907,7 @@ export default function SettingsDialog({
                           </span>
                         </SelectValue>
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700/50">
+                      <SelectContent className="bg-panel border-hairline/50">
                         {(
                           [
                             {
@@ -910,7 +957,7 @@ export default function SettingsDialog({
                           <SelectItem
                             key={stack}
                             value={stack}
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100 py-2.5"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100 py-2.5"
                           >
                             <span
                               style={{ fontFamily: stack }}
@@ -928,7 +975,7 @@ export default function SettingsDialog({
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="grid gap-2">
-                      <Label className="text-gray-300 text-sm">
+                      <Label className="text-ink-muted text-sm">
                         Font Size (px)
                       </Label>
                       <Input
@@ -942,11 +989,11 @@ export default function SettingsDialog({
                             terminalFontSize: parseFloat(e.target.value) || 14,
                           })
                         }
-                        className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20"
+                        className="bg-elevated/60 border-hairline/50 text-ink focus:border-accent-500/50 focus:ring-accent-500/20"
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label className="text-gray-300 text-sm">
+                      <Label className="text-ink-muted text-sm">
                         Line Height
                       </Label>
                       <Input
@@ -962,21 +1009,21 @@ export default function SettingsDialog({
                               parseFloat(e.target.value) || 1.2,
                           })
                         }
-                        className="bg-slate-800/60 border-slate-700/50 text-gray-100 focus:border-accent-500/50 focus:ring-accent-500/20"
+                        className="bg-elevated/60 border-hairline/50 text-ink focus:border-accent-500/50 focus:ring-accent-500/20"
                       />
                     </div>
                   </div>
                 </div>
 
                 {/* Cursor settings */}
-                <div className="space-y-3 pt-3 border-t border-slate-700/40">
-                  <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
+                <div className="space-y-3 pt-3 border-t border-hairline/40">
+                  <div className="flex items-center gap-2 text-ink-muted text-sm font-semibold">
                     <div className="w-1 h-4 bg-accent-500 rounded-full"></div>
                     Cursor
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="grid gap-2">
-                      <Label className="text-gray-300 text-sm">Style</Label>
+                      <Label className="text-ink-muted text-sm">Style</Label>
                       <Select
                         value={localSettings.cursorStyle}
                         onValueChange={(v) =>
@@ -986,25 +1033,25 @@ export default function SettingsDialog({
                           })
                         }
                       >
-                        <SelectTrigger className="bg-slate-800/60 border-slate-700/50 text-gray-100 hover:bg-slate-800 focus:border-accent-500/50">
+                        <SelectTrigger className="bg-elevated/60 border-hairline/50 text-ink hover:bg-elevated focus:border-accent-500/50">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-900 border-slate-700/50">
+                        <SelectContent className="bg-panel border-hairline/50">
                           <SelectItem
                             value="block"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             Block
                           </SelectItem>
                           <SelectItem
                             value="bar"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             Bar
                           </SelectItem>
                           <SelectItem
                             value="underline"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             Underline
                           </SelectItem>
@@ -1012,7 +1059,7 @@ export default function SettingsDialog({
                       </Select>
                     </div>
                     <div className="grid gap-2">
-                      <Label className="text-gray-300 text-sm">Blink</Label>
+                      <Label className="text-ink-muted text-sm">Blink</Label>
                       <div className="flex items-center gap-3 h-9">
                         <button
                           type="button"
@@ -1022,13 +1069,13 @@ export default function SettingsDialog({
                               cursorBlink: !localSettings.cursorBlink,
                             })
                           }
-                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${localSettings.cursorBlink ? "bg-accent-500" : "bg-slate-700"}`}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${localSettings.cursorBlink ? "bg-accent-500" : "bg-elevated"}`}
                         >
                           <span
-                            className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${localSettings.cursorBlink ? "translate-x-4.5" : "translate-x-0.5"}`}
+                            className={`inline-block h-3.5 w-3.5 transform rounded-full bg-panel transition-transform ${localSettings.cursorBlink ? "translate-x-4.5" : "translate-x-0.5"}`}
                           />
                         </button>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-ink-muted">
                           {localSettings.cursorBlink ? "On" : "Off"}
                         </span>
                       </div>
@@ -1037,13 +1084,13 @@ export default function SettingsDialog({
                 </div>
 
                 {/* Scrollback */}
-                <div className="space-y-3 pt-3 border-t border-slate-700/40">
-                  <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
+                <div className="space-y-3 pt-3 border-t border-hairline/40">
+                  <div className="flex items-center gap-2 text-ink-muted text-sm font-semibold">
                     <div className="w-1 h-4 bg-accent-500 rounded-full"></div>
                     Scrollback Buffer
                   </div>
                   <div className="grid gap-2">
-                    <Label className="text-gray-300 text-sm">Max lines</Label>
+                    <Label className="text-ink-muted text-sm">Max lines</Label>
                     <div className="flex items-center gap-3">
                       <Select
                         value={localSettings.scrollback.toString()}
@@ -1054,22 +1101,22 @@ export default function SettingsDialog({
                           })
                         }
                       >
-                        <SelectTrigger className="flex-1 bg-slate-800/60 border-slate-700/50 text-gray-100 hover:bg-slate-800 focus:border-accent-500/50">
+                        <SelectTrigger className="flex-1 bg-elevated/60 border-hairline/50 text-ink hover:bg-elevated focus:border-accent-500/50">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-900 border-slate-700/50">
+                        <SelectContent className="bg-panel border-hairline/50">
                           {[1000, 2000, 5000, 10000, 20000, 50000].map((v) => (
                             <SelectItem
                               key={v}
                               value={v.toString()}
-                              className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                              className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                             >
                               {v.toLocaleString()}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
-                      <span className="text-xs text-gray-400 shrink-0">
+                      <span className="text-xs text-ink-muted shrink-0">
                         lines
                       </span>
                     </div>
@@ -1077,19 +1124,19 @@ export default function SettingsDialog({
                 </div>
 
                 {/* Command History */}
-                <div className="space-y-3 pt-3 border-t border-slate-700/40">
-                  <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
+                <div className="space-y-3 pt-3 border-t border-hairline/40">
+                  <div className="flex items-center gap-2 text-ink-muted text-sm font-semibold">
                     <div className="w-1 h-4 bg-accent-500 rounded-full"></div>
                     Command History
                   </div>
                   <div className="grid gap-2.5">
                     <Label
                       htmlFor="retention-days"
-                      className="text-gray-300 text-sm"
+                      className="text-ink-muted text-sm"
                     >
                       History Retention Period
                     </Label>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-ink-muted">
                       Commands older than this period will be automatically
                       deleted (pinned commands are kept forever)
                     </p>
@@ -1103,85 +1150,85 @@ export default function SettingsDialog({
                           })
                         }
                       >
-                        <SelectTrigger className="flex-1 bg-slate-800/60 border-slate-700/50 text-gray-100 hover:bg-slate-800 focus:border-accent-500/50 focus:ring-accent-500/20">
+                        <SelectTrigger className="flex-1 bg-elevated/60 border-hairline/50 text-ink hover:bg-elevated focus:border-accent-500/50 focus:ring-accent-500/20">
                           <SelectValue />
                         </SelectTrigger>
-                        <SelectContent className="bg-slate-900 border-slate-700/50">
+                        <SelectContent className="bg-panel border-hairline/50">
                           <SelectItem
                             value="0.04167"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             1 hour
                           </SelectItem>
                           <SelectItem
                             value="0.125"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             3 hours
                           </SelectItem>
                           <SelectItem
                             value="0.25"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             6 hours
                           </SelectItem>
                           <SelectItem
                             value="0.5"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             12 hours
                           </SelectItem>
                           <SelectItem
                             value="1"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             1 day
                           </SelectItem>
                           <SelectItem
                             value="2"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             2 days
                           </SelectItem>
                           <SelectItem
                             value="3"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             3 days
                           </SelectItem>
                           <SelectItem
                             value="7"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             1 week
                           </SelectItem>
                           <SelectItem
                             value="14"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             2 weeks
                           </SelectItem>
                           <SelectItem
                             value="30"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             1 month
                           </SelectItem>
                           <SelectItem
                             value="90"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             3 months
                           </SelectItem>
                           <SelectItem
                             value="365"
-                            className="text-gray-100 focus:bg-accent-500/20 focus:text-accent-100"
+                            className="text-ink focus:bg-accent-500/20 focus:text-accent-100"
                           >
                             1 year
                           </SelectItem>
                         </SelectContent>
                       </Select>
-                      <span className="text-xs text-gray-400 min-w-fit">
+                      <span className="text-xs text-ink-muted min-w-fit">
                         {localSettings.historyRetentionDays < 1
                           ? `${Math.round(localSettings.historyRetentionDays * 24)}h`
                           : `${localSettings.historyRetentionDays}d`}
@@ -1198,14 +1245,14 @@ export default function SettingsDialog({
               >
                 {/* Default Shell / CWD */}
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
+                  <div className="flex items-center gap-2 text-ink-muted text-sm font-semibold">
                     <div className="w-1 h-4 bg-accent-500 rounded-full"></div>
                     Default Terminal Startup
                   </div>
                   <div className="grid gap-2.5">
-                    <Label className="text-gray-300 text-sm">
+                    <Label className="text-ink-muted text-sm">
                       Default Shell{" "}
-                      <span className="text-gray-500 font-normal">
+                      <span className="text-ink-subtle font-normal">
                         (leave blank for OS default)
                       </span>
                     </Label>
@@ -1222,13 +1269,13 @@ export default function SettingsDialog({
                           ? "powershell.exe"
                           : "/bin/zsh"
                       }
-                      className="bg-slate-800/60 border-slate-700/50 text-gray-100 placeholder:text-gray-500 focus:border-accent-500/50 focus:ring-accent-500/20 font-mono text-sm"
+                      className="bg-elevated/60 border-hairline/50 text-ink placeholder:text-ink-subtle focus:border-accent-500/50 focus:ring-accent-500/20 font-mono text-sm"
                     />
                   </div>
                   <div className="grid gap-2.5">
-                    <Label className="text-gray-300 text-sm">
+                    <Label className="text-ink-muted text-sm">
                       Default Working Directory{" "}
-                      <span className="text-gray-500 font-normal">
+                      <span className="text-ink-subtle font-normal">
                         (leave blank for home)
                       </span>
                     </Label>
@@ -1241,7 +1288,7 @@ export default function SettingsDialog({
                         })
                       }
                       placeholder="/home/user/projects"
-                      className="bg-slate-800/60 border-slate-700/50 text-gray-100 placeholder:text-gray-500 focus:border-accent-500/50 focus:ring-accent-500/20 font-mono text-sm"
+                      className="bg-elevated/60 border-hairline/50 text-ink placeholder:text-ink-subtle focus:border-accent-500/50 focus:ring-accent-500/20 font-mono text-sm"
                     />
                   </div>
                   <label className="flex items-start gap-2.5 cursor-pointer pt-1">
@@ -1257,10 +1304,10 @@ export default function SettingsDialog({
                       className="mt-0.5 accent-accent-500"
                     />
                     <span>
-                      <span className="block text-gray-300 text-sm">
+                      <span className="block text-ink-muted text-sm">
                         Restore tabs on startup
                       </span>
-                      <span className="block text-gray-500 text-xs">
+                      <span className="block text-ink-subtle text-xs">
                         Reopen the tabs from your last session when the app
                         launches. SSH tabs reconnect automatically.
                       </span>
@@ -1269,13 +1316,13 @@ export default function SettingsDialog({
                 </div>
 
                 {/* Keyboard Shortcuts */}
-                <div className="space-y-3 pt-3 border-t border-slate-700/40">
-                  <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
+                <div className="space-y-3 pt-3 border-t border-hairline/40">
+                  <div className="flex items-center gap-2 text-ink-muted text-sm font-semibold">
                     <div className="w-1 h-4 bg-accent-500 rounded-full"></div>
                     <Keyboard size={14} />
                     Keyboard Shortcuts
                   </div>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-ink-muted">
                     Click "Record" then press your desired key combination.
                   </p>
                   <div className="space-y-2">
@@ -1299,14 +1346,14 @@ export default function SettingsDialog({
                       return (
                         <div
                           key={action}
-                          className="flex items-center gap-2.5 p-2.5 rounded-md bg-slate-800/60 border border-slate-700/50"
+                          className="flex items-center gap-2.5 p-2.5 rounded-md bg-elevated/60 border border-hairline/50"
                         >
-                          <span className="flex-1 text-sm text-gray-300">
+                          <span className="flex-1 text-sm text-ink-muted">
                             {labels[action]}
                           </span>
-                          <kbd className="px-2 py-0.5 rounded bg-slate-900 border border-slate-600/60 text-xs text-accent-300 font-mono min-w-[90px] text-center">
+                          <kbd className="px-2 py-0.5 rounded bg-panel border border-hairline/60 text-xs text-accent-300 font-mono min-w-[90px] text-center">
                             {isCapturing ? (
-                              <span className="animate-pulse text-yellow-400">
+                              <span className="animate-pulse text-warning">
                                 Press keys…
                               </span>
                             ) : (
@@ -1346,8 +1393,8 @@ export default function SettingsDialog({
                             }}
                             className={`px-2.5 py-1 rounded text-xs font-medium border transition-colors outline-none ${
                               isCapturing
-                                ? "bg-yellow-500/20 border-yellow-500/50 text-yellow-300"
-                                : "bg-slate-700/60 border-slate-600/50 text-gray-400 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50"
+                                ? "bg-warning/20 border-warning/50 text-warning"
+                                : "bg-elevated/60 border-hairline/50 text-ink-muted hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50"
                             }`}
                           >
                             {isCapturing ? "Cancel" : "Record"}
@@ -1359,12 +1406,12 @@ export default function SettingsDialog({
                 </div>
 
                 {/* Tags */}
-                <div className="space-y-3 pt-3 border-t border-slate-700/40">
-                  <div className="flex items-center gap-2 text-gray-300 text-sm font-semibold">
+                <div className="space-y-3 pt-3 border-t border-hairline/40">
+                  <div className="flex items-center gap-2 text-ink-muted text-sm font-semibold">
                     <div className="w-1 h-4 bg-accent-500 rounded-full"></div>
                     Terminal Tags
                   </div>
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-ink-muted">
                     Create custom tags to organize your terminals
                   </p>
 
@@ -1379,18 +1426,18 @@ export default function SettingsDialog({
                           addTag();
                         }
                       }}
-                      className="bg-slate-800/60 border-slate-700/50 text-gray-100 placeholder:text-gray-500 focus:border-accent-500/50 focus:ring-accent-500/20"
+                      className="bg-elevated/60 border-hairline/50 text-ink placeholder:text-ink-subtle focus:border-accent-500/50 focus:ring-accent-500/20"
                     />
                     <input
                       type="color"
                       value={newTagColor}
                       onChange={(e) => setNewTagColor(e.target.value)}
-                      className="w-12 h-9 rounded-md border border-slate-700/50 bg-slate-800/60 cursor-pointer"
+                      className="w-12 h-9 rounded-md border border-hairline/50 bg-elevated/60 cursor-pointer"
                     />
                     <Button
                       onClick={addTag}
                       size="icon"
-                      className="bg-slate-800/60 border border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 text-gray-400"
+                      className="bg-elevated/60 border border-hairline/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 text-ink-muted"
                     >
                       <Plus size={16} />
                     </Button>
@@ -1400,7 +1447,7 @@ export default function SettingsDialog({
                     {tags.map((tag) => (
                       <div
                         key={tag.id}
-                        className="flex items-center gap-2.5 p-2.5 rounded-md bg-slate-800/60 border border-slate-700/50 hover:border-slate-600/60 transition-colors"
+                        className="flex items-center gap-2.5 p-2.5 rounded-md bg-elevated/60 border border-hairline/50 hover:border-hairline/60 transition-colors"
                       >
                         {editingTagId === tag.id ? (
                           <>
@@ -1415,7 +1462,7 @@ export default function SettingsDialog({
                                   ),
                                 );
                               }}
-                              className="flex-1 h-8 bg-slate-900/60 border-slate-700/50 text-gray-100"
+                              className="flex-1 h-8 bg-panel/60 border-hairline/50 text-ink"
                             />
                             <input
                               type="color"
@@ -1429,7 +1476,7 @@ export default function SettingsDialog({
                                   ),
                                 );
                               }}
-                              className="w-10 h-8 rounded border border-slate-700/50 bg-slate-900/60 cursor-pointer"
+                              className="w-10 h-8 rounded border border-hairline/50 bg-panel/60 cursor-pointer"
                             />
                             <Button
                               onClick={() =>
@@ -1445,17 +1492,17 @@ export default function SettingsDialog({
                         ) : (
                           <>
                             <div
-                              className="w-4 h-4 rounded-full border border-slate-600/60 shrink-0"
+                              className="w-4 h-4 rounded-full border border-hairline/60 shrink-0"
                               style={{ backgroundColor: tag.color }}
                             />
-                            <span className="flex-1 text-sm text-gray-200">
+                            <span className="flex-1 text-sm text-ink-muted">
                               {tag.name}
                             </span>
                             <Button
                               onClick={() => setEditingTagId(tag.id)}
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-gray-400 hover:text-accent-300 hover:bg-accent-500/20"
+                              className="h-8 w-8 text-ink-muted hover:text-accent-300 hover:bg-accent-500/20"
                             >
                               <Edit2 size={14} />
                             </Button>
@@ -1463,7 +1510,7 @@ export default function SettingsDialog({
                               onClick={() => deleteTag(tag.id)}
                               variant="ghost"
                               size="icon"
-                              className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-red-500/20"
+                              className="h-8 w-8 text-ink-muted hover:text-danger hover:bg-danger/20"
                             >
                               <X size={14} />
                             </Button>
@@ -1483,10 +1530,10 @@ export default function SettingsDialog({
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-gray-300 text-sm font-semibold">
+                      <p className="text-ink-muted text-sm font-semibold">
                         Credential Vault
                       </p>
-                      <p className="text-xs text-gray-400 mt-0.5">
+                      <p className="text-xs text-ink-muted mt-0.5">
                         Save username/password pairs to reuse across SSH
                         connections
                       </p>
@@ -1494,7 +1541,7 @@ export default function SettingsDialog({
                     <Button
                       onClick={openAddVault}
                       size="sm"
-                      className="gap-1.5 bg-slate-800/60 border border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 text-gray-400"
+                      className="gap-1.5 bg-elevated/60 border border-hairline/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 text-ink-muted"
                     >
                       <Plus size={14} />
                       Add
@@ -1504,11 +1551,11 @@ export default function SettingsDialog({
                   <div className="space-y-2 max-h-[340px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-accent-600/40 scrollbar-track-transparent">
                     {vaultCredentials.length === 0 && (
                       <div className="flex flex-col items-center justify-center py-10 text-center">
-                        <Vault size={32} className="text-slate-600 mb-3" />
-                        <p className="text-sm text-gray-500">
+                        <Vault size={32} className="text-ink-subtle mb-3" />
+                        <p className="text-sm text-ink-subtle">
                           No credentials saved yet
                         </p>
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p className="text-xs text-ink-subtle mt-1">
                           Click "Add" to store your first credential
                         </p>
                       </div>
@@ -1516,17 +1563,17 @@ export default function SettingsDialog({
                     {vaultCredentials.map((cred) => (
                       <div
                         key={cred.id}
-                        className="flex items-center gap-2.5 p-2.5 rounded-md bg-slate-800/60 border border-slate-700/50 hover:border-slate-600/60 transition-colors"
+                        className="flex items-center gap-2.5 p-2.5 rounded-md bg-elevated/60 border border-hairline/50 hover:border-hairline/60 transition-colors"
                       >
                         <Vault
                           size={14}
                           className="text-accent-500/70 shrink-0"
                         />
                         <div className="flex-1 min-w-0">
-                          <div className="text-sm text-gray-200 truncate">
+                          <div className="text-sm text-ink-muted truncate">
                             {cred.name}
                           </div>
-                          <div className="flex items-center gap-1 text-xs text-gray-500">
+                          <div className="flex items-center gap-1 text-xs text-ink-subtle">
                             <User size={10} />
                             {cred.username}
                             {cred.hasPassword && (
@@ -1541,7 +1588,7 @@ export default function SettingsDialog({
                           onClick={() => openEditVault(cred)}
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-accent-300 hover:bg-accent-500/20"
+                          className="h-8 w-8 text-ink-muted hover:text-accent-300 hover:bg-accent-500/20"
                         >
                           <Edit2 size={14} />
                         </Button>
@@ -1549,7 +1596,7 @@ export default function SettingsDialog({
                           onClick={() => handleVaultDelete(cred.id)}
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-gray-400 hover:text-red-400 hover:bg-red-500/20"
+                          className="h-8 w-8 text-ink-muted hover:text-danger hover:bg-danger/20"
                         >
                           <X size={14} />
                         </Button>
@@ -1624,36 +1671,36 @@ export default function SettingsDialog({
               >
                 <div className="space-y-6">
                   <div className="space-y-1">
-                    <p className="text-gray-300 text-sm font-semibold">
+                    <p className="text-ink-muted text-sm font-semibold">
                       About calico-term
                     </p>
-                    <p className="text-xs text-gray-400">
+                    <p className="text-xs text-ink-muted">
                       Check for updates and manage the application version.
                     </p>
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-3">
-                      <p className="text-xs text-gray-400 mb-1">
+                    <div className="bg-elevated/60 border border-hairline/50 rounded-lg p-3">
+                      <p className="text-xs text-ink-muted mb-1">
                         Current version
                       </p>
-                      <p className="text-sm font-mono text-gray-100">
+                      <p className="text-sm font-mono text-ink">
                         {currentVersion}
                       </p>
                     </div>
-                    <div className="bg-slate-800/60 border border-slate-700/50 rounded-lg p-3">
-                      <p className="text-xs text-gray-400 mb-1">
+                    <div className="bg-elevated/60 border border-hairline/50 rounded-lg p-3">
+                      <p className="text-xs text-ink-muted mb-1">
                         Latest version
                       </p>
-                      <p className="text-sm font-mono text-gray-100">
+                      <p className="text-sm font-mono text-ink">
                         {updaterStatus === "checking" && (
-                          <span className="text-gray-400">Checking...</span>
+                          <span className="text-ink-muted">Checking...</span>
                         )}
                         {updaterStatus === "idle" && (
-                          <span className="text-gray-500">—</span>
+                          <span className="text-ink-subtle">—</span>
                         )}
                         {updaterStatus === "up-to-date" && (
-                          <span className="text-green-400">
+                          <span className="text-success">
                             {currentVersion}
                           </span>
                         )}
@@ -1665,14 +1712,14 @@ export default function SettingsDialog({
                           </span>
                         )}
                         {updaterStatus === "error" && (
-                          <span className="text-red-400">Error</span>
+                          <span className="text-danger">Error</span>
                         )}
                       </p>
                     </div>
                   </div>
 
                   {updaterStatus === "up-to-date" && (
-                    <div className="flex items-center gap-2 text-green-400 text-sm bg-green-400/10 border border-green-400/20 rounded-lg px-3 py-2">
+                    <div className="flex items-center gap-2 text-success text-sm bg-success/10 border border-success/20 rounded-lg px-3 py-2">
                       <CheckCircle2 size={14} />
                       You are on the latest version.
                     </div>
@@ -1687,11 +1734,11 @@ export default function SettingsDialog({
 
                   {updaterStatus === "downloading" && (
                     <div className="space-y-2">
-                      <div className="flex items-center justify-between text-xs text-gray-400">
+                      <div className="flex items-center justify-between text-xs text-ink-muted">
                         <span>Downloading update...</span>
                         <span>{updaterProgress}%</span>
                       </div>
-                      <div className="h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
+                      <div className="h-1.5 bg-elevated/60 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-accent-500 rounded-full transition-all duration-300"
                           style={{ width: `${updaterProgress}%` }}
@@ -1701,7 +1748,7 @@ export default function SettingsDialog({
                   )}
 
                   {updaterStatus === "downloaded" && (
-                    <div className="flex items-center gap-2 text-green-400 text-sm bg-green-400/10 border border-green-400/20 rounded-lg px-3 py-2">
+                    <div className="flex items-center gap-2 text-success text-sm bg-success/10 border border-success/20 rounded-lg px-3 py-2">
                       <CheckCircle2 size={14} />
                       Update downloaded. Restart to install version{" "}
                       {updaterVersion}.
@@ -1709,7 +1756,7 @@ export default function SettingsDialog({
                   )}
 
                   {updaterStatus === "error" && (
-                    <div className="flex items-start gap-2 text-red-400 text-sm bg-red-400/10 border border-red-400/20 rounded-lg px-3 py-2">
+                    <div className="flex items-start gap-2 text-danger text-sm bg-danger/10 border border-danger/20 rounded-lg px-3 py-2">
                       <XCircle size={14} className="mt-0.5 shrink-0" />
                       <span className="break-all">{updaterError}</span>
                     </div>
@@ -1723,7 +1770,7 @@ export default function SettingsDialog({
                         variant="outline"
                         size="sm"
                         onClick={handleCheckUpdates}
-                        className="bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 text-gray-300 flex items-center gap-1.5"
+                        className="bg-elevated/60 border-hairline/50 hover:bg-elevated/60 text-ink-muted flex items-center gap-1.5"
                       >
                         <RefreshCw size={13} />
                         Check for updates
@@ -1734,7 +1781,7 @@ export default function SettingsDialog({
                         variant="outline"
                         size="sm"
                         disabled
-                        className="bg-slate-800/60 border-slate-700/50 text-gray-500 flex items-center gap-1.5"
+                        className="bg-elevated/60 border-hairline/50 text-ink-subtle flex items-center gap-1.5"
                       >
                         <Loader2 size={13} className="animate-spin" />
                         Checking...
@@ -1744,7 +1791,7 @@ export default function SettingsDialog({
                       <Button
                         size="sm"
                         onClick={handleDownloadUpdate}
-                        className="bg-accent-500/90 hover:bg-accent-500 text-white flex items-center gap-1.5"
+                        className="bg-accent-500/90 hover:bg-accent-500 text-on-accent flex items-center gap-1.5"
                       >
                         <Download size={13} />
                         Download update
@@ -1754,7 +1801,7 @@ export default function SettingsDialog({
                       <Button
                         size="sm"
                         onClick={handleInstallUpdate}
-                        className="bg-green-600/90 hover:bg-green-600 text-white flex items-center gap-1.5"
+                        className="bg-success/90 hover:bg-success text-on-accent flex items-center gap-1.5"
                       >
                         <RotateCcw size={13} />
                         Restart and install
@@ -1766,18 +1813,18 @@ export default function SettingsDialog({
             </div>
           </Tabs>
 
-          <DialogFooter className="border-t border-slate-700/40 pt-4 gap-2 shrink-0">
+          <DialogFooter className="border-t border-hairline/40 pt-4 gap-2 shrink-0">
             <DialogClose asChild>
               <Button
                 variant="outline"
-                className="bg-slate-800/60 border-slate-700/50 hover:bg-slate-700/60 text-gray-300"
+                className="bg-elevated/60 border-hairline/50 hover:bg-elevated/60 text-ink-muted"
               >
                 Cancel
               </Button>
             </DialogClose>
             <Button
               onClick={handleSave}
-              className="bg-accent-500/90 hover:bg-accent-500 text-white shadow-sm"
+              className="bg-accent-500/90 hover:bg-accent-500 text-on-accent shadow-sm"
             >
               Save changes
             </Button>
@@ -1787,17 +1834,17 @@ export default function SettingsDialog({
 
       {/* Vault credential add/edit dialog */}
       <Dialog open={vaultDialogOpen} onOpenChange={setVaultDialogOpen}>
-        <DialogContent className="sm:max-w-[400px] bg-slate-900 border-slate-700/40 shadow-xl">
+        <DialogContent className="sm:max-w-[400px] bg-panel border-hairline/40 shadow-xl">
           <DialogHeader>
-            <DialogTitle className="text-gray-100 flex items-center gap-2">
+            <DialogTitle className="text-ink flex items-center gap-2">
               <Vault size={16} className="text-accent-400" />
               {editingCredentialId ? "Edit Credential" : "New Credential"}
             </DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid gap-1.5">
-              <Label className="text-gray-300 text-sm">
-                Name <span className="text-red-400">*</span>
+              <Label className="text-ink-muted text-sm">
+                Name <span className="text-danger">*</span>
               </Label>
               <Input
                 placeholder="e.g. Work Admin"
@@ -1805,12 +1852,12 @@ export default function SettingsDialog({
                 onChange={(e) =>
                   setVaultForm((p) => ({ ...p, name: e.target.value }))
                 }
-                className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+                className="bg-elevated/60 border-hairline text-ink placeholder:text-ink-subtle"
               />
             </div>
             <div className="grid gap-1.5">
-              <Label className="text-gray-300 text-sm">
-                Username <span className="text-red-400">*</span>
+              <Label className="text-ink-muted text-sm">
+                Username <span className="text-danger">*</span>
               </Label>
               <Input
                 placeholder="root"
@@ -1818,14 +1865,14 @@ export default function SettingsDialog({
                 onChange={(e) =>
                   setVaultForm((p) => ({ ...p, username: e.target.value }))
                 }
-                className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+                className="bg-elevated/60 border-hairline text-ink placeholder:text-ink-subtle"
               />
             </div>
             <div className="grid gap-1.5">
-              <Label className="text-gray-300 text-sm">
+              <Label className="text-ink-muted text-sm">
                 Password{" "}
                 {editingCredentialId && (
-                  <span className="text-gray-500 font-normal">
+                  <span className="text-ink-subtle font-normal">
                     (leave blank to keep current)
                   </span>
                 )}
@@ -1841,13 +1888,13 @@ export default function SettingsDialog({
                   onChange={(e) =>
                     setVaultForm((p) => ({ ...p, password: e.target.value }))
                   }
-                  className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+                  className="bg-elevated/60 border-hairline text-ink placeholder:text-ink-subtle"
                 />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => setShowVaultPassword((v) => !v)}
-                  className="bg-slate-800/60 border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50"
+                  className="bg-elevated/60 border-hairline/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50"
                 >
                   {showVaultPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </Button>
@@ -1858,14 +1905,14 @@ export default function SettingsDialog({
             <Button
               variant="outline"
               onClick={() => setVaultDialogOpen(false)}
-              className="border-slate-700 text-gray-300 hover:bg-slate-800"
+              className="border-hairline text-ink-muted hover:bg-elevated"
             >
               Cancel
             </Button>
             <Button
               onClick={handleVaultSave}
               disabled={!vaultForm.name.trim() || !vaultForm.username.trim()}
-              className="bg-accent-600 hover:bg-accent-500 text-white disabled:opacity-50"
+              className="bg-accent-600 hover:bg-accent-500 text-on-accent disabled:opacity-50"
             >
               {editingCredentialId ? "Save Changes" : "Add Credential"}
             </Button>

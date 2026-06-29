@@ -41,7 +41,7 @@ export function TabContextMenu({
 }: TabContextMenuProps) {
   return createPortal(
     <div
-      className="context-menu fixed bg-slate-800/98 backdrop-blur-md border border-slate-700/60 rounded-lg shadow-2xl shadow-black/40 py-1.5 min-w-[180px]"
+      className="context-menu fixed bg-elevated/98 backdrop-blur-md border border-hairline/60 rounded-lg shadow-2xl shadow-black/40 py-1.5 min-w-[180px]"
       style={{
         left: contextMenu.x,
         top: contextMenu.y,
@@ -51,7 +51,7 @@ export function TabContextMenu({
       onClick={(e) => e.stopPropagation()}
     >
       <button
-        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-accent-300 flex items-center gap-2 transition-colors"
+        className="w-full px-3 py-2 text-left text-sm text-ink-muted hover:bg-elevated/50 hover:text-accent-300 flex items-center gap-2 transition-colors"
         onClick={(e) => {
           e.stopPropagation();
           onRename();
@@ -59,10 +59,10 @@ export function TabContextMenu({
       >
         <Edit2 size={14} />
         <span>Rename</span>
-        <span className="ml-auto text-xs text-gray-500">F2</span>
+        <span className="ml-auto text-xs text-ink-subtle">F2</span>
       </button>
       <button
-        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-accent-300 flex items-center gap-2 transition-colors"
+        className="w-full px-3 py-2 text-left text-sm text-ink-muted hover:bg-elevated/50 hover:text-accent-300 flex items-center gap-2 transition-colors"
         onClick={(e) => {
           e.stopPropagation();
           onDuplicate();
@@ -70,10 +70,10 @@ export function TabContextMenu({
       >
         <Copy size={14} />
         <span>Duplicate</span>
-        <span className="ml-auto text-xs text-gray-500">Ctrl+Shift+D</span>
+        <span className="ml-auto text-xs text-ink-subtle">Ctrl+Shift+D</span>
       </button>
       <button
-        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-accent-300 flex items-center gap-2 transition-colors"
+        className="w-full px-3 py-2 text-left text-sm text-ink-muted hover:bg-elevated/50 hover:text-accent-300 flex items-center gap-2 transition-colors"
         onClick={(e) => {
           e.stopPropagation();
           onDetach();
@@ -83,11 +83,11 @@ export function TabContextMenu({
         <span>Open in New Window</span>
       </button>
 
-      <div className="h-px bg-slate-700/50 my-1.5"></div>
+      <div className="h-px bg-hairline/50 my-1.5"></div>
 
       {/* Tags submenu trigger */}
       <button
-        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-accent-300 flex items-center gap-2 transition-colors relative"
+        className="w-full px-3 py-2 text-left text-sm text-ink-muted hover:bg-elevated/50 hover:text-accent-300 flex items-center gap-2 transition-colors relative"
         onMouseEnter={onTagsHover}
         onMouseLeave={onTagsLeave}
       >
@@ -96,10 +96,10 @@ export function TabContextMenu({
         <ChevronRight size={14} className="ml-auto" />
       </button>
 
-      <div className="h-px bg-slate-700/50 my-1.5"></div>
+      <div className="h-px bg-hairline/50 my-1.5"></div>
 
       <button
-        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-red-400 flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full px-3 py-2 text-left text-sm text-ink-muted hover:bg-elevated/50 hover:text-danger flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         onClick={(e) => {
           e.stopPropagation();
           if (canCloseTab) onClose();
@@ -108,10 +108,10 @@ export function TabContextMenu({
       >
         <X size={14} />
         <span>Close</span>
-        <span className="ml-auto text-xs text-gray-500">Ctrl+W</span>
+        <span className="ml-auto text-xs text-ink-subtle">Ctrl+W</span>
       </button>
       <button
-        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-red-400 flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full px-3 py-2 text-left text-sm text-ink-muted hover:bg-elevated/50 hover:text-danger flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         onClick={(e) => {
           e.stopPropagation();
           if (canCloseOthers) onCloseOthers();
@@ -122,7 +122,7 @@ export function TabContextMenu({
         <span>Close Others</span>
       </button>
       <button
-        className="w-full px-3 py-2 text-left text-sm text-gray-300 hover:bg-slate-700/50 hover:text-red-400 flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        className="w-full px-3 py-2 text-left text-sm text-ink-muted hover:bg-elevated/50 hover:text-danger flex items-center gap-2 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         onClick={(e) => {
           e.stopPropagation();
           if (canCloseToRight) onCloseToRight();

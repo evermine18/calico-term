@@ -113,38 +113,38 @@ export default function DiffViewerDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="sm:max-w-[900px] max-h-[85vh] bg-slate-900 border-slate-700/40 shadow-xl flex flex-col">
+      <DialogContent className="sm:max-w-[900px] max-h-[85vh] bg-panel border-hairline/40 shadow-xl flex flex-col">
         <DialogHeader>
-          <DialogTitle className="text-gray-100 flex items-center gap-2 text-sm">
+          <DialogTitle className="text-ink flex items-center gap-2 text-sm">
             <GitCompare size={14} className="text-accent-400" />
             <span className="font-mono truncate">Diff: {remotePath}</span>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="text-xs text-gray-400">
+        <div className="text-xs text-ink-muted">
           Paste local file contents to compare against the remote version.
         </div>
 
         <div className="grid grid-cols-2 gap-2 flex-1 min-h-[400px]">
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-gray-500 uppercase tracking-widest">
+            <span className="text-[10px] text-ink-subtle uppercase tracking-widest">
               Local (paste here)
             </span>
             <textarea
               value={localText}
               onChange={(e) => setLocalText(e.target.value)}
               spellCheck={false}
-              className="flex-1 bg-slate-950 border border-slate-700/50 rounded-md p-2 font-mono text-[11px] text-gray-200 outline-none resize-none focus:border-accent-500/60"
+              className="flex-1 bg-surface border border-hairline/50 rounded-md p-2 font-mono text-[11px] text-ink-muted outline-none resize-none focus:border-accent-500/60"
               placeholder="Paste or type local contents…"
             />
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-[10px] text-gray-500 uppercase tracking-widest">
+            <span className="text-[10px] text-ink-subtle uppercase tracking-widest">
               Diff (remote → local)
             </span>
-            <div className="flex-1 overflow-y-auto bg-slate-950 border border-slate-700/50 rounded-md p-2 font-mono text-[11px]">
+            <div className="flex-1 overflow-y-auto bg-surface border border-hairline/50 rounded-md p-2 font-mono text-[11px]">
               {loading ? (
-                <div className="flex items-center gap-2 text-gray-500">
+                <div className="flex items-center gap-2 text-ink-subtle">
                   <Loader2 className="animate-spin" size={12} /> Loading remote…
                 </div>
               ) : (
@@ -153,10 +153,10 @@ export default function DiffViewerDialog({
                     key={i}
                     className={`whitespace-pre-wrap break-all ${
                       o.kind === "add"
-                        ? "bg-green-500/10 text-green-300"
+                        ? "bg-success/10 text-success"
                         : o.kind === "del"
-                          ? "bg-red-500/10 text-red-300"
-                          : "text-gray-400"
+                          ? "bg-danger/10 text-danger"
+                          : "text-ink-muted"
                     }`}
                   >
                     <span className="select-none pr-1">
@@ -170,25 +170,25 @@ export default function DiffViewerDialog({
           </div>
         </div>
 
-        {error && <p className="text-xs text-red-400">{error}</p>}
+        {error && <p className="text-xs text-danger">{error}</p>}
 
         <DialogFooter className="gap-2">
-          <span className="text-xs text-gray-500 mr-auto">
-            <span className="text-green-400">+{stats.add}</span>{" "}
-            <span className="text-red-400">-{stats.del}</span>
+          <span className="text-xs text-ink-subtle mr-auto">
+            <span className="text-success">+{stats.add}</span>{" "}
+            <span className="text-danger">-{stats.del}</span>
           </span>
           <Button
             variant="outline"
             onClick={onClose}
             disabled={pushing}
-            className="border-slate-700 text-gray-300 hover:bg-slate-800"
+            className="border-hairline text-ink-muted hover:bg-elevated"
           >
             Close
           </Button>
           <Button
             onClick={pushLocal}
             disabled={pushing || loading || localText === remoteText}
-            className="bg-accent-600 hover:bg-accent-500 text-white gap-1.5"
+            className="bg-accent-600 hover:bg-accent-500 text-on-accent gap-1.5"
           >
             <Upload size={14} />
             {pushing ? "Pushing…" : "Push local → remote"}

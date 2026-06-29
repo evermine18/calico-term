@@ -106,25 +106,25 @@ export default function RemoteFolderBrowser({
   }, []);
 
   return (
-    <div className="rounded-md border border-slate-700 bg-slate-950/60 text-sm">
+    <div className="rounded-md border border-hairline bg-surface/60 text-sm">
       {/* Path bar */}
-      <div className="flex items-center gap-2 px-2 py-1.5 border-b border-slate-700/60">
+      <div className="flex items-center gap-2 px-2 py-1.5 border-b border-hairline/60">
         <button
           type="button"
           onClick={() => navigate(parentPath(path))}
           disabled={connecting || !path || path === "/"}
-          className="flex items-center justify-center w-6 h-6 rounded text-gray-400 hover:bg-slate-800 hover:text-accent-300 disabled:opacity-40 transition-colors"
+          className="flex items-center justify-center w-6 h-6 rounded text-ink-muted hover:bg-elevated hover:text-accent-300 disabled:opacity-40 transition-colors"
           title="Up one level"
         >
           <ArrowUp size={14} />
         </button>
-        <span className="flex-1 min-w-0 truncate font-mono text-xs text-gray-400">
+        <span className="flex-1 min-w-0 truncate font-mono text-xs text-ink-muted">
           {path || "…"}
         </span>
         <button
           type="button"
           onClick={onClose}
-          className="flex items-center justify-center w-6 h-6 rounded text-gray-500 hover:bg-slate-800 hover:text-gray-300 transition-colors"
+          className="flex items-center justify-center w-6 h-6 rounded text-ink-subtle hover:bg-elevated hover:text-ink-muted transition-colors"
           title="Close"
         >
           <X size={14} />
@@ -134,27 +134,27 @@ export default function RemoteFolderBrowser({
       {/* Listing */}
       <div className="max-h-48 overflow-y-auto p-1">
         {connecting && (
-          <div className="flex items-center gap-2 px-2 py-3 text-xs text-gray-500">
+          <div className="flex items-center gap-2 px-2 py-3 text-xs text-ink-subtle">
             <Loader2 size={13} className="animate-spin" />
             Connecting…
           </div>
         )}
         {!connecting && error && (
-          <div className="px-2 py-3 text-xs text-red-400">
+          <div className="px-2 py-3 text-xs text-danger">
             {error}
-            <div className="mt-1 text-gray-500">
+            <div className="mt-1 text-ink-subtle">
               You can still type the path manually.
             </div>
           </div>
         )}
         {!connecting && !error && loading && (
-          <div className="flex items-center gap-2 px-2 py-3 text-xs text-gray-500">
+          <div className="flex items-center gap-2 px-2 py-3 text-xs text-ink-subtle">
             <Loader2 size={13} className="animate-spin" />
             Loading…
           </div>
         )}
         {!connecting && !error && !loading && dirs.length === 0 && (
-          <div className="px-2 py-3 text-xs text-gray-600">
+          <div className="px-2 py-3 text-xs text-ink-subtle">
             No subfolders here.
           </div>
         )}
@@ -166,7 +166,7 @@ export default function RemoteFolderBrowser({
               key={name}
               type="button"
               onClick={() => navigate(joinPath(path, name))}
-              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-gray-300 hover:bg-slate-800 transition-colors"
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-left text-ink-muted hover:bg-elevated transition-colors"
             >
               <Folder size={14} className="text-accent-400/70 flex-shrink-0" />
               <span className="truncate">{name}</span>
@@ -175,8 +175,8 @@ export default function RemoteFolderBrowser({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-t border-slate-700/60">
-        <span className="text-[11px] text-gray-600">
+      <div className="flex items-center justify-between gap-2 px-2 py-1.5 border-t border-hairline/60">
+        <span className="text-[11px] text-ink-subtle">
           Browsing {connection.username}@{connection.host}
         </span>
         <button

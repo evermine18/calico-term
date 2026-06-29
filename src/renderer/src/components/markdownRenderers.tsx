@@ -32,7 +32,7 @@ export const Markdown: React.FC<MarkdownProps> = ({
           ),
           a: ({ node, ...props }) => (
             <a
-              className="text-blue-600 underline hover:text-blue-800"
+              className="text-info underline hover:text-info"
               target="_blank"
               rel="noopener noreferrer"
               {...props}
@@ -49,7 +49,7 @@ export const Markdown: React.FC<MarkdownProps> = ({
             if (!isBlock) {
               return (
                 <code
-                  className="bg-gray-100 rounded px-1 font-mono text-sm"
+                  className="bg-elevated rounded px-1 font-mono text-sm"
                   {...props}
                 >
                   {children}
@@ -60,7 +60,7 @@ export const Markdown: React.FC<MarkdownProps> = ({
             const lang = langMatch![1];
 
             return (
-              <pre className="bg-gray-900 text-gray-100 rounded-lg p-4 overflow-x-auto text-sm my-4">
+              <pre className="bg-field text-ink rounded-lg p-4 overflow-x-auto text-sm my-4">
                 <code className={`language-${lang}`} {...props}>
                   {children}
                 </code>
@@ -69,12 +69,12 @@ export const Markdown: React.FC<MarkdownProps> = ({
           },
           blockquote: ({ node, ...props }) => (
             <blockquote
-              className="border-l-4 border-gray-300 pl-4 italic text-gray-600 my-4"
+              className="border-l-4 border-hairline pl-4 italic text-ink-subtle my-4"
               {...props}
             />
           ),
           hr: ({ node, ...props }) => (
-            <hr className="my-8 border-gray-300" {...props} />
+            <hr className="my-8 border-hairline" {...props} />
           ),
         } as Components
       }

@@ -143,10 +143,10 @@ export default function AgentLaunchDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="sm:max-w-md bg-slate-900 border-slate-700/40 shadow-xl">
+      <DialogContent className="sm:max-w-md bg-panel border-hairline/40 shadow-xl">
         <DialogHeader>
-          <DialogTitle className="text-gray-100">Launch AI Agent</DialogTitle>
-          <DialogDescription className="text-gray-400">
+          <DialogTitle className="text-ink">Launch AI Agent</DialogTitle>
+          <DialogDescription className="text-ink-muted">
             Run a coding agent in a new tab — locally or over SSH.
           </DialogDescription>
         </DialogHeader>
@@ -154,12 +154,12 @@ export default function AgentLaunchDialog({
         <div className="flex flex-col gap-4 py-2">
           {/* Agent */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-gray-300 text-sm">Agent</Label>
+            <Label className="text-ink-muted text-sm">Agent</Label>
             <Select value={agentId} onValueChange={setAgentId}>
-              <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+              <SelectTrigger className="bg-elevated/60 border-hairline text-ink">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700/50">
+              <SelectContent className="bg-panel border-hairline/50">
                 {AGENT_LAUNCHERS.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
                     <span className="flex items-center gap-2">
@@ -168,7 +168,7 @@ export default function AgentLaunchDialog({
                       </span>
                       {a.name}
                       {installed[a.command] === false && (
-                        <span className="text-[10px] text-gray-500">
+                        <span className="text-[10px] text-ink-subtle">
                           (not found)
                         </span>
                       )}
@@ -182,7 +182,7 @@ export default function AgentLaunchDialog({
                 href={agent.website}
                 target="_blank"
                 rel="noreferrer"
-                className="flex items-center gap-1 text-[11px] text-gray-500 hover:text-accent-400"
+                className="flex items-center gap-1 text-[11px] text-ink-subtle hover:text-accent-400"
               >
                 <code className="font-mono">{agent.command}</code> not found
                 locally — install docs
@@ -193,7 +193,7 @@ export default function AgentLaunchDialog({
 
           {/* Run on */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-gray-300 text-sm">Run on</Label>
+            <Label className="text-ink-muted text-sm">Run on</Label>
             <Select
               value={target}
               onValueChange={(v) => {
@@ -202,10 +202,10 @@ export default function AgentLaunchDialog({
                 setBrowsing(false);
               }}
             >
-              <SelectTrigger className="bg-slate-800/60 border-slate-700 text-gray-100">
+              <SelectTrigger className="bg-elevated/60 border-hairline text-ink">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-slate-900 border-slate-700/50">
+              <SelectContent className="bg-panel border-hairline/50">
                 <SelectItem value={LOCAL}>Local</SelectItem>
                 {visibleConnections.map((c) => (
                   <SelectItem key={c.id} value={c.id}>
@@ -218,7 +218,7 @@ export default function AgentLaunchDialog({
 
           {/* Folder */}
           <div className="flex flex-col gap-1.5">
-            <Label className="text-gray-300 text-sm">
+            <Label className="text-ink-muted text-sm">
               {isLocal ? "Folder" : "Remote folder"}
             </Label>
             <div className="flex items-center gap-2">
@@ -228,7 +228,7 @@ export default function AgentLaunchDialog({
                 placeholder={
                   isLocal ? "Default (home directory)" : "~ (default login dir)"
                 }
-                className="bg-slate-800/60 border-slate-700 text-gray-100 placeholder:text-gray-500"
+                className="bg-elevated/60 border-hairline text-ink placeholder:text-ink-subtle"
               />
               <Button
                 type="button"
@@ -236,7 +236,7 @@ export default function AgentLaunchDialog({
                 size="icon"
                 onClick={isLocal ? browseFolder : () => setBrowsing((v) => !v)}
                 title="Browse…"
-                className="border-slate-700 text-gray-300 hover:bg-slate-800 hover:text-gray-100"
+                className="border-hairline text-ink-muted hover:bg-elevated hover:text-ink"
               >
                 <FolderOpen size={16} />
               </Button>
@@ -258,13 +258,13 @@ export default function AgentLaunchDialog({
           <Button
             variant="outline"
             onClick={() => setOpen(false)}
-            className="border-slate-700 text-gray-300 hover:bg-slate-800"
+            className="border-hairline text-ink-muted hover:bg-elevated"
           >
             Cancel
           </Button>
           <Button
             onClick={launch}
-            className="bg-accent-600 hover:bg-accent-500 text-white"
+            className="bg-accent-600 hover:bg-accent-500 text-on-accent"
           >
             Launch
           </Button>

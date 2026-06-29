@@ -41,8 +41,8 @@ export function WorkspaceIdentityPanel() {
   return (
     <div className="space-y-5">
       <div>
-        <p className="text-gray-300 text-sm font-semibold">Workspace Identity</p>
-        <p className="text-xs text-gray-400 mt-1">
+        <p className="text-ink-muted text-sm font-semibold">Workspace Identity</p>
+        <p className="text-xs text-ink-muted mt-1">
           Controls how strongly the active workspace is signaled visually. Changes
           apply instantly.
         </p>
@@ -59,7 +59,7 @@ export function WorkspaceIdentityPanel() {
               className={`text-left p-3 rounded-lg border transition-colors ${
                 selected
                   ? "bg-accent-500/10 border-accent-500/50"
-                  : "bg-slate-800/40 border-slate-700/40 hover:bg-slate-800/70 hover:border-slate-600/60"
+                  : "bg-elevated/40 border-hairline/40 hover:bg-elevated/70 hover:border-hairline/60"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -67,18 +67,18 @@ export function WorkspaceIdentityPanel() {
                   className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
                     selected
                       ? "border-accent-400"
-                      : "border-slate-600"
+                      : "border-hairline"
                   }`}
                 >
                   {selected && (
                     <span className="w-1.5 h-1.5 rounded-full bg-accent-400" />
                   )}
                 </span>
-                <span className="text-sm font-medium text-gray-200">
+                <span className="text-sm font-medium text-ink-muted">
                   {opt.label}
                 </span>
               </div>
-              <p className="text-xs text-gray-400 mt-1.5 ml-5">
+              <p className="text-xs text-ink-muted mt-1.5 ml-5">
                 {opt.description}
               </p>
             </button>
@@ -87,11 +87,11 @@ export function WorkspaceIdentityPanel() {
       </div>
 
       {activeWs && (
-        <div className="pt-3 border-t border-slate-700/40">
-          <p className="text-xs text-gray-400 mb-2">
+        <div className="pt-3 border-t border-hairline/40">
+          <p className="text-xs text-ink-muted mb-2">
             Active workspace preview
           </p>
-          <div className="flex items-center gap-3 p-3 rounded-md bg-slate-800/40 border border-slate-700/40">
+          <div className="flex items-center gap-3 p-3 rounded-md bg-elevated/40 border border-hairline/40">
             <span
               className="w-2 h-2 rounded-full"
               style={{
@@ -106,7 +106,7 @@ export function WorkspaceIdentityPanel() {
               {activeWs.name}
             </span>
             {activeWs.environment === "prod" && (
-              <span className="text-[9px] font-mono tracking-wider px-1.5 py-0.5 rounded border bg-red-500/15 text-red-300 border-red-500/30">
+              <span className="text-[9px] font-mono tracking-wider px-1.5 py-0.5 rounded border bg-danger/15 text-danger border-danger/30">
                 PROD
               </span>
             )}

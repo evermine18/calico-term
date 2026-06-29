@@ -102,7 +102,7 @@ export default function TerminalHeader({
   const isHomeActive = tabs.length === 0 || showHome;
 
   return (
-    <div className="bg-slate-900/95 backdrop-blur-md border-b border-slate-700/40 px-4 py-2.5 flex items-center gap-2 shadow-xl overflow-hidden">
+    <div className="bg-panel/95 backdrop-blur-md border-b border-hairline/40 px-4 py-2.5 flex items-center gap-2 shadow-xl overflow-hidden">
       {/* Home button — wrapped in pt-2.5 to match tabs-list internal offset */}
       <div className="flex items-center gap-2 pt-2.5 flex-shrink-0">
         <button
@@ -114,8 +114,8 @@ export default function TerminalHeader({
             border transition-all duration-150 shadow-sm
             ${
               isHomeActive
-                ? "bg-gradient-to-br from-slate-800/95 to-slate-800/90 text-accent-300 border-l-[3px] border-l-cyan-400 border-r-slate-700/50 border-t-slate-700/50 border-b-slate-700/50 shadow-accent-500/20"
-                : "bg-slate-900/60 text-gray-400 border-l-[3px] border-l-slate-700/50 border-r-slate-700/30 border-t-slate-700/30 border-b-slate-700/30 hover:bg-slate-800/70 hover:text-accent-100 hover:border-l-cyan-400/50"
+                ? "bg-gradient-to-br from-elevated/95 to-elevated/90 text-accent-300 border-l-[3px] border-l-accent-400 border-r-hairline/50 border-t-hairline/50 border-b-hairline/50 shadow-accent-500/20"
+                : "bg-panel/60 text-ink-muted border-l-[3px] border-l-hairline/50 border-r-hairline/30 border-t-hairline/30 border-b-hairline/30 hover:bg-elevated/70 hover:text-accent-100 hover:border-l-accent-400/50"
             }
             ${tabs.length === 0 ? "cursor-default" : "cursor-pointer"}
           `}
@@ -124,7 +124,7 @@ export default function TerminalHeader({
           <House size={15} />
         </button>
 
-        {tabs.length > 0 && <div className="w-px h-5 bg-slate-700/60" />}
+        {tabs.length > 0 && <div className="w-px h-5 bg-hairline/60" />}
       </div>
 
       <TabsList
@@ -135,14 +135,14 @@ export default function TerminalHeader({
         onDetachTab={onDetachTab}
       />
       {/* Action buttons group */}
-      <div className="flex items-center gap-0.5 bg-slate-800/40 border border-slate-700/40 rounded-lg p-0.5 flex-shrink-0">
+      <div className="flex items-center gap-0.5 bg-elevated/40 border border-hairline/40 rounded-lg p-0.5 flex-shrink-0">
         {/* New — split button: the icon opens a local terminal, the caret a menu */}
         <button
           onClick={addTab}
           className="
               flex items-center justify-center w-8 h-8 rounded-md
-              text-gray-500
-              hover:bg-slate-700/60 hover:text-accent-300
+              text-ink-subtle
+              hover:bg-elevated/60 hover:text-accent-300
               transition-all duration-150
             "
           title="New terminal (Ctrl+Shift+T)"
@@ -152,7 +152,7 @@ export default function TerminalHeader({
         <Popover open={newMenuOpen} onOpenChange={setNewMenuOpen}>
           <PopoverTrigger asChild>
             <button
-              className="flex items-center justify-center w-5 h-8 rounded-md text-gray-600 hover:bg-slate-700/60 hover:text-accent-300 transition-all duration-150"
+              className="flex items-center justify-center w-5 h-8 rounded-md text-ink-subtle hover:bg-elevated/60 hover:text-accent-300 transition-all duration-150"
               title="New…"
             >
               <ChevronDown size={13} />
@@ -160,7 +160,7 @@ export default function TerminalHeader({
           </PopoverTrigger>
           <PopoverContent
             align="start"
-            className="w-52 p-1 bg-slate-900 border-slate-700 text-gray-200"
+            className="w-52 p-1 bg-panel border-hairline text-ink-muted"
           >
             <MenuItem
               icon={<Plus size={14} className="text-accent-400/80" />}
@@ -189,8 +189,8 @@ export default function TerminalHeader({
               transition-all duration-150
               ${
                 sftpOpen
-                  ? "bg-slate-700/60 text-accent-300"
-                  : "text-gray-500 hover:bg-slate-700/60 hover:text-accent-300"
+                  ? "bg-elevated/60 text-accent-300"
+                  : "text-ink-subtle hover:bg-elevated/60 hover:text-accent-300"
               }
             `}
             title="File Browser (SFTP)"
@@ -203,8 +203,8 @@ export default function TerminalHeader({
           onClick={() => setAiSidebarOpen(true)}
           className="
               flex items-center justify-center w-8 h-8 rounded-md
-              text-gray-500
-              hover:bg-slate-700/60 hover:text-accent-300
+              text-ink-subtle
+              hover:bg-elevated/60 hover:text-accent-300
               transition-all duration-150
             "
           title="AI Assistant"
@@ -212,13 +212,13 @@ export default function TerminalHeader({
           <Bot size={16} />
         </button>
 
-        <div className="w-px h-5 bg-slate-700/50 mx-0.5" />
+        <div className="w-px h-5 bg-hairline/50 mx-0.5" />
 
         {/* Overflow — secondary actions kept out of the toolbar */}
         <Popover open={overflowOpen} onOpenChange={setOverflowOpen}>
           <PopoverTrigger asChild>
             <button
-              className="flex items-center justify-center w-8 h-8 rounded-md text-gray-500 hover:bg-slate-700/60 hover:text-gray-300 transition-all duration-150"
+              className="flex items-center justify-center w-8 h-8 rounded-md text-ink-subtle hover:bg-elevated/60 hover:text-ink-muted transition-all duration-150"
               title="More"
             >
               <MoreHorizontal size={16} />
@@ -226,10 +226,10 @@ export default function TerminalHeader({
           </PopoverTrigger>
           <PopoverContent
             align="end"
-            className="w-52 p-1 bg-slate-900 border-slate-700 text-gray-200"
+            className="w-52 p-1 bg-panel border-hairline text-ink-muted"
           >
             <MenuItem
-              icon={<Clock size={14} className="text-gray-400" />}
+              icon={<Clock size={14} className="text-ink-muted" />}
               label="Command history"
               onClick={() => {
                 setOverflowOpen(false);
@@ -242,7 +242,7 @@ export default function TerminalHeader({
                   <Circle
                     size={12}
                     className={
-                      recording ? "fill-red-500 text-red-500" : "text-gray-400"
+                      recording ? "fill-danger text-danger" : "text-ink-muted"
                     }
                   />
                 }
@@ -254,7 +254,7 @@ export default function TerminalHeader({
               />
             )}
             <MenuItem
-              icon={<Cog size={14} className="text-gray-400" />}
+              icon={<Cog size={14} className="text-ink-muted" />}
               label="Settings"
               onClick={() => {
                 setOverflowOpen(false);
@@ -289,7 +289,7 @@ function MenuItem({
   return (
     <button
       onClick={onClick}
-      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm text-gray-300 hover:bg-slate-800 transition-colors"
+      className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm text-ink-muted hover:bg-elevated transition-colors"
     >
       {icon}
       {label}

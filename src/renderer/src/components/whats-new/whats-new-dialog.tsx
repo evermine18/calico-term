@@ -28,7 +28,7 @@ export default function WhatsNewDialog({
         if (!o) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-[780px] max-h-[85vh] flex flex-col gap-3 bg-slate-900 border-slate-700/50 text-gray-100">
+      <DialogContent className="sm:max-w-[780px] max-h-[85vh] flex flex-col gap-3 bg-panel border-hairline/50 text-ink">
         <DialogHeader className="shrink-0">
           <div className="flex items-center gap-2 text-accent-400">
             <Sparkles size={14} />
@@ -36,14 +36,14 @@ export default function WhatsNewDialog({
               What&apos;s new
             </span>
           </div>
-          <DialogTitle className="text-xl text-gray-100 mt-1">
+          <DialogTitle className="text-xl text-ink mt-1">
             Calico Term{" "}
             <span className="text-accent-400">v{latest.version}</span>
           </DialogTitle>
           {latest.tagline && (
-            <p className="text-sm text-gray-400 mt-1">{latest.tagline}</p>
+            <p className="text-sm text-ink-muted mt-1">{latest.tagline}</p>
           )}
-          <p className="text-[11px] text-gray-500 mt-0.5">
+          <p className="text-[11px] text-ink-subtle mt-0.5">
             Released {latest.date}
           </p>
         </DialogHeader>
@@ -54,7 +54,7 @@ export default function WhatsNewDialog({
             return (
               <div
                 key={s.id}
-                className="rounded-lg border border-slate-700/50 bg-slate-800/40 p-3.5 flex flex-col gap-2 hover:border-slate-600/60 transition-colors"
+                className="rounded-lg border border-hairline/50 bg-elevated/40 p-3.5 flex flex-col gap-2 hover:border-hairline/60 transition-colors"
               >
                 <div className="flex items-center gap-2">
                   <div
@@ -62,11 +62,11 @@ export default function WhatsNewDialog({
                   >
                     <Icon size={14} />
                   </div>
-                  <h3 className="text-sm font-semibold text-gray-100">
+                  <h3 className="text-sm font-semibold text-ink">
                     {s.title}
                   </h3>
                 </div>
-                <ul className="space-y-1.5 text-[12.5px] leading-snug text-gray-300">
+                <ul className="space-y-1.5 text-[12.5px] leading-snug text-ink-muted">
                   {s.items.map((it, i) => (
                     <li key={i} className="flex gap-2">
                       <span className="text-accent-400 mt-[3px] leading-none">
@@ -81,11 +81,11 @@ export default function WhatsNewDialog({
           })}
         </div>
 
-        <DialogFooter className="shrink-0 border-t border-slate-700/40 pt-3">
+        <DialogFooter className="shrink-0 border-t border-hairline/40 pt-3">
           <Button
             size="sm"
             onClick={onClose}
-            className="bg-accent-500 hover:bg-accent-400 text-white"
+            className="bg-accent-500 hover:bg-accent-400 text-ink"
           >
             Got it
           </Button>

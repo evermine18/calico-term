@@ -87,8 +87,8 @@ export function EnvVaultPanel() {
   return (
     <div className="space-y-3">
       <div>
-        <p className="text-gray-300 text-sm font-semibold">Env Var Vault</p>
-        <p className="text-xs text-gray-400 mt-0.5">
+        <p className="text-ink-muted text-sm font-semibold">Env Var Vault</p>
+        <p className="text-xs text-ink-muted mt-0.5">
           Encrypted environment variables injected into terminals at startup.
           Global applies everywhere; workspace scopes apply to tabs whose
           connection belongs to that workspace; host scopes only to that SSH
@@ -97,18 +97,18 @@ export function EnvVaultPanel() {
       </div>
 
       <div className="grid gap-1.5">
-        <Label className="text-gray-300 text-sm">Scope</Label>
+        <Label className="text-ink-muted text-sm">Scope</Label>
         <Select value={scopeId} onValueChange={setScopeId}>
-          <SelectTrigger className="bg-slate-800/60 border-slate-700/50 text-gray-100">
+          <SelectTrigger className="bg-elevated/60 border-hairline/50 text-ink">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent className="bg-slate-900 border-slate-700/50">
+          <SelectContent className="bg-panel border-hairline/50">
             {(["Global", "Workspace", "Host"] as const).map((g) => {
               const items = scopeOptions.filter((o) => o.group === g);
               if (items.length === 0) return null;
               return (
                 <div key={g}>
-                  <div className="px-2 pt-1.5 pb-0.5 text-[10px] uppercase tracking-widest text-gray-500">
+                  <div className="px-2 pt-1.5 pb-0.5 text-[10px] uppercase tracking-widest text-ink-subtle">
                     {g}
                   </div>
                   {items.map((o) => (
@@ -126,20 +126,20 @@ export function EnvVaultPanel() {
       <div className="space-y-2 max-h-[260px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-accent-600/40 scrollbar-track-transparent">
         {entries.length === 0 && (
           <div className="flex flex-col items-center justify-center py-8 text-center">
-            <Variable size={28} className="text-slate-600 mb-2" />
-            <p className="text-sm text-gray-500">No variables in this scope</p>
+            <Variable size={28} className="text-ink-subtle mb-2" />
+            <p className="text-sm text-ink-subtle">No variables in this scope</p>
           </div>
         )}
         {entries.map((e) => (
           <div
             key={e.key}
-            className="flex items-center gap-2 p-2 rounded-md bg-slate-800/60 border border-slate-700/50"
+            className="flex items-center gap-2 p-2 rounded-md bg-elevated/60 border border-hairline/50"
           >
             <span className="text-xs font-mono text-accent-300 shrink-0">
               {e.key}
             </span>
-            <span className="text-gray-600">=</span>
-            <span className="flex-1 min-w-0 text-xs font-mono text-gray-200 truncate">
+            <span className="text-ink-subtle">=</span>
+            <span className="flex-1 min-w-0 text-xs font-mono text-ink-muted truncate">
               {revealed.has(e.key)
                 ? e.value
                 : "•".repeat(Math.min(e.value.length, 12))}
@@ -148,7 +148,7 @@ export function EnvVaultPanel() {
               onClick={() => toggleReveal(e.key)}
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-gray-400 hover:text-accent-300 hover:bg-accent-500/20"
+              className="h-7 w-7 text-ink-muted hover:text-accent-300 hover:bg-accent-500/20"
             >
               {revealed.has(e.key) ? <EyeOff size={13} /> : <Eye size={13} />}
             </Button>
@@ -156,7 +156,7 @@ export function EnvVaultPanel() {
               onClick={() => handleDelete(e.key)}
               variant="ghost"
               size="icon"
-              className="h-7 w-7 text-gray-400 hover:text-red-400 hover:bg-red-500/20"
+              className="h-7 w-7 text-ink-muted hover:text-danger hover:bg-danger/20"
             >
               <Trash2 size={13} />
             </Button>
@@ -164,34 +164,34 @@ export function EnvVaultPanel() {
         ))}
       </div>
 
-      <div className="grid grid-cols-[1fr_2fr_auto] gap-2 items-end pt-2 border-t border-slate-700/40">
+      <div className="grid grid-cols-[1fr_2fr_auto] gap-2 items-end pt-2 border-t border-hairline/40">
         <div className="grid gap-1">
-          <Label className="text-gray-300 text-xs">Name</Label>
+          <Label className="text-ink-muted text-xs">Name</Label>
           <Input
             placeholder="MY_VAR"
             value={newKey}
             onChange={(e) => setNewKey(e.target.value)}
-            className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-sm h-8"
+            className="bg-elevated/60 border-hairline text-ink font-mono text-sm h-8"
           />
         </div>
         <div className="grid gap-1">
-          <Label className="text-gray-300 text-xs">Value</Label>
+          <Label className="text-ink-muted text-xs">Value</Label>
           <Input
             placeholder="value"
             value={newValue}
             onChange={(e) => setNewValue(e.target.value)}
-            className="bg-slate-800/60 border-slate-700 text-gray-100 font-mono text-sm h-8"
+            className="bg-elevated/60 border-hairline text-ink font-mono text-sm h-8"
           />
         </div>
         <Button
           onClick={handleAdd}
           size="icon"
-          className="h-8 w-8 bg-accent-600/90 hover:bg-accent-500 text-white"
+          className="h-8 w-8 bg-accent-600/90 hover:bg-accent-500 text-on-accent"
         >
           <Plus size={14} />
         </Button>
       </div>
-      {error && <p className="text-xs text-red-400">{error}</p>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );
 }

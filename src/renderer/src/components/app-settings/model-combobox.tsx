@@ -105,7 +105,7 @@ export function ModelsSelector({
             role="combobox"
             aria-expanded={open}
             disabled={status === "loading"}
-            className="flex-1 justify-between bg-slate-800/60 border-slate-700/50 text-gray-100 hover:bg-slate-800 focus:border-accent-500/50 disabled:opacity-60"
+            className="flex-1 justify-between bg-elevated/60 border-hairline/50 text-ink hover:bg-elevated focus:border-accent-500/50 disabled:opacity-60"
           >
             <span className="truncate">
               {status === "loading"
@@ -122,16 +122,16 @@ export function ModelsSelector({
           </Button>
         </PopoverTrigger>
         <PopoverContent
-          className="w-[260px] p-0 bg-slate-900 border border-slate-700/50 shadow-xl"
+          className="w-[260px] p-0 bg-panel border border-hairline/50 shadow-xl"
           align="start"
         >
-          <Command className="bg-transparent text-gray-100 [&_[cmdk-input-wrapper]]:border-slate-700/50">
+          <Command className="bg-transparent text-ink [&_[cmdk-input-wrapper]]:border-hairline/50">
             <CommandInput
               placeholder="Search model..."
-              className="text-gray-100 placeholder:text-slate-500"
+              className="text-ink placeholder:text-ink-subtle"
             />
             <CommandList className="max-h-60">
-              <CommandEmpty className="py-4 text-center text-xs text-slate-500">
+              <CommandEmpty className="py-4 text-center text-xs text-ink-subtle">
                 No model found.
               </CommandEmpty>
               <CommandGroup>
@@ -143,7 +143,7 @@ export function ModelsSelector({
                       setValue(currentValue === value ? "" : currentValue);
                       setOpen(false);
                     }}
-                    className="text-slate-300 aria-selected:bg-accent-500/20 aria-selected:text-accent-300 data-[selected=true]:bg-accent-500/20 data-[selected=true]:text-accent-300"
+                    className="text-ink-muted aria-selected:bg-accent-500/20 aria-selected:text-accent-300 data-[selected=true]:bg-accent-500/20 data-[selected=true]:text-accent-300"
                   >
                     <CheckIcon
                       className={cn(
@@ -165,7 +165,7 @@ export function ModelsSelector({
         onClick={fetchModels}
         disabled={status === "loading" || !url || (provider !== "ollama" && !hasKey)}
         title="Refresh models"
-        className="shrink-0 bg-slate-800/60 border-slate-700/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 disabled:opacity-40"
+        className="shrink-0 bg-elevated/60 border-hairline/50 hover:bg-accent-500/20 hover:text-accent-300 hover:border-accent-500/50 disabled:opacity-40"
       >
         <RefreshCw
           size={14}
