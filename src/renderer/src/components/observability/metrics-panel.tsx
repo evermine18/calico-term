@@ -72,7 +72,7 @@ export default function MetricsPanel({ samples, error, onClose }: Props) {
 
 function Gauge({ label, pct }: { label: string; pct: number }) {
   const color =
-    pct >= 85 ? "bg-danger0" : pct >= 60 ? "bg-warning" : "bg-accent-500";
+    pct >= 85 ? "bg-danger" : pct >= 60 ? "bg-warning" : "bg-accent-500";
   return (
     <div>
       <div className="flex justify-between text-[10px] text-ink-muted mb-1">

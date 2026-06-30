@@ -19,6 +19,10 @@ export interface Theme {
     rgb: string;    // "r, g, b" — for rgba() usage
     oklch: string;  // full oklch(...) value — for shadcn --primary / --ring
   };
+  // Darkened, hue-matched 100/300/400 for LIGHT mode. The bright defaults above
+  // are illegible as foreground text and washed-out as dots/borders on light
+  // surfaces, so provider.tsx swaps these in whenever light mode is active.
+  light: { 100: string; 300: string; 400: string };
 }
 
 export const themes: Theme[] = [
@@ -35,6 +39,7 @@ export const themes: Theme[] = [
       rgb: '6, 182, 212',
       oklch: 'oklch(0.70 0.15 200)',
     },
+    light: { 100: '#0e7490', 300: '#155e75', 400: '#0e7490' },
   },
   {
     id: 'neon-purple',
@@ -49,6 +54,7 @@ export const themes: Theme[] = [
       rgb: '139, 92, 246',
       oklch: 'oklch(0.65 0.25 280)',
     },
+    light: { 100: '#6d28d9', 300: '#5b21b6', 400: '#6d28d9' },
   },
   {
     id: 'amber-glow',
@@ -63,6 +69,7 @@ export const themes: Theme[] = [
       rgb: '245, 158, 11',
       oklch: 'oklch(0.78 0.18 80)',
     },
+    light: { 100: '#b45309', 300: '#92400e', 400: '#b45309' },
   },
   {
     id: 'emerald',
@@ -77,6 +84,7 @@ export const themes: Theme[] = [
       rgb: '16, 185, 129',
       oklch: 'oklch(0.70 0.17 162)',
     },
+    light: { 100: '#047857', 300: '#065f46', 400: '#047857' },
   },
   {
     id: 'rose',
@@ -91,6 +99,7 @@ export const themes: Theme[] = [
       rgb: '244, 63, 94',
       oklch: 'oklch(0.65 0.25 15)',
     },
+    light: { 100: '#be123c', 300: '#9f1239', 400: '#be123c' },
   },
   {
     id: 'frost-blue',
@@ -105,6 +114,7 @@ export const themes: Theme[] = [
       rgb: '59, 130, 246',
       oklch: 'oklch(0.68 0.18 240)',
     },
+    light: { 100: '#1d4ed8', 300: '#1e40af', 400: '#1d4ed8' },
   },
 ];
 

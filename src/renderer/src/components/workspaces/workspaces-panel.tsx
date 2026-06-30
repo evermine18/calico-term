@@ -625,7 +625,7 @@ export function WorkspacesPanel() {
                     </div>
                   </label>
                 )}
-                <label className="flex items-start gap-2 p-2 rounded border border-danger0/30 bg-danger0/5 cursor-pointer hover:bg-danger0/10">
+                <label className="flex items-start gap-2 p-2 rounded border border-danger/30 bg-danger/5 cursor-pointer hover:bg-danger/10">
                   <input
                     type="radio"
                     name="del-mode"

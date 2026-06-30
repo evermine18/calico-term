@@ -33,7 +33,7 @@ export function TerminalSearchBar({
   };
 
   return (
-    <div className="absolute top-2 right-3 z-20 flex items-center gap-1.5 bg-panel/95 border border-hairline/60 rounded-lg px-2 py-1.5 shadow-xl shadow-black/40 backdrop-blur-md">
+    <div className="absolute top-2 right-3 z-20 flex items-center gap-1.5 bg-panel/95 border border-hairline/60 rounded-lg px-2 py-1.5 shadow-xl shadow-black/10 dark:shadow-black/40 backdrop-blur-md">
       <input
         ref={inputRef}
         type="text"

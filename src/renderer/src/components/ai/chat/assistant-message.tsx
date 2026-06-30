@@ -178,7 +178,7 @@ export default function AssistantMessage({
         return <CodeBlock lang={lang} code={code} onExecute={onExecute} />;
       }
       return (
-        <code className="bg-panel rounded px-1 py-0.5 font-mono text-xs text-accent-300">
+        <code className="bg-field dark:bg-panel rounded px-1 py-0.5 font-mono text-xs text-accent-300">
           {children}
         </code>
       );

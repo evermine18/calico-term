@@ -458,6 +458,25 @@ app.whenReady().then(() => {
   ipcMain.on("win-close", (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close();
   });
+  // Repaint the native Windows title-bar overlay (min/max/close) to match the
+  // renderer's light/dark mode. The overlay colors are baked at window creation
+  // and don't follow CSS, so the renderer pushes them here whenever mode flips.
+  ipcMain.on(
+    "win-set-overlay",
+    (event, opts: { color: string; symbolColor: string }) => {
+      if (process.platform !== "win32") return;
+      const win = BrowserWindow.fromWebContents(event.sender);
+      try {
+        win?.setTitleBarOverlay({
+          color: opts.color,
+          symbolColor: opts.symbolColor,
+          height: 36,
+        });
+      } catch {
+        // Window was created without an overlay; nothing to repaint.
+      }
+    },
+  );
 
   // --- Detached terminal windows (pop-out) ---
   ipcMain.on("detach-tab", (_event, payload: DetachPayload) => {

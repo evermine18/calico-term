@@ -41,7 +41,7 @@ export function TabContextMenu({
 }: TabContextMenuProps) {
   return createPortal(
     <div
-      className="context-menu fixed bg-elevated/98 backdrop-blur-md border border-hairline/60 rounded-lg shadow-2xl shadow-black/40 py-1.5 min-w-[180px]"
+      className="context-menu fixed bg-elevated/98 backdrop-blur-md border border-hairline/60 rounded-lg shadow-2xl shadow-black/10 dark:shadow-black/40 py-1.5 min-w-[180px]"
       style={{
         left: contextMenu.x,
         top: contextMenu.y,

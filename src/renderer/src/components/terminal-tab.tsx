@@ -578,7 +578,7 @@ export const TerminalPanel: React.FC<TerminalPanelProps> = ({
               }}
             />
             <div
-              className="fixed z-50 min-w-[160px] py-1 rounded-md border border-hairline/60 bg-panel/97 shadow-xl shadow-black/40 backdrop-blur-md text-sm text-ink-muted"
+              className="fixed z-50 min-w-[160px] py-1 rounded-md border border-hairline/60 bg-panel/97 shadow-xl shadow-black/10 dark:shadow-black/40 backdrop-blur-md text-sm text-ink-muted"
               style={{ top: ctxMenu.y, left: ctxMenu.x }}
             >
               <CtxItem

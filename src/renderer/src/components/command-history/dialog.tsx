@@ -208,7 +208,7 @@ export default function CommandHistoryDialog() {
                     </button>
                     <button
                       onClick={(e) => handleDeleteCommand(entry.id, e)}
-                      className="p-2 hover:bg-danger0/20 rounded-md transition-colors"
+                      className="p-2 hover:bg-danger/20 rounded-md transition-colors"
                       title="Delete command"
                     >
                       <Trash2 className="w-4 h-4 text-danger" />

@@ -242,7 +242,7 @@ export function McpPanel() {
                 : `Add this to ${connect.configPath}:`}
             </p>
             <div className="flex items-start gap-2">
-              <pre className="flex-1 text-xs font-mono text-accent-200 bg-elevated/80 border border-hairline/40 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
+              <pre className="flex-1 text-xs font-mono text-accent-400 bg-elevated/80 border border-hairline/40 rounded p-2 overflow-x-auto whitespace-pre-wrap break-all">
                 {connect.snippet}
               </pre>
               <Button

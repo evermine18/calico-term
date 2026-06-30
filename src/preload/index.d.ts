@@ -492,6 +492,7 @@ declare global {
         minimize: () => void;
         maximize: () => void;
         close: () => void;
+        setOverlay: (color: string, symbolColor: string) => void;
       };
       detach: {
         open: (payload: DetachPayload) => void;

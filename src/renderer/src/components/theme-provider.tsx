@@ -35,17 +35,22 @@ export function ThemeProvider({
 
     root.classList.remove("light", "dark");
 
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
+    const resolved =
+      theme === "system"
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light"
+        : theme;
 
-      root.classList.add(systemTheme);
-      return;
-    }
+    root.classList.add(resolved);
 
-    root.classList.add(theme);
+    // Repaint the native Windows title-bar overlay (min/max/close strip) to
+    // match the active mode — its colors are baked at window creation and don't
+    // follow CSS, so we push them over IPC whenever the mode changes.
+    window.api?.windowControls?.setOverlay?.(
+      resolved === "dark" ? "#0f172a" : "#eceef0",
+      resolved === "dark" ? "#cbd5e1" : "#545b67",
+    );
   }, [theme]);
 
   const value = {

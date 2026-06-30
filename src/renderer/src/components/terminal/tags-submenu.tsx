@@ -19,7 +19,7 @@ export function TagsSubmenu({
 }: TagsSubmenuProps) {
   return createPortal(
     <div
-      className="tags-submenu fixed bg-elevated/98 backdrop-blur-md border border-hairline/60 rounded-lg shadow-2xl shadow-black/40 py-1.5 min-w-[160px] max-h-[300px] overflow-y-auto"
+      className="tags-submenu fixed bg-elevated/98 backdrop-blur-md border border-hairline/60 rounded-lg shadow-2xl shadow-black/10 dark:shadow-black/40 py-1.5 min-w-[160px] max-h-[300px] overflow-y-auto"
       style={{
         left: submenu.x,
         top: submenu.y,

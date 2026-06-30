@@ -99,39 +99,44 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --destructive-foreground: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  /* shadcn tokens (LIGHT) — retinted to the Graphite family (true-neutral, hue
+     ~256, near-zero chroma) so the few primitives that use them match the custom
+     surface layer. background=--surface, card=--panel, popover/secondary lift to
+     --elevated, and muted/accent are split into distinct steps so hover/selected
+     states differentiate again. Mirrors --surface/--panel/--elevated/etc. */
+  --background: oklch(0.892 0.004 256);   /* = --surface */
+  --foreground: oklch(0.250 0.012 264);   /* = --ink */
+  --card: oklch(0.948 0.004 256);         /* = --panel */
+  --card-foreground: oklch(0.250 0.012 264);
+  --popover: oklch(0.970 0.004 256);      /* = --elevated — a real step above card */
+  --popover-foreground: oklch(0.250 0.012 264);
+  --primary: oklch(0.280 0.014 264);      /* deep graphite — high-contrast solid buttons */
+  --primary-foreground: oklch(0.990 0.003 256);
+  --secondary: oklch(0.970 0.004 256);    /* = --elevated — raised secondary fill */
+  --secondary-foreground: oklch(0.280 0.014 264);
+  --muted: oklch(0.930 0.006 256);        /* split off secondary/accent for distinct steps */
+  --muted-foreground: oklch(0.470 0.022 260);  /* = --ink-muted */
+  --accent: oklch(0.915 0.007 256);       /* darker than card so hover/selected reads */
+  --accent-foreground: oklch(0.280 0.014 264);
+  --destructive: oklch(0.491 0.188 27);   /* = --danger */
+  --destructive-foreground: oklch(0.990 0.003 256);
+  --border: oklch(0.710 0.017 257);       /* = --hairline */
+  --input: oklch(0.710 0.017 257);
+  --ring: var(--accent-oklch);            /* focus ring tracks the active accent */
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.948 0.004 256);      /* = --panel */
+  --sidebar-foreground: oklch(0.250 0.012 264);
+  --sidebar-primary: oklch(0.280 0.014 264);
+  --sidebar-primary-foreground: oklch(0.990 0.003 256);
+  --sidebar-accent: oklch(0.915 0.007 256);
+  --sidebar-accent-foreground: oklch(0.280 0.014 264);
+  --sidebar-border: oklch(0.710 0.017 257);
+  --sidebar-ring: var(--accent-oklch);
 }
 
 .dark {
@@ -219,35 +224,39 @@
    Values in :root are LIGHT; .dark overrides with the current slate look.
    These power the app-wide light mode; accent-* stay theme-driven. */
 :root {
-  /* Surfaces & text (LIGHT) */
-  --surface: #f8fafc;     /* app/terminal/chat backdrop */
-  --panel: #ffffff;       /* chrome: header, tabs, sidebar, dialogs */
-  --elevated: #f1f5f9;    /* raised: buttons, cards, menus, hover */
-  --field: #ffffff;       /* inputs, code blocks */
-  --hairline: #cbd5e1;    /* borders (opacity applied per-use) */
-  --ink: #0f172a;         /* primary text */
-  --ink-muted: #475569;   /* secondary text */
-  --ink-subtle: #94a3b8;  /* tertiary text / placeholders */
+  /* Surfaces & text (LIGHT — Graphite: true-neutral IDE light with committed,
+     layered depth) Ascending lightness with elevation on a grey "desktop"; the
+     canvas is a real grey (never off-white), chrome floats decisively lighter,
+     and neutrals are near-zero-chroma graphite (hue ~256) so they harmonize
+     with all six accents and never compete for attention. */
+  --surface: #dadbde;     /* app/terminal/chat backdrop — committed grey desktop, never white */
+  --panel: #eceef0;       /* chrome: header, tabs, sidebar, dialogs — floats +6.6 L* lighter */
+  --elevated: #f3f5f8;    /* raised chips/buttons/menus/hover/skeletons — lifts above panel */
+  --field: #fafcfe;       /* inputs, code blocks — brightest wells invite input */
+  --hairline: #9ba2ac;    /* borders (opacity applied per-use) — graphite, crisp at low alpha */
+  --ink: #1f2228;         /* primary text (graphite near-black) */
+  --ink-muted: #545b67;   /* secondary text */
+  --ink-subtle: #646a76;  /* tertiary text / placeholders — darkened for legible contrast on grey */
   --on-accent: #ffffff;   /* text/icons on solid accent or state buttons (mode-agnostic) */
 
-  /* Semantic state (LIGHT — darker for contrast on white) */
-  --success: #059669;
-  --warning: #d97706;
-  --info: #2563eb;
-  --danger: #dc2626;
+  /* Semantic state (LIGHT — darkened to clear AA on the grey canvas) */
+  --success: #046a4d;
+  --warning: #9a4a07;
+  --info: #1d4ed8;
+  --danger: #b3161a;
 
-  /* xterm terminal (LIGHT) */
-  --term-bg: #ffffff;
-  --term-fg: #1e293b;
-  --term-cursor-accent: #ffffff;
-  --term-selection-fg: #ffffff;
-  --term-black: #1e293b;
+  /* xterm terminal (LIGHT — soft grey screen recessed below the chrome) */
+  --term-bg: #dee0e3;
+  --term-fg: #20242b;
+  --term-cursor-accent: #0b0e13;
+  --term-selection-fg: #0b0e13;
+  --term-black: #20242b;
   --term-red: #dc2626;
   --term-green: #059669;
   --term-yellow: #d97706;
   --term-magenta: #9333ea;
   --term-white: #94a3b8;
-  --term-bright-black: #475569;
+  --term-bright-black: #545b67;
   --term-bright-red: #ef4444;
   --term-bright-green: #10b981;
   --term-bright-yellow: #f59e0b;

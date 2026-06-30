@@ -513,8 +513,8 @@ export default function SSHDialog({
                         backgroundColor: selected
                           ? `${tag.color}22`
                           : "transparent",
-                        color: selected ? tag.color : "#6b7280",
-                        borderColor: selected ? `${tag.color}60` : "#374151",
+                        color: selected ? tag.color : "var(--ink-muted)",
+                        borderColor: selected ? `${tag.color}60` : "var(--hairline)",
                       }}
                     >
                       {selected && <Check size={10} />}

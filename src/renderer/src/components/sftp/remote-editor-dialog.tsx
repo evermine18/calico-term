@@ -175,6 +175,13 @@ export default function RemoteEditorDialog({
     const [r, g, b] = rgb.split(",").map((s) => parseInt(s.trim(), 10));
     const toHex = (n: number) => n.toString(16).padStart(2, "0");
     const accent = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    // Accent-400 is mode-aware (darkened in light mode by the app provider), so
+    // use it for syntax/cursor where the bright 500 tint would be illegible on light.
+    const accent400 = root.getPropertyValue("--accent-400").trim() || accent;
+    const isLight =
+      document.documentElement.classList.contains("light") ||
+      (!document.documentElement.classList.contains("dark") &&
+        !window.matchMedia("(prefers-color-scheme: dark)").matches);
 
     monaco.editor.defineTheme("calico-dark", {
       base: "vs-dark",
@@ -220,7 +227,51 @@ export default function RemoteEditorDialog({
         "editorOverviewRuler.border": "#0f172a",
       },
     });
-    monaco.editor.setTheme("calico-dark");
+    monaco.editor.defineTheme("calico-light", {
+      base: "vs",
+      inherit: true,
+      rules: [
+        { token: "comment", foreground: "646a76", fontStyle: "italic" },
+        { token: "keyword", foreground: accent400.slice(1) },
+        { token: "string", foreground: "047857" },
+        { token: "number", foreground: "b45309" },
+        { token: "type", foreground: "1d4ed8" },
+        { token: "function", foreground: "6d28d9" },
+        { token: "variable", foreground: "1f2228" },
+        { token: "delimiter", foreground: "545b67" },
+      ],
+      colors: {
+        "editor.background": "#fafcfe",
+        "editor.foreground": "#1f2228",
+        "editorLineNumber.foreground": "#9ba2ac",
+        "editorLineNumber.activeForeground": "#545b67",
+        "editor.lineHighlightBackground": "#eceef0",
+        "editor.lineHighlightBorder": "#eceef0",
+        "editorCursor.foreground": accent400,
+        "editor.selectionBackground": `${accent}44`,
+        "editor.inactiveSelectionBackground": `${accent}22`,
+        "editor.selectionHighlightBackground": `${accent}1a`,
+        "editor.findMatchBackground": `${accent}55`,
+        "editor.findMatchHighlightBackground": `${accent}2a`,
+        "editorIndentGuide.background1": "#d8dce2",
+        "editorIndentGuide.activeBackground1": "#b9bfc8",
+        "editorWhitespace.foreground": "#c4cad2",
+        "editorBracketMatch.background": `${accent}22`,
+        "editorBracketMatch.border": accent400,
+        "scrollbar.shadow": "#00000000",
+        "scrollbarSlider.background": "#9ba2ac66",
+        "scrollbarSlider.hoverBackground": "#9ba2ac99",
+        "scrollbarSlider.activeBackground": "#646a76cc",
+        "editorWidget.background": "#eceef0",
+        "editorWidget.border": "#9ba2ac66",
+        "editorSuggestWidget.background": "#eceef0",
+        "editorSuggestWidget.border": "#9ba2ac66",
+        "editorSuggestWidget.selectedBackground": `${accent}22`,
+        "editorGutter.background": "#fafcfe",
+        "editorOverviewRuler.border": "#fafcfe",
+      },
+    });
+    monaco.editor.setTheme(isLight ? "calico-light" : "calico-dark");
 
     ed.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       saveRef.current();
@@ -243,7 +294,7 @@ export default function RemoteEditorDialog({
             <Loader2 className="animate-spin" size={14} /> Loading…
           </div>
         ) : (
-          <div className="flex-1 min-h-[460px] border border-hairline/50 rounded-md overflow-hidden bg-[#0f172a]">
+          <div className="flex-1 min-h-[460px] border border-hairline/50 rounded-md overflow-hidden bg-field dark:bg-[#0f172a]">
             <Editor
               height="60vh"
               language={detectLanguage(remotePath)}

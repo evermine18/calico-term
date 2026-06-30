@@ -34,14 +34,34 @@ export const AppProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const root = document.documentElement;
     root.setAttribute("data-theme", theme);
-    const colors = getTheme(theme).colors;
-    root.style.setProperty("--accent-100", colors[100]);
-    root.style.setProperty("--accent-300", colors[300]);
-    root.style.setProperty("--accent-400", colors[400]);
-    root.style.setProperty("--accent-500", colors[500]);
-    root.style.setProperty("--accent-600", colors[600]);
-    root.style.setProperty("--accent-rgb", colors.rgb);
-    root.style.setProperty("--accent-oklch", colors.oklch);
+    const t = getTheme(theme);
+
+    // Accent vars are applied as inline styles (which win over CSS), so light/
+    // dark adaptation has to happen here too. In light mode the bright 100/300/
+    // 400 tints are illegible as text and washed-out as dots/borders, so swap in
+    // the theme's darkened, hue-matched `light` values; 500/600 stay canonical.
+    const applyAccent = (): void => {
+      const isLight = root.classList.contains("light")
+        ? true
+        : root.classList.contains("dark")
+          ? false
+          : !window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const c = t.colors;
+      const fg = isLight ? t.light : null;
+      root.style.setProperty("--accent-100", fg ? fg[100] : c[100]);
+      root.style.setProperty("--accent-300", fg ? fg[300] : c[300]);
+      root.style.setProperty("--accent-400", fg ? fg[400] : c[400]);
+      root.style.setProperty("--accent-500", c[500]);
+      root.style.setProperty("--accent-600", c[600]);
+      root.style.setProperty("--accent-rgb", c.rgb);
+      root.style.setProperty("--accent-oklch", c.oklch);
+    };
+
+    applyAccent();
+    // Re-apply whenever the light/dark class on <html> flips.
+    const observer = new MutationObserver(applyAccent);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
   }, [theme]);
 
   const [aiSidebarOpen, setAiSidebarOpen] = useState(false);

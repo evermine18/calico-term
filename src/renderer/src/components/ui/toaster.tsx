@@ -57,7 +57,7 @@ export function ToastProvider({
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="pointer-events-auto flex items-start gap-2 max-w-sm rounded-lg border border-hairline/60 bg-panel/95 px-3 py-2 shadow-xl shadow-black/40 backdrop-blur-md animate-in slide-in-from-right-4 fade-in duration-200"
+            className="pointer-events-auto flex items-start gap-2 max-w-sm rounded-lg border border-hairline/60 bg-panel/95 px-3 py-2 shadow-xl shadow-black/10 dark:shadow-black/40 backdrop-blur-md animate-in slide-in-from-right-4 fade-in duration-200"
           >
             <span className="mt-0.5 flex-shrink-0">{ICON[t.kind]}</span>
             <span className="text-sm text-ink break-words">

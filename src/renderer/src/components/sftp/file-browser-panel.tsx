@@ -332,7 +332,7 @@ export default function FileBrowserPanel({
     >
       {dragOver && (
         <div className="absolute inset-0 z-30 flex items-center justify-center bg-accent-500/10 border-2 border-dashed border-accent-500/60 pointer-events-none">
-          <span className="text-sm font-medium text-accent-200">
+          <span className="text-sm font-medium text-accent-400">
             Soltar para subir a {currentPath}
           </span>
         </div>

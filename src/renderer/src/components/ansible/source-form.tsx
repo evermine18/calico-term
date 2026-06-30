@@ -202,7 +202,7 @@ export default function AnsibleSourceForm({
                   onClick={() => setOrigin(o)}
                   className={`flex-1 text-sm py-1.5 rounded border transition-colors ${
                     origin === o
-                      ? "border-accent-500 bg-accent-500/10 text-accent-200"
+                      ? "border-accent-500 bg-accent-500/10 text-accent-400"
                       : "border-hairline/50 text-ink-muted hover:border-hairline"
                   }`}
                 >
@@ -354,7 +354,7 @@ export default function AnsibleSourceForm({
                   onClick={() => setInventoryMode(m)}
                   className={`flex-1 text-sm py-1.5 rounded border transition-colors ${
                     inventoryMode === m
-                      ? "border-accent-500 bg-accent-500/10 text-accent-200"
+                      ? "border-accent-500 bg-accent-500/10 text-accent-400"
                       : "border-hairline/50 text-ink-muted hover:border-hairline"
                   }`}
                 >

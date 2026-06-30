@@ -27,7 +27,7 @@ export function WorkspaceChip() {
         {ws.name}
       </span>
       {isProd && (
-        <span className="text-[9px] font-mono tracking-wider px-1 rounded bg-danger0/15 text-danger border border-danger0/30">
+        <span className="text-[9px] font-mono tracking-wider px-1 rounded bg-danger/15 text-danger border border-danger/30">
           PROD
         </span>
       )}

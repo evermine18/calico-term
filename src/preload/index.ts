@@ -335,6 +335,8 @@ const api = {
     minimize: () => ipcRenderer.send("win-minimize"),
     maximize: () => ipcRenderer.send("win-maximize"),
     close: () => ipcRenderer.send("win-close"),
+    setOverlay: (color: string, symbolColor: string) =>
+      ipcRenderer.send("win-set-overlay", { color, symbolColor }),
   },
   detach: {
     // Pop a tab out into its own window. The PTY keeps running in main.

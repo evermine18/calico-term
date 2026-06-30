@@ -43,7 +43,7 @@ export function WorkspaceSwitcher() {
           />
           <span className="font-medium tracking-wide">{active.name}</span>
           {active.environment === "prod" && (
-            <span className="px-1 rounded text-[9px] font-mono bg-danger0/20 text-danger">
+            <span className="px-1 rounded text-[9px] font-mono bg-danger/20 text-danger">
               PROD
             </span>
           )}
@@ -72,7 +72,7 @@ export function WorkspaceSwitcher() {
                     setActiveWorkspaceId(w.id);
                     setWorkspaceSwitcherOpen(false);
                   }}
-                  className="flex items-center gap-2 text-ink data-[selected=true]:bg-accent-500/15 data-[selected=true]:text-accent-100"
+                  className="flex items-center gap-2 text-ink data-[selected=true]:bg-accent-500/15 data-[selected=true]:text-ink"
                 >
                   <span
                     className="w-2.5 h-2.5 rounded-full"

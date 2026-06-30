@@ -46,6 +46,10 @@ export default function RecordingPlayerDialog({ recording, onClose }: Props) {
           getComputedStyle(document.documentElement)
             .getPropertyValue("--term-bg")
             .trim() || "#020617",
+        foreground:
+          getComputedStyle(document.documentElement)
+            .getPropertyValue("--term-fg")
+            .trim() || "#e2e8f0",
       },
       disableStdin: true,
       scrollback: 5000,

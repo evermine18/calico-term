@@ -70,7 +70,7 @@ function ActionPreview({ name, args }: { name: string; args: unknown }) {
         <div className="text-[10px] uppercase tracking-wide text-ink-subtle mb-1">
           will run in your active terminal
         </div>
-        <div className="flex items-start gap-2 bg-black/60 rounded px-2.5 py-2 border border-hairline">
+        <div className="flex items-start gap-2 bg-field dark:bg-black/60 rounded px-2.5 py-2 border border-hairline">
           <span className="text-success font-mono text-xs select-none">$</span>
           <code className="text-xs font-mono text-ink whitespace-pre-wrap break-all flex-1">
             {cmd}
@@ -102,7 +102,7 @@ function ActionPreview({ name, args }: { name: string; args: unknown }) {
             {bytes === 1 ? "" : "s"}
           </div>
           {preview && (
-            <pre className="text-[11px] font-mono text-ink-muted bg-black/40 rounded px-2 py-1 overflow-x-auto max-h-32">
+            <pre className="text-[11px] font-mono text-ink-muted bg-field dark:bg-black/40 rounded px-2 py-1 overflow-x-auto max-h-32">
               {preview}
             </pre>
           )}
