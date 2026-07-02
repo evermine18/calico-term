@@ -112,14 +112,14 @@ export function TabItem({
         style={accentStyle}
         className={`tab-item
           relative group flex items-center gap-2 px-3 py-2 rounded-lg
-          text-sm font-medium border-l-[3px] border-r border-t border-b
+          text-sm font-medium border-l border-r border-t border-b
           w-full min-w-0 cursor-pointer
           backdrop-blur-md transition-all duration-100
           ${isDragged ? "opacity-50" : ""}
           ${
             isActive
-              ? `bg-gradient-to-br from-elevated/95 to-elevated/90 text-ink ${accent.borderColor ? "" : "border-l-accent-400"} border-r-hairline/50 border-t-hairline/50 border-b-hairline/50 shadow-xl shadow-accent-500/20 z-10`
-              : `bg-panel/60 text-ink-muted ${accent.borderColor ? "" : "border-l-hairline/50"} border-r-hairline/30 border-t-hairline/30 border-b-hairline/30 hover:bg-elevated/70 hover:text-accent-100 ${accent.borderColor ? "" : "hover:border-l-accent-400/50"} hover:shadow-lg hover:shadow-accent-500/10`
+              ? `bg-gradient-to-br from-elevated/95 to-elevated/90 border-accent-600 text-ink z-10`
+              : `bg-panel/60 text-ink-muted border-hairline/50 hover:border-transparent  hover:bg-elevated/70 hover:text-accent-100 `
           }
         `}
         onClick={onSelect}

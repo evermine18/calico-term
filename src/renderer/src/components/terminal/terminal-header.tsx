@@ -114,8 +114,8 @@ export default function TerminalHeader({
             border transition-all duration-150 shadow-sm
             ${
               isHomeActive
-                ? "bg-gradient-to-br from-elevated/95 to-elevated/90 text-accent-300 border-l-[3px] border-l-accent-400 border-r-hairline/50 border-t-hairline/50 border-b-hairline/50 shadow-accent-500/20"
-                : "bg-panel/60 text-ink-muted border-l-[3px] border-l-hairline/50 border-r-hairline/30 border-t-hairline/30 border-b-hairline/30 hover:bg-elevated/70 hover:text-accent-100 hover:border-l-accent-400/50"
+                ? "bg-gradient-to-br from-elevated/95 to-elevated/90 text-accent-300 border-accent-400/50"
+                : "bg-panel/60 text-ink-muted  border-l-hairline/50 border-r-hairline/30 border-t-hairline/30 border-b-hairline/30 hover:bg-elevated/70 hover:text-accent-100"
             }
             ${tabs.length === 0 ? "cursor-default" : "cursor-pointer"}
           `}
