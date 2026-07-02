@@ -119,7 +119,7 @@ export function TabItem({
           ${
             isActive
               ? `bg-gradient-to-br from-elevated/95 to-elevated/90 border-accent-600 text-ink z-10`
-              : `bg-panel/60 text-ink-muted border-hairline/50 hover:border-transparent  hover:bg-elevated/70 hover:text-accent-100 `
+              : `bg-panel/60 text-ink-muted border-hairline/50 hover:border-transparent hover:bg-elevated/70 hover:text-accent-100 `
           }
         `}
         onClick={onSelect}
