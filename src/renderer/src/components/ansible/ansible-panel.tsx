@@ -10,11 +10,16 @@ import {
   GitBranch,
   FolderGit2,
   Server,
+  Laptop,
   Loader2,
   ScrollText,
+  RefreshCw,
+  FileSearch,
+  Save,
 } from "lucide-react";
 import { Button } from "@renderer/components/ui/button";
 import AnsibleSourceForm from "./source-form";
+import AddPlaybookDialog from "./add-playbook-dialog";
 
 type OutLine = { text: string; stream: "stdout" | "stderr" | "meta" };
 
@@ -51,6 +56,7 @@ const STATUS_LABEL: Record<string, string> = {
   connecting: "Connecting…",
   "installing-key": "Installing deploy key…",
   "syncing-repo": "Syncing repo…",
+  preparing: "Preparing…",
   running: "Running…",
   done: "Done",
   error: "Error",
@@ -66,6 +72,7 @@ export default function AnsiblePanel({
     deleteAnsibleSource,
     ansiblePlaybooks,
     addAnsiblePlaybook,
+    updateAnsiblePlaybook,
     deleteAnsiblePlaybook,
     sshConnections,
   } = useAppContext();
@@ -78,6 +85,19 @@ export default function AnsiblePanel({
   );
   const [sourceFormOpen, setSourceFormOpen] = useState(false);
   const [editingSourceId, setEditingSourceId] = useState<string | null>(null);
+  const [playbookDialogOpen, setPlaybookDialogOpen] = useState(false);
+
+  // Playbook discovery for the selected source.
+  const [detected, setDetected] = useState<string[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [scanError, setScanError] = useState<string | null>(null);
+
+  // --limit autocomplete targets, loaded lazily from the source's inventory.
+  const [invTargets, setInvTargets] = useState<{
+    groups: string[];
+    hosts: string[];
+  }>({ groups: [], hosts: [] });
+  const invLoadedKeyRef = useRef<string>("");
 
   // Run state
   const [running, setRunning] = useState(false);
@@ -95,10 +115,111 @@ export default function AnsiblePanel({
   const playbooks = ansiblePlaybooks.filter(
     (p) => p.sourceId === selectedSourceId,
   );
-  const playbook = playbooks.find((p) => p.id === selectedPlaybookId) ?? null;
-  const controlNode = source
-    ? sshConnections.find((c) => c.id === source.sshConnectionId)
-    : null;
+  const isLocal = source?.origin === "local";
+  const controlNode =
+    source && !isLocal
+      ? sshConnections.find((c) => c.id === source.sshConnectionId)
+      : null;
+  // Local sources need no control node; everything else does.
+  const canRun = isLocal || !!controlNode;
+
+  // Merge scan results in as transient (unregistered) playbook entries, so they
+  // are selectable and runnable without being persisted. Registering one (the
+  // "+" on a detected row) turns it into a real AnsiblePlaybookEntry.
+  const registeredPaths = new Set(playbooks.map((p) => p.relativePath));
+  const detectedEntries: AnsiblePlaybookEntry[] = detected
+    .filter((rel) => !registeredPaths.has(rel))
+    .map((rel) => ({
+      id: `detected:${rel}`,
+      sourceId: source?.id ?? "",
+      name: rel.split("/").pop()?.replace(/\.ya?ml$/i, "") ?? rel,
+      relativePath: rel,
+      defaultCheck: true,
+    }));
+  const shownPlaybooks = [...playbooks, ...detectedEntries];
+  const playbook =
+    shownPlaybooks.find((p) => p.id === selectedPlaybookId) ?? null;
+
+  // Scan the selected source for playbooks. For remote sources the control node
+  // must exist; git sources only return results once the repo has been synced
+  // by a prior run.
+  const runScan = async (src: AnsibleSourceEntry): Promise<void> => {
+    const node =
+      src.origin !== "local"
+        ? sshConnections.find((c) => c.id === src.sshConnectionId)
+        : undefined;
+    if (src.origin !== "local" && !node) {
+      setDetected([]);
+      setScanError(null);
+      return;
+    }
+    setScanning(true);
+    setScanError(null);
+    try {
+      const res = await window.api.ansible.listPlaybooks({
+        sourceId: src.id,
+        origin: src.origin,
+        conn: node ? toControlNode(node, sshConnections) : undefined,
+        subdir: src.subdir,
+        basePath: src.basePath,
+        localPath: src.localPath,
+      });
+      if (res.ok) setDetected(res.playbooks);
+      else {
+        setDetected([]);
+        setScanError(res.error ?? "Scan failed");
+      }
+    } catch (err) {
+      setDetected([]);
+      setScanError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  // Lazily fetch the --limit autocomplete targets for a source (once per
+  // source; triggered when the user focuses the limit field). Runs
+  // `ansible-inventory --list` under the hood, so it's on-demand only.
+  const loadInvTargets = async (src: AnsibleSourceEntry): Promise<void> => {
+    if (invLoadedKeyRef.current === src.id) return;
+    const node =
+      src.origin !== "local"
+        ? sshConnections.find((c) => c.id === src.sshConnectionId)
+        : undefined;
+    if (src.origin !== "local" && !node) return;
+    invLoadedKeyRef.current = src.id;
+    const res = await window.api.ansible.listInventory({
+      sourceId: src.id,
+      origin: src.origin,
+      conn: node ? toControlNode(node, sshConnections) : undefined,
+      subdir: src.subdir,
+      basePath: src.basePath,
+      localPath: src.localPath,
+      inventoryMode: src.inventoryMode,
+      inventoryFile: src.inventoryFile,
+      inventoryHosts:
+        src.inventoryMode === "auto"
+          ? sshConnections.map((c) => ({
+              name: c.name,
+              host: c.host,
+              port: c.port,
+              username: c.username,
+              tags: c.tags,
+            }))
+          : undefined,
+    });
+    if (res.ok) setInvTargets({ groups: res.groups, hosts: res.hosts });
+    else invLoadedKeyRef.current = ""; // allow a retry after a failure
+  };
+
+  // Auto-scan whenever the selected source changes.
+  useEffect(() => {
+    setDetected([]);
+    setScanError(null);
+    setInvTargets({ groups: [], hosts: [] });
+    invLoadedKeyRef.current = "";
+    if (source) runScan(source);
+  }, [selectedSourceId]);
 
   // Seed run overrides whenever the selected playbook changes.
   useEffect(() => {
@@ -155,23 +276,28 @@ export default function AnsiblePanel({
   }, []);
 
   const startRun = async (): Promise<void> => {
-    if (!source || !playbook || !controlNode) return;
+    if (!source || !playbook || !canRun) return;
+    // Remember the values used for this playbook so they're pre-filled next time.
+    persistPlaybookDefaults();
     const runId = crypto.randomUUID();
     runIdRef.current = runId;
     setLines([]);
     setRunning(true);
-    setPhase("connecting");
+    setPhase(isLocal ? "preparing" : "connecting");
 
     const payload: AnsibleRunPayload = {
       runId,
       sourceId: source.id,
-      conn: toControlNode(controlNode, sshConnections),
+      conn: controlNode
+        ? toControlNode(controlNode, sshConnections)
+        : undefined,
       origin: source.origin,
       repoUrl: source.repoUrl,
       branch: source.branch,
       deployKeyId: source.deployKeyId,
       subdir: source.subdir,
       basePath: source.basePath,
+      localPath: source.localPath,
       playbook: playbook.relativePath,
       inventoryMode: source.inventoryMode,
       inventoryFile: source.inventoryFile,
@@ -203,6 +329,47 @@ export default function AnsiblePanel({
 
   const cancelRun = (): void => {
     if (runIdRef.current) window.api.ansible.cancelRun(runIdRef.current);
+  };
+
+  const addManualPlaybook = (name: string, relativePath: string): void => {
+    if (!source) return;
+    const id = crypto.randomUUID();
+    addAnsiblePlaybook({
+      id,
+      sourceId: source.id,
+      name,
+      relativePath,
+      defaultCheck: true,
+    });
+    setPlaybookDialogOpen(false);
+    setSelectedPlaybookId(id);
+  };
+
+  // Persist a detected (transient) playbook so it survives rescans and can carry
+  // per-playbook run defaults.
+  const registerDetected = (entry: AnsiblePlaybookEntry): void => {
+    const id = crypto.randomUUID();
+    addAnsiblePlaybook({ ...entry, id });
+    setSelectedPlaybookId(id);
+  };
+
+  // Save the current --limit / -e / dry-run values as the selected playbook's
+  // defaults (they re-seed the controls next time it's picked). If the playbook
+  // was only detected, this also registers it.
+  const persistPlaybookDefaults = (): void => {
+    if (!playbook) return;
+    const defaults = {
+      defaultLimit: limit.trim() || undefined,
+      defaultExtraVars: extraVars.trim() || undefined,
+      defaultCheck: check,
+    };
+    if (playbook.id.startsWith("detected:")) {
+      const id = crypto.randomUUID();
+      addAnsiblePlaybook({ ...playbook, id, ...defaults });
+      setSelectedPlaybookId(id);
+    } else {
+      updateAnsiblePlaybook({ ...playbook, ...defaults });
+    }
   };
 
   return (
@@ -245,8 +412,8 @@ export default function AnsiblePanel({
           <div className="flex-1 overflow-y-auto">
             {ansibleSources.length === 0 && (
               <p className="px-3 py-3 text-xs text-ink-subtle">
-                No sources yet. Create one to register a Git repo or a folder
-                on the control node.
+                No sources yet. Create one to register a Git repo, a folder on
+                a control node, or a playbook on this machine.
               </p>
             )}
             {ansibleSources.map((s) => {
@@ -273,6 +440,11 @@ export default function AnsiblePanel({
                         <FolderGit2
                           size={13}
                           className="text-accent-400 flex-shrink-0"
+                        />
+                      ) : s.origin === "local" ? (
+                        <Laptop
+                          size={13}
+                          className="text-ink-muted flex-shrink-0"
                         />
                       ) : (
                         <Server
@@ -315,7 +487,11 @@ export default function AnsiblePanel({
                     </div>
                   </div>
                   <div className="flex items-center gap-1 mt-0.5 pl-5 text-[11px] text-ink-subtle truncate">
-                    {node ? node.name : "⚠ control node not found"}
+                    {s.origin === "local"
+                      ? "Local machine"
+                      : node
+                        ? node.name
+                        : "⚠ control node not found"}
                     {s.origin === "git" && s.branch && (
                       <span className="flex items-center gap-0.5 text-ink-subtle">
                         <GitBranch size={10} /> {s.branch}
@@ -334,37 +510,40 @@ export default function AnsiblePanel({
                 <span className="text-[11px] font-semibold uppercase tracking-wider text-ink-subtle">
                   Playbooks
                 </span>
-                <button
-                  onClick={() => {
-                    const name = window.prompt("Playbook name:");
-                    if (!name) return;
-                    const relativePath = window.prompt(
-                      "Relative path (e.g. site.yml or plays/deploy.yml):",
-                      name.endsWith(".yml") ? name : `${name}.yml`,
-                    );
-                    if (!relativePath) return;
-                    addAnsiblePlaybook({
-                      id: crypto.randomUUID(),
-                      sourceId: source.id,
-                      name,
-                      relativePath,
-                      defaultCheck: true,
-                    });
-                  }}
-                  className="text-ink-muted hover:text-accent-300 transition-colors"
-                  title="Add playbook"
-                >
-                  <Plus size={15} />
-                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => runScan(source)}
+                    disabled={scanning}
+                    className="text-ink-muted hover:text-accent-300 transition-colors disabled:opacity-40"
+                    title="Rescan source for playbooks"
+                  >
+                    <RefreshCw
+                      size={13}
+                      className={scanning ? "animate-spin" : ""}
+                    />
+                  </button>
+                  <button
+                    onClick={() => setPlaybookDialogOpen(true)}
+                    className="text-ink-muted hover:text-accent-300 transition-colors"
+                    title="Add playbook manually"
+                  >
+                    <Plus size={15} />
+                  </button>
+                </div>
               </div>
               <div className="flex-1 overflow-y-auto">
-                {playbooks.length === 0 && (
+                {shownPlaybooks.length === 0 && (
                   <p className="px-3 py-2 text-xs text-ink-subtle">
-                    No playbooks in this source.
+                    {scanning
+                      ? "Scanning for playbooks…"
+                      : scanError
+                        ? `⚠ ${scanError}`
+                        : "No playbooks detected. Rescan or add one manually with +."}
                   </p>
                 )}
-                {playbooks.map((p) => {
+                {shownPlaybooks.map((p) => {
                   const active = p.id === selectedPlaybookId;
+                  const isDetected = p.id.startsWith("detected:");
                   return (
                     <div
                       key={p.id}
@@ -376,26 +555,50 @@ export default function AnsiblePanel({
                       }`}
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm text-ink-muted truncate">
+                        <span className="text-sm text-ink-muted truncate flex items-center gap-1.5">
+                          {isDetected && (
+                            <FileSearch
+                              size={12}
+                              className="text-ink-subtle flex-shrink-0"
+                            />
+                          )}
                           {p.name}
                         </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (window.confirm(`Delete "${p.name}"?`)) {
-                              deleteAnsiblePlaybook(p.id);
-                              if (selectedPlaybookId === p.id)
-                                setSelectedPlaybookId(null);
-                            }
-                          }}
-                          className="text-ink-subtle hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
-                          title="Delete"
-                        >
-                          <Trash2 size={12} />
-                        </button>
+                        {isDetected ? (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              registerDetected(p);
+                            }}
+                            className="text-ink-subtle hover:text-accent-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Add to this source"
+                          >
+                            <Plus size={13} />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (window.confirm(`Delete "${p.name}"?`)) {
+                                deleteAnsiblePlaybook(p.id);
+                                if (selectedPlaybookId === p.id)
+                                  setSelectedPlaybookId(null);
+                              }
+                            }}
+                            className="text-ink-subtle hover:text-danger opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Delete"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        )}
                       </div>
                       <div className="pl-0 text-[11px] text-ink-subtle font-mono truncate">
                         {p.relativePath}
+                        {isDetected && (
+                          <span className="ml-1.5 not-italic text-ink-subtle/70">
+                            · detected
+                          </span>
+                        )}
                       </div>
                     </div>
                   );
@@ -442,9 +645,20 @@ export default function AnsiblePanel({
                     <input
                       value={limit}
                       onChange={(e) => setLimit(e.target.value)}
-                      placeholder="host or group"
+                      onFocus={() => source && loadInvTargets(source)}
+                      list="ansible-limit-targets"
+                      placeholder="empty = all"
+                      title="Restrict to a host/group. Empty runs every host the playbook targets."
                       className="bg-elevated/60 border border-hairline/50 rounded px-2 py-1 text-xs text-ink font-mono w-40 focus:outline-none focus:border-accent-500/60"
                     />
+                    <datalist id="ansible-limit-targets">
+                      {invTargets.groups.map((g) => (
+                        <option key={`g:${g}`} value={g} label="group" />
+                      ))}
+                      {invTargets.hosts.map((h) => (
+                        <option key={`h:${h}`} value={h} label="host" />
+                      ))}
+                    </datalist>
                   </label>
                   <label className="flex items-center gap-1.5 text-xs text-ink-muted flex-1 min-w-[180px]">
                     <span>-e</span>
@@ -471,6 +685,15 @@ export default function AnsiblePanel({
                     />
                     dry-run
                   </label>
+                  {!running && (
+                    <button
+                      onClick={persistPlaybookDefaults}
+                      title="Save these values as this playbook's defaults"
+                      className="flex items-center gap-1 text-[11px] text-ink-muted hover:text-accent-300 border border-hairline/50 rounded px-2 py-1 transition-colors"
+                    >
+                      <Save size={12} /> Defaults
+                    </button>
+                  )}
                   {running ? (
                     <Button
                       size="sm"
@@ -483,7 +706,7 @@ export default function AnsiblePanel({
                     <Button
                       size="sm"
                       onClick={startRun}
-                      disabled={!controlNode}
+                      disabled={!canRun}
                       className="bg-accent-600/90 hover:bg-accent-600 text-on-accent gap-1"
                     >
                       <Play size={13} />
@@ -491,7 +714,7 @@ export default function AnsiblePanel({
                     </Button>
                   )}
                 </div>
-                {!controlNode && (
+                {!canRun && (
                   <p className="text-[11px] text-danger">
                     This source's control node no longer exists. Edit the
                     source and pick a valid SSH connection.
@@ -545,6 +768,13 @@ export default function AnsiblePanel({
             setSelectedPlaybookId(null);
             setSourceFormOpen(false);
           }}
+        />
+      )}
+
+      {playbookDialogOpen && (
+        <AddPlaybookDialog
+          onClose={() => setPlaybookDialogOpen(false)}
+          onAdd={addManualPlaybook}
         />
       )}
     </div>

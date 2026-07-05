@@ -50,8 +50,8 @@ type SSHConnectionEntry = {
 type AnsibleSourceEntry = {
   id: string;
   name: string;
-  sshConnectionId: string; // control node this source runs on
-  origin: "git" | "path";
+  sshConnectionId: string; // control node this source runs on ("" for local)
+  origin: "git" | "path" | "local";
   // git origin
   repoUrl?: string;
   branch?: string;
@@ -59,6 +59,8 @@ type AnsibleSourceEntry = {
   subdir?: string; // playbook root within the repo
   // path origin
   basePath?: string; // existing playbook root on the node
+  // local origin (Calico's own machine acts as the control node)
+  localPath?: string; // existing playbook root on the local machine
   // inventory
   inventoryMode: "auto" | "file";
   inventoryFile?: string; // relative to run dir when mode === "file"

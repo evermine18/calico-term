@@ -46,13 +46,14 @@ declare global {
   interface AnsibleRunPayload {
     runId: string;
     sourceId: string;
-    conn: AnsibleControlNode;
-    origin: "git" | "path";
+    conn?: AnsibleControlNode;
+    origin: "git" | "path" | "local";
     repoUrl?: string;
     branch?: string;
     deployKeyId?: string;
     subdir?: string;
     basePath?: string;
+    localPath?: string;
     playbook: string;
     inventoryMode: "auto" | "file";
     inventoryFile?: string;
@@ -394,6 +395,39 @@ declare global {
           payload: AnsibleRunPayload,
         ) => Promise<{ ok: boolean; error?: string }>;
         cancelRun: (runId: string) => void;
+        checkLocal: () => Promise<{
+          available: boolean;
+          version?: string;
+          error?: string;
+        }>;
+        listPlaybooks: (payload: {
+          sourceId: string;
+          origin: "git" | "path" | "local";
+          conn?: AnsibleControlNode;
+          subdir?: string;
+          basePath?: string;
+          localPath?: string;
+        }) => Promise<{
+          ok: boolean;
+          playbooks: string[];
+          error?: string;
+        }>;
+        listInventory: (payload: {
+          sourceId: string;
+          origin: "git" | "path" | "local";
+          conn?: AnsibleControlNode;
+          subdir?: string;
+          basePath?: string;
+          localPath?: string;
+          inventoryMode: "auto" | "file";
+          inventoryFile?: string;
+          inventoryHosts?: AnsibleInventoryHost[];
+        }) => Promise<{
+          ok: boolean;
+          groups: string[];
+          hosts: string[];
+          error?: string;
+        }>;
         testGit: (
           conn: AnsibleControlNode,
           repoUrl: string,

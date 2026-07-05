@@ -194,6 +194,11 @@ const api = {
     startRun: (payload: unknown) =>
       ipcRenderer.invoke("ansible-run-start", payload),
     cancelRun: (runId: string) => ipcRenderer.send("ansible-run-cancel", runId),
+    checkLocal: () => ipcRenderer.invoke("ansible-check-local"),
+    listPlaybooks: (payload: unknown) =>
+      ipcRenderer.invoke("ansible-list-playbooks", payload),
+    listInventory: (payload: unknown) =>
+      ipcRenderer.invoke("ansible-list-inventory", payload),
     testGit: (conn: unknown, repoUrl: string, deployKeyId?: string) =>
       ipcRenderer.invoke("ansible-test-git", conn, repoUrl, deployKeyId),
     onOutput: (

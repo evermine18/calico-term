@@ -63,13 +63,14 @@ export default function AnsibleSourceForm({
   const [sshConnectionId, setSshConnectionId] = useState(
     existing?.sshConnectionId ?? sshConnections[0]?.id ?? "",
   );
-  const [origin, setOrigin] = useState<"git" | "path">(
+  const [origin, setOrigin] = useState<"git" | "path" | "local">(
     existing?.origin ?? "git",
   );
   const [repoUrl, setRepoUrl] = useState(existing?.repoUrl ?? "");
   const [branch, setBranch] = useState(existing?.branch ?? "main");
   const [subdir, setSubdir] = useState(existing?.subdir ?? "");
   const [basePath, setBasePath] = useState(existing?.basePath ?? "");
+  const [localPath, setLocalPath] = useState(existing?.localPath ?? "");
   const [deployKeyId, setDeployKeyId] = useState(existing?.deployKeyId ?? "");
   const [inventoryMode, setInventoryMode] = useState<"auto" | "file">(
     existing?.inventoryMode ?? "file",
@@ -89,8 +90,16 @@ export default function AnsibleSourceForm({
     output: string;
   } | null>(null);
 
+  // Local Ansible availability probe (drives the "Local machine" option).
+  const [localAnsible, setLocalAnsible] = useState<{
+    available: boolean;
+    version?: string;
+    error?: string;
+  } | null>(null);
+
   useEffect(() => {
     window.api.sshKeys.list().then(setKeys);
+    window.api.ansible.checkLocal().then(setLocalAnsible);
   }, []);
 
   const generateDeployKey = async (): Promise<void> => {
@@ -128,21 +137,24 @@ export default function AnsibleSourceForm({
 
   const canSave =
     name.trim() &&
-    sshConnectionId &&
-    (origin === "git" ? repoUrl.trim() : basePath.trim());
+    (origin === "local"
+      ? localPath.trim()
+      : sshConnectionId &&
+        (origin === "git" ? repoUrl.trim() : basePath.trim()));
 
   const save = (): void => {
     const id = existing?.id ?? crypto.randomUUID();
     const entry: AnsibleSourceEntry = {
       id,
       name: name.trim(),
-      sshConnectionId,
+      sshConnectionId: origin === "local" ? "" : sshConnectionId,
       origin,
       repoUrl: origin === "git" ? repoUrl.trim() : undefined,
       branch: origin === "git" ? branch.trim() || "main" : undefined,
       subdir: origin === "git" ? subdir.trim() || undefined : undefined,
       deployKeyId: origin === "git" ? deployKeyId || undefined : undefined,
       basePath: origin === "path" ? basePath.trim() : undefined,
+      localPath: origin === "local" ? localPath.trim() : undefined,
       inventoryMode,
       inventoryFile:
         inventoryMode === "file"
@@ -175,28 +187,30 @@ export default function AnsibleSourceForm({
             />
           </div>
 
-          <div>
-            <label className={labelCls}>Control node (SSH connection)</label>
-            <select
-              value={sshConnectionId}
-              onChange={(e) => setSshConnectionId(e.target.value)}
-              className={inputCls}
-            >
-              {sshConnections.length === 0 && (
-                <option value="">(no SSH connections)</option>
-              )}
-              {sshConnections.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name} — {c.username}@{c.host}
-                </option>
-              ))}
-            </select>
-          </div>
+          {origin !== "local" && (
+            <div>
+              <label className={labelCls}>Control node (SSH connection)</label>
+              <select
+                value={sshConnectionId}
+                onChange={(e) => setSshConnectionId(e.target.value)}
+                className={inputCls}
+              >
+                {sshConnections.length === 0 && (
+                  <option value="">(no SSH connections)</option>
+                )}
+                {sshConnections.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} — {c.username}@{c.host}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className={labelCls}>Playbook source</label>
             <div className="flex gap-2">
-              {(["git", "path"] as const).map((o) => (
+              {(["git", "path", "local"] as const).map((o) => (
                 <button
                   key={o}
                   onClick={() => setOrigin(o)}
@@ -206,7 +220,11 @@ export default function AnsibleSourceForm({
                       : "border-hairline/50 text-ink-muted hover:border-hairline"
                   }`}
                 >
-                  {o === "git" ? "Git repo" : "Path on control node"}
+                  {o === "git"
+                    ? "Git repo"
+                    : o === "path"
+                      ? "Path on node"
+                      : "Local machine"}
                 </button>
               ))}
             </div>
@@ -332,7 +350,7 @@ export default function AnsibleSourceForm({
                 )}
               </div>
             </>
-          ) : (
+          ) : origin === "path" ? (
             <div>
               <label className={labelCls}>Path on control node</label>
               <input
@@ -341,6 +359,33 @@ export default function AnsibleSourceForm({
                 placeholder="/opt/ansible"
                 className={`${inputCls} font-mono`}
               />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div>
+                <label className={labelCls}>Path on this machine</label>
+                <input
+                  value={localPath}
+                  onChange={(e) => setLocalPath(e.target.value)}
+                  placeholder="/Users/me/infra/ansible"
+                  className={`${inputCls} font-mono`}
+                />
+              </div>
+              {localAnsible &&
+                (localAnsible.available ? (
+                  <p className="text-[11px] text-success flex items-center gap-1">
+                    <Check size={12} />
+                    {localAnsible.version ?? "Ansible detected on this machine."}
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-warning">
+                    Ansible was not found on this machine. Install it (e.g.{" "}
+                    <span className="font-mono">brew install ansible</span> or{" "}
+                    <span className="font-mono">pipx install ansible</span>) and
+                    reopen this dialog. The playbook runs locally — no control
+                    node needed.
+                  </p>
+                ))}
             </div>
           )}
 

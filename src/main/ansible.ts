@@ -1,6 +1,9 @@
-import { BrowserWindow, ipcMain } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import { Client, ConnectConfig } from "ssh2";
+import { spawn, ChildProcess } from "child_process";
 import fs from "fs";
+import os from "os";
+import path from "path";
 import {
   buildAuthConfig,
   connectHop,
@@ -25,8 +28,8 @@ export type AnsibleInventoryHost = {
 export type AnsibleRunPayload = {
   runId: string;
   sourceId: string; // stable id → stable checkout/inventory paths on the node
-  conn: SSHConnectionInfo; // the control node
-  origin: "git" | "path";
+  conn?: SSHConnectionInfo; // the control node (absent for local runs)
+  origin: "git" | "path" | "local";
   // git origin
   repoUrl?: string;
   branch?: string;
@@ -34,6 +37,8 @@ export type AnsibleRunPayload = {
   subdir?: string; // playbook root within the repo
   // path origin
   basePath?: string; // existing playbook root on the node
+  // local origin (Calico's own machine acts as the control node)
+  localPath?: string; // existing playbook root on the local machine
   // common
   playbook: string; // path relative to the run dir
   inventoryMode: "auto" | "file";
@@ -53,6 +58,7 @@ type RunHandle = {
     close?: () => void;
     signal?: (s: string) => void;
   };
+  child?: ChildProcess; // local runs spawn ansible-playbook directly
   cancelled: boolean;
 };
 
@@ -311,11 +317,173 @@ function gitPrepareCmd(
   );
 }
 
+// ---- local run (Calico's own machine as the control node) -------------------
+
+// GUI apps launched from Finder/Dock on macOS don't inherit the shell PATH, so
+// pip/pipx/homebrew installs of ansible are invisible unless we add the common
+// bin dirs ourselves. Also force color off to keep the console readable.
+function localAnsibleEnv(): NodeJS.ProcessEnv {
+  const extra = [
+    "/opt/homebrew/bin",
+    "/usr/local/bin",
+    `${os.homedir()}/.local/bin`,
+    `${os.homedir()}/.local/pipx/venvs/ansible/bin`,
+  ];
+  const current = process.env.PATH || "";
+  const merged = [...extra, current].filter(Boolean).join(path.delimiter);
+  return { ...process.env, PATH: merged, ANSIBLE_FORCE_COLOR: "0" };
+}
+
+// Directory where Calico keeps generated inventories for local runs.
+function localStateDir(): string {
+  return path.join(app.getPath("userData"), "ansible");
+}
+
+// Spawn ansible-playbook locally, streaming stdout/stderr line-by-line to the
+// renderer. Stores the child on the handle so cancel() can kill it.
+function spawnLocal(
+  handle: RunHandle,
+  runId: string,
+  args: string[],
+  cwd: string,
+): Promise<number | null> {
+  return new Promise((resolve, reject) => {
+    const child = spawn("ansible-playbook", args, {
+      cwd,
+      env: localAnsibleEnv(),
+    });
+    handle.child = child;
+    let outBuf = "";
+    let errBuf = "";
+    const flush = (buf: string, kind: "stdout" | "stderr"): string => {
+      const lines = buf.split("\n");
+      const rest = lines.pop() ?? "";
+      for (const l of lines) sendOutput(runId, l, kind);
+      return rest;
+    };
+    child.stdout?.on("data", (c: Buffer) => {
+      outBuf += c.toString();
+      outBuf = flush(outBuf, "stdout");
+    });
+    child.stderr?.on("data", (c: Buffer) => {
+      errBuf += c.toString();
+      errBuf = flush(errBuf, "stderr");
+    });
+    child.on("error", (err: NodeJS.ErrnoException) => {
+      handle.child = undefined;
+      const msg =
+        err.code === "ENOENT"
+          ? "ansible-playbook not found on this machine. Install Ansible " +
+            "(e.g. `brew install ansible` or `pipx install ansible`) and restart Calico."
+          : err.message;
+      reject(new Error(msg));
+    });
+    child.on("close", (code) => {
+      if (outBuf) sendOutput(runId, outBuf, "stdout");
+      if (errBuf) sendOutput(runId, errBuf, "stderr");
+      handle.child = undefined;
+      resolve(code);
+    });
+  });
+}
+
+async function runLocalPlaybook(
+  handle: RunHandle,
+  payload: AnsibleRunPayload,
+): Promise<void> {
+  const { runId } = payload;
+  const runDir = payload.localPath;
+  if (!runDir) throw new Error("Missing local path for local source.");
+  if (!fs.existsSync(runDir))
+    throw new Error(`Local path not found: ${runDir}`);
+
+  sendStatus(runId, "preparing");
+
+  // Resolve the inventory.
+  let inventoryRef: string;
+  if (payload.inventoryMode === "auto") {
+    const ini = buildAnsibleInventory(payload.inventoryHosts ?? []);
+    const dir = localStateDir();
+    fs.mkdirSync(dir, { recursive: true });
+    const invPath = path.join(dir, `inventory-${payload.sourceId}.ini`);
+    fs.writeFileSync(invPath, ini, { mode: 0o644 });
+    inventoryRef = invPath;
+  } else {
+    inventoryRef = payload.inventoryFile || "inventory";
+  }
+
+  if (handle.cancelled) return;
+
+  const args = ["-i", inventoryRef, payload.playbook, "--diff"];
+  if (payload.check) args.push("--check");
+  if (payload.limit) args.push("--limit", payload.limit);
+  if (payload.extraVars) args.push("-e", payload.extraVars);
+
+  sendStatus(runId, "running");
+  sendOutput(runId, `$ ansible-playbook ${args.join(" ")}`, "stdout");
+  sendOutput(
+    runId,
+    `[local · run dir: ${runDir} · inventory: ${inventoryRef}${payload.check ? " · dry-run" : ""}]`,
+    "stdout",
+  );
+
+  const code = await spawnLocal(handle, runId, args, runDir);
+  if (handle.cancelled) return;
+  sendStatus(runId, code === 0 ? "done" : "error");
+  emit("ansible-run-done", { runId, code });
+}
+
+// Probe whether ansible-playbook is available on the local machine. Drives the
+// "Local machine" option in the source form.
+function checkLocalAnsible(): Promise<{
+  available: boolean;
+  version?: string;
+  error?: string;
+}> {
+  return new Promise((resolve) => {
+    let child: ChildProcess;
+    try {
+      child = spawn("ansible-playbook", ["--version"], {
+        env: localAnsibleEnv(),
+      });
+    } catch (err) {
+      resolve({
+        available: false,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      return;
+    }
+    let out = "";
+    child.stdout?.on("data", (c: Buffer) => (out += c.toString()));
+    child.on("error", (err: NodeJS.ErrnoException) => {
+      resolve({
+        available: false,
+        error:
+          err.code === "ENOENT"
+            ? "ansible-playbook not found in PATH"
+            : err.message,
+      });
+    });
+    child.on("close", (code) => {
+      if (code === 0) {
+        resolve({ available: true, version: out.split("\n")[0]?.trim() });
+      } else {
+        resolve({ available: false });
+      }
+    });
+  });
+}
+
 async function runPlaybook(payload: AnsibleRunPayload): Promise<void> {
   const { runId } = payload;
   const handle: RunHandle = { clients: [], cancelled: false };
   runs.set(runId, handle);
   try {
+    if (payload.origin === "local") {
+      await runLocalPlaybook(handle, payload);
+      return;
+    }
+    if (!payload.conn) throw new Error("Missing control node for remote run.");
     sendStatus(runId, "connecting");
     const clients = await connectControlNode(payload.conn);
     handle.clients = clients;
@@ -423,6 +591,7 @@ function cancelRun(runId: string): void {
   try {
     handle.stream?.signal?.("KILL");
     handle.stream?.close?.();
+    handle.child?.kill("SIGKILL");
   } catch {
     /* ignore */
   }
@@ -459,6 +628,272 @@ async function testGitAccess(
   }
 }
 
+// ---- playbook discovery -----------------------------------------------------
+
+export type AnsibleScanPayload = {
+  sourceId: string;
+  origin: "git" | "path" | "local";
+  conn?: SSHConnectionInfo;
+  subdir?: string;
+  basePath?: string;
+  localPath?: string;
+};
+
+// A file is treated as a playbook if it has a top-level `hosts:` (optionally as
+// the first list item) or an `import_playbook:`. Cheap heuristic over the first
+// few KB — good enough to separate plays from vars/inventory/role task files.
+const PLAYBOOK_MARKER = /^[ \t]*(-[ \t]+)?(hosts|import_playbook)[ \t]*:/m;
+
+// Directories that never contain top-level playbooks worth listing.
+const SCAN_SKIP_DIRS = new Set([
+  "roles",
+  "group_vars",
+  "host_vars",
+  "molecule",
+  "collections",
+  "node_modules",
+  "vars",
+  "defaults",
+  "tasks",
+  "handlers",
+]);
+
+function scanLocalPlaybooks(root: string): string[] {
+  const results: string[] = [];
+  const walk = (dir: string, depth: number): void => {
+    if (depth > 4) return;
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const e of entries) {
+      if (e.name.startsWith(".")) continue;
+      const full = path.join(dir, e.name);
+      if (e.isDirectory()) {
+        if (SCAN_SKIP_DIRS.has(e.name)) continue;
+        walk(full, depth + 1);
+      } else if (/\.ya?ml$/i.test(e.name)) {
+        try {
+          const content = fs.readFileSync(full, "utf8").slice(0, 4096);
+          if (PLAYBOOK_MARKER.test(content)) {
+            results.push(path.relative(root, full));
+          }
+        } catch {
+          /* unreadable file — skip */
+        }
+      }
+    }
+  };
+  walk(root, 0);
+  return results.sort();
+}
+
+// Scan a directory on the control node with a single portable shell pipeline:
+// grep for the playbook markers, strip the leading "./", and drop paths that
+// live inside role/vars-style subdirs.
+async function scanRemotePlaybooks(
+  conn: SSHConnectionInfo,
+  runDir: string,
+): Promise<string[]> {
+  const clients = await connectControlNode(conn);
+  try {
+    const skip = [...SCAN_SKIP_DIRS].join("|");
+    const cmd =
+      `cd ${shQuote(runDir)} 2>/dev/null && ` +
+      `grep -rlE '^[[:space:]]*(-[[:space:]]+)?(hosts|import_playbook)[[:space:]]*:' ` +
+      `--include='*.yml' --include='*.yaml' . 2>/dev/null ` +
+      `| sed 's|^\\./||' ` +
+      `| grep -vE '(^|/)(${skip})/' ` +
+      `| sort`;
+    const res = await execCapture(clients[0], cmd);
+    return res.out
+      .split("\n")
+      .map((s) => s.trim())
+      .filter(Boolean);
+  } finally {
+    closeClients(clients);
+  }
+}
+
+async function scanPlaybooks(
+  payload: AnsibleScanPayload,
+): Promise<{ ok: boolean; playbooks: string[]; error?: string }> {
+  try {
+    if (payload.origin === "local") {
+      if (!payload.localPath)
+        return { ok: false, playbooks: [], error: "No local path set." };
+      if (!fs.existsSync(payload.localPath))
+        return {
+          ok: false,
+          playbooks: [],
+          error: `Local path not found: ${payload.localPath}`,
+        };
+      return { ok: true, playbooks: scanLocalPlaybooks(payload.localPath) };
+    }
+    if (!payload.conn)
+      return { ok: false, playbooks: [], error: "No control node." };
+    let runDir: string;
+    if (payload.origin === "git") {
+      const repoDir = `${REMOTE_BASE}/repos/${payload.sourceId}`;
+      runDir = payload.subdir ? `${repoDir}/${payload.subdir}` : repoDir;
+    } else {
+      if (!payload.basePath)
+        return { ok: false, playbooks: [], error: "No base path set." };
+      runDir = payload.basePath;
+    }
+    const playbooks = await scanRemotePlaybooks(payload.conn, runDir);
+    return { ok: true, playbooks };
+  } catch (err) {
+    return {
+      ok: false,
+      playbooks: [],
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+// ---- inventory introspection (populates the --limit picker) -----------------
+
+export type AnsibleInventoryQuery = {
+  sourceId: string;
+  origin: "git" | "path" | "local";
+  conn?: SSHConnectionInfo;
+  subdir?: string;
+  basePath?: string;
+  localPath?: string;
+  inventoryMode: "auto" | "file";
+  inventoryFile?: string;
+  inventoryHosts?: AnsibleInventoryHost[];
+};
+
+// Extract selectable --limit targets from `ansible-inventory --list` JSON:
+// every group name (minus the implicit all/ungrouped) and every host.
+function parseInventoryJson(json: string): {
+  groups: string[];
+  hosts: string[];
+} {
+  let data: Record<string, unknown>;
+  try {
+    data = JSON.parse(json);
+  } catch {
+    return { groups: [], hosts: [] };
+  }
+  const keys = Object.keys(data).filter((k) => k !== "_meta");
+  const hostSet = new Set<string>();
+  const meta = data._meta as { hostvars?: Record<string, unknown> } | undefined;
+  if (meta?.hostvars) for (const h of Object.keys(meta.hostvars)) hostSet.add(h);
+  for (const k of keys) {
+    const grp = data[k] as { hosts?: unknown };
+    if (Array.isArray(grp?.hosts)) for (const h of grp.hosts) hostSet.add(h);
+  }
+  return {
+    groups: keys.filter((g) => g !== "all" && g !== "ungrouped").sort(),
+    hosts: [...hostSet].sort(),
+  };
+}
+
+// Spawn a local command and capture its full output (no streaming).
+function spawnCapture(
+  cmd: string,
+  args: string[],
+  cwd: string,
+): Promise<{ code: number | null; out: string; err: string }> {
+  return new Promise((resolve) => {
+    const child = spawn(cmd, args, { cwd, env: localAnsibleEnv() });
+    let out = "";
+    let err = "";
+    child.stdout?.on("data", (c: Buffer) => (out += c.toString()));
+    child.stderr?.on("data", (c: Buffer) => (err += c.toString()));
+    child.on("error", (e: Error) => resolve({ code: null, out, err: err || e.message }));
+    child.on("close", (code) => resolve({ code, out, err }));
+  });
+}
+
+async function listInventory(payload: AnsibleInventoryQuery): Promise<{
+  ok: boolean;
+  groups: string[];
+  hosts: string[];
+  error?: string;
+}> {
+  try {
+    if (payload.origin === "local") {
+      const runDir = payload.localPath;
+      if (!runDir || !fs.existsSync(runDir))
+        return { ok: false, groups: [], hosts: [], error: "Local path not found." };
+      let inv: string;
+      if (payload.inventoryMode === "auto") {
+        const ini = buildAnsibleInventory(payload.inventoryHosts ?? []);
+        const dir = localStateDir();
+        fs.mkdirSync(dir, { recursive: true });
+        inv = path.join(dir, `inventory-${payload.sourceId}.ini`);
+        fs.writeFileSync(inv, ini, { mode: 0o644 });
+      } else {
+        inv = payload.inventoryFile || "inventory";
+      }
+      const res = await spawnCapture(
+        "ansible-inventory",
+        ["-i", inv, "--list"],
+        runDir,
+      );
+      if (res.code !== 0)
+        return {
+          ok: false,
+          groups: [],
+          hosts: [],
+          error: res.err.trim() || "ansible-inventory failed",
+        };
+      return { ok: true, ...parseInventoryJson(res.out) };
+    }
+
+    if (!payload.conn)
+      return { ok: false, groups: [], hosts: [], error: "No control node." };
+    let runDir: string;
+    if (payload.origin === "git") {
+      const repoDir = `${REMOTE_BASE}/repos/${payload.sourceId}`;
+      runDir = payload.subdir ? `${repoDir}/${payload.subdir}` : repoDir;
+    } else {
+      if (!payload.basePath)
+        return { ok: false, groups: [], hosts: [], error: "No base path set." };
+      runDir = payload.basePath;
+    }
+    const clients = await connectControlNode(payload.conn);
+    try {
+      const client = clients[0];
+      let invRef: string;
+      if (payload.inventoryMode === "auto") {
+        const ini = buildAnsibleInventory(payload.inventoryHosts ?? []);
+        invRef = `${REMOTE_BASE}/inventory-${payload.sourceId}.ini`;
+        await remoteWriteFile(client, invRef, ini, "644");
+      } else {
+        invRef = payload.inventoryFile || "inventory";
+      }
+      const cmd =
+        `export PATH="$HOME/.local/bin:$PATH"; ` +
+        `cd ${shQuote(runDir)} && ansible-inventory -i ${shQuote(invRef)} --list`;
+      const res = await execCapture(client, cmd);
+      if (res.code !== 0)
+        return {
+          ok: false,
+          groups: [],
+          hosts: [],
+          error: res.out.trim() || "ansible-inventory failed",
+        };
+      return { ok: true, ...parseInventoryJson(res.out) };
+    } finally {
+      closeClients(clients);
+    }
+  } catch (err) {
+    return {
+      ok: false,
+      groups: [],
+      hosts: [],
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
 export function setupAnsibleHandlers(): void {
   ipcMain.handle(
     "ansible-run-start",
@@ -472,6 +907,18 @@ export function setupAnsibleHandlers(): void {
   ipcMain.on("ansible-run-cancel", (_e, runId: string) => {
     cancelRun(runId);
   });
+
+  ipcMain.handle("ansible-check-local", async () => checkLocalAnsible());
+
+  ipcMain.handle(
+    "ansible-list-playbooks",
+    async (_e, payload: AnsibleScanPayload) => scanPlaybooks(payload),
+  );
+
+  ipcMain.handle(
+    "ansible-list-inventory",
+    async (_e, payload: AnsibleInventoryQuery) => listInventory(payload),
+  );
 
   ipcMain.handle(
     "ansible-test-git",
