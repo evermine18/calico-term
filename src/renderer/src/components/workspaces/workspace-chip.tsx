@@ -14,13 +14,6 @@ export function WorkspaceChip() {
       title={`Workspace: ${ws.name}${isProd ? " (PROD)" : ""}`}
     >
       <span
-        className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-        style={{
-          backgroundColor: ws.color,
-          boxShadow: `0 0 4px ${ws.color}aa`,
-        }}
-      />
-      <span
         className="text-[10px] uppercase tracking-widest font-medium"
         style={{ color: ws.color }}
       >

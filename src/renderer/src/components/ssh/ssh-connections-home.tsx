@@ -203,7 +203,7 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
                   onClick={handleImportConfig}
                   title="Importar hosts desde ~/.ssh/config"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
-                  bg-elevated/60 text-ink-muted border border-hairline/50
+                  bg-elevated/60 text-ink-muted
                   hover:bg-elevated/60 hover:text-accent-300 hover:border-accent-500/40 transition-all duration-150"
                 >
                   <FileDown size={13} />
@@ -212,7 +212,7 @@ export default function SSHConnectionsHome({ onConnect }: Props) {
                 <button
                   onClick={openAdd}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium
-                  bg-accent-600/20 text-accent-400 border border-accent-600/30
+                  bg-accent-600/20 text-accent-400
                   hover:bg-accent-600/30 hover:border-accent-500/50 transition-all duration-150"
                 >
                   <Plus size={13} />

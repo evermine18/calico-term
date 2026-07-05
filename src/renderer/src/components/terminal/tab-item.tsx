@@ -84,19 +84,10 @@ export function TabItem({
   onFinishEdit,
   onClose,
 }: TabItemProps) {
-  const accent = useTabAccent(tab.connId);
   const agent = tab.agentId
     ? AGENT_LAUNCHERS.find((a) => a.id === tab.agentId)
     : undefined;
-  const accentStyle: React.CSSProperties = {};
-  if (accent.borderColor) {
-    accentStyle.borderLeftColor = isActive
-      ? accent.borderColor
-      : `${accent.borderColor}80`;
-  }
-  if (isActive && accent.tintBg) {
-    accentStyle.backgroundColor = accent.tintBg;
-  }
+
   return (
     <div
       key={tab.id}
@@ -109,7 +100,6 @@ export function TabItem({
         onDrop={onDrop}
         onDragEnd={onDragEnd}
         title={tab.title}
-        style={accentStyle}
         className={`tab-item
           relative group flex items-center gap-2 px-3 py-2 rounded-lg
           text-sm font-medium border-l border-r border-t border-b
