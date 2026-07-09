@@ -224,25 +224,56 @@ export function closeTabsToRight(
   setTabs((prev) => prev.slice(0, index + 1));
 }
 
-export function duplicateTab(
+export async function duplicateTab(
   tabId: string,
   tabs: any[],
   setTabs: React.Dispatch<React.SetStateAction<any[]>>,
   setActiveTab: (id: string) => void,
+  sshConnections: SSHConnectionEntry[] = [],
 ) {
   const tab = tabs.find((t) => t.id === tabId);
-  if (tab) {
-    const id = crypto.randomUUID();
-    const newTab = {
-      id,
-      title: `${tab.title} (Copy)`,
-      mode: tab.mode,
-      terminal: new Terminal(),
-      badge: tab.badge || null,
-    };
-    setTabs((prev) => [...prev, newTab]);
-    setActiveTab(id);
+  if (!tab) return;
+
+  const id = crypto.randomUUID();
+
+  // SSH tab: re-open a fresh connection instead of a bare local shell. We rebuild
+  // the ssh command from the tab's connection (and its jump chain) and re-arm
+  // password injection + alert/guardrail scoping for the NEW tab id — that
+  // priming is keyed by tab id, so the duplicate needs its own arming.
+  if (tab.isSSH && tab.connId) {
+    const conn = sshConnections.find((c) => c.id === tab.connId);
+    if (conn) {
+      const jumpChain = (conn.jumpHostIds ?? [])
+        .map((jid) => sshConnections.find((c) => c.id === jid))
+        .filter((c): c is SSHConnectionEntry => !!c);
+      const newTab = {
+        id,
+        title: `${tab.title} (Copy)`,
+        mode: tab.mode,
+        terminal: new Terminal(),
+        initialCommand: buildSSHCommand(conn, jumpChain),
+        badge: tab.badge || null,
+        isSSH: true,
+        connId: conn.id,
+      };
+      // Arm password-injection + scoping BEFORE the terminal mounts.
+      await armSSHSession(id, conn);
+      setTabs((prev) => [...prev, newTab]);
+      setActiveTab(id);
+      return;
+    }
   }
+
+  // Plain tab (or an SSH tab whose connection no longer exists): fresh local shell.
+  const newTab = {
+    id,
+    title: `${tab.title} (Copy)`,
+    mode: tab.mode,
+    terminal: new Terminal(),
+    badge: tab.badge || null,
+  };
+  setTabs((prev) => [...prev, newTab]);
+  setActiveTab(id);
 }
 
 export function setBadge(

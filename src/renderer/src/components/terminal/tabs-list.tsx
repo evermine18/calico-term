@@ -6,6 +6,7 @@ import { useTabNavigation } from "../../hooks/useTabNavigation";
 import { useTags } from "../../hooks/useTags";
 import { useContextMenu } from "../../hooks/useContextMenu";
 import { TabsSubmenuState } from "../../types/tabs";
+import { useAppContext } from "../../contexts/app-context";
 import * as tabOps from "../../lib/tab-operations";
 
 export default function TabsList({
@@ -21,6 +22,7 @@ export default function TabsList({
   const droppedOnTabRef = useRef(false);
 
   const customTags = useTags();
+  const { sshConnections } = useAppContext();
   const { contextMenu, setContextMenu } = useContextMenu();
 
   // Tab operation handlers
@@ -29,7 +31,7 @@ export default function TabsList({
   };
 
   const handleDuplicateTab = (tabId: string) => {
-    tabOps.duplicateTab(tabId, tabs, setTabs, setActiveTab);
+    tabOps.duplicateTab(tabId, tabs, setTabs, setActiveTab, sshConnections);
   };
 
   const handleCloseOtherTabs = (id: string) => {
