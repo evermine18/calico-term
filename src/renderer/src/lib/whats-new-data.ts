@@ -10,6 +10,9 @@ import {
   ServerCog,
   Search,
   AppWindow,
+  SunMoon,
+  Waypoints,
+  Copy,
   type LucideIcon,
 } from "lucide-react";
 
@@ -30,11 +33,62 @@ export interface WhatsNewVersion {
 
 // Bump APP_VERSION when shipping a release whose changes should re-trigger
 // the What's New dialog. Must match `version` in package.json.
-export const APP_VERSION = "2.2.0";
+export const APP_VERSION = "2.3.0";
 
 export const WHATS_NEW_STORAGE_KEY = "calico-term:whats-new-seen-version";
 
 export const WHATS_NEW: WhatsNewVersion[] = [
+  {
+    version: "2.3.0",
+    date: "2026-07-13",
+    tagline:
+      "A polished light mode, SSH tunnels, local Ansible playbooks, and smarter tabs.",
+    sections: [
+      {
+        id: "light-mode",
+        title: "Light Mode",
+        icon: SunMoon,
+        accent: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+        items: [
+          "A refined light theme across the whole app — chrome, terminal, and the SFTP editor.",
+          "Pick Light, Dark, or System from Appearance settings; the six accent colors adapt to both.",
+          "The terminal, cursor, and ANSI palette all repaint to match the active mode.",
+        ],
+      },
+      {
+        id: "ssh-forwarding",
+        title: "SSH Port Forwarding",
+        icon: Waypoints,
+        accent: "bg-sky-500/15 text-sky-300 border-sky-500/30",
+        items: [
+          "Save local (-L), remote (-R), and dynamic SOCKS (-D) tunnels per SSH connection.",
+          "Tunnels apply automatically on connect and stay up for the life of the session.",
+          "A tunnel indicator on each connection card shows how many are configured.",
+        ],
+      },
+      {
+        id: "ansible-local",
+        title: "Local Ansible",
+        icon: ServerCog,
+        accent: "bg-emerald-500/15 text-emerald-300 border-emerald-500/30",
+        items: [
+          "Run Ansible playbooks straight from your local machine, no SSH control node required.",
+          "Auto-detect a local Ansible install and scan a path for playbooks and inventory.",
+          "Register playbooks manually with default limits, extra vars, and check mode.",
+        ],
+      },
+      {
+        id: "tabs",
+        title: "Smarter Tabs",
+        icon: Copy,
+        accent: "bg-violet-500/15 text-violet-300 border-violet-500/30",
+        items: [
+          "Duplicate a tab and keep its SSH connection — no need to reconnect by hand.",
+          "Reworked tab and header styling for crisp rendering in both light and dark modes.",
+        ],
+      },
+    ],
+  },
   {
     version: "2.2.0",
     date: "2026-06-16",
@@ -95,7 +149,8 @@ export const WHATS_NEW: WhatsNewVersion[] = [
   {
     version: "2.1.0",
     date: "2026-06-11",
-    tagline: "Run AI coding agents in tabs, and detach tabs into their own windows.",
+    tagline:
+      "Run AI coding agents in tabs, and detach tabs into their own windows.",
     sections: [
       {
         id: "agent-launch",

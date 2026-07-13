@@ -25,6 +25,8 @@ import {
   Check,
   Vault,
   Network,
+  Waypoints,
+  Plus,
   X,
   Download,
   Boxes,
@@ -44,8 +46,23 @@ type SSHFormData = {
   credentialId: string;
   tags: string[];
   jumpHostIds: string[];
+  forwards: SSHForwardEntry[];
   passwordRefProvider: "" | SecretProviderId;
   passwordRefRef: string;
+};
+
+type ForwardDraft = {
+  type: "local" | "remote" | "dynamic";
+  bindPort: string;
+  destHost: string;
+  destPort: string;
+};
+
+const EMPTY_FORWARD_DRAFT: ForwardDraft = {
+  type: "local",
+  bindPort: "",
+  destHost: "",
+  destPort: "",
 };
 
 const EMPTY_FORM: SSHFormData = {
@@ -60,6 +77,7 @@ const EMPTY_FORM: SSHFormData = {
   credentialId: "",
   tags: [],
   jumpHostIds: [],
+  forwards: [],
   passwordRefProvider: "",
   passwordRefRef: "",
 };
@@ -90,11 +108,20 @@ export default function SSHDialog({
     "idle" | "ok" | "error"
   >("idle");
   const [secretTestMessage, setSecretTestMessage] = useState("");
+  const [forwardDraft, setForwardDraft] =
+    useState<ForwardDraft>(EMPTY_FORWARD_DRAFT);
+  const [forwardError, setForwardError] = useState("");
 
   useEffect(() => {
     if (!open) return;
-    window.api.sshKeys.list().then(setKeys).catch(() => setKeys([]));
-    window.api.sshConfig.list().then(setConfigHosts).catch(() => setConfigHosts([]));
+    window.api.sshKeys
+      .list()
+      .then(setKeys)
+      .catch(() => setKeys([]));
+    window.api.sshConfig
+      .list()
+      .then(setConfigHosts)
+      .catch(() => setConfigHosts([]));
   }, [open]);
 
   useEffect(() => {
@@ -112,6 +139,7 @@ export default function SSHDialog({
           credentialId: editConnection.credentialId ?? "",
           tags: editConnection.tags ?? [],
           jumpHostIds: editConnection.jumpHostIds ?? [],
+          forwards: editConnection.forwards ?? [],
           passwordRefProvider: editConnection.passwordRef?.provider ?? "",
           passwordRefRef: editConnection.passwordRef?.ref ?? "",
         });
@@ -120,6 +148,8 @@ export default function SSHDialog({
       }
       setErrors({});
       setSecretTestState("idle");
+      setForwardDraft(EMPTY_FORWARD_DRAFT);
+      setForwardError("");
     }
   }, [open, editConnection]);
 
@@ -176,6 +206,7 @@ export default function SSHDialog({
         : undefined,
       tags: form.tags,
       jumpHostIds: form.jumpHostIds.length > 0 ? form.jumpHostIds : undefined,
+      forwards: form.forwards.length > 0 ? form.forwards : undefined,
     };
 
     if (isEdit) {
@@ -195,7 +226,8 @@ export default function SSHDialog({
     onOpenChange(false);
   };
 
-  const set = (field: keyof Omit<SSHFormData, "tags" | "jumpHostIds">) =>
+  const set =
+    (field: keyof Omit<SSHFormData, "tags" | "jumpHostIds" | "forwards">) =>
     (e: React.ChangeEvent<HTMLInputElement>) => {
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
       if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
@@ -224,6 +256,50 @@ export default function SSHDialog({
       ...prev,
       jumpHostIds: prev.jumpHostIds.filter((j) => j !== id),
     }));
+  };
+
+  const addForward = () => {
+    const bindPort = parseInt(forwardDraft.bindPort, 10);
+    if (isNaN(bindPort) || bindPort < 1 || bindPort > 65535) {
+      setForwardError("Bind port must be 1-65535");
+      return;
+    }
+    const forward: SSHForwardEntry = {
+      type: forwardDraft.type,
+      bindPort,
+    };
+    if (forwardDraft.type !== "dynamic") {
+      const destPort = parseInt(forwardDraft.destPort, 10);
+      if (!forwardDraft.destHost.trim()) {
+        setForwardError("Destination host is required");
+        return;
+      }
+      if (isNaN(destPort) || destPort < 1 || destPort > 65535) {
+        setForwardError("Destination port must be 1-65535");
+        return;
+      }
+      forward.destHost = forwardDraft.destHost.trim();
+      forward.destPort = destPort;
+    }
+    setForm((prev) => ({ ...prev, forwards: [...prev.forwards, forward] }));
+    setForwardDraft(EMPTY_FORWARD_DRAFT);
+    setForwardError("");
+  };
+
+  const removeForward = (index: number) => {
+    setForm((prev) => ({
+      ...prev,
+      forwards: prev.forwards.filter((_, i) => i !== index),
+    }));
+  };
+
+  const describeForward = (f: SSHForwardEntry): string => {
+    const bind = f.bindAddress
+      ? `${f.bindAddress}:${f.bindPort}`
+      : `${f.bindPort}`;
+    if (f.type === "dynamic") return `D ${bind} (SOCKS)`;
+    const arrow = f.type === "local" ? "→" : "←";
+    return `${f.type === "local" ? "L" : "R"} ${bind} ${arrow} ${f.destHost}:${f.destPort}`;
   };
 
   const importFromConfig = (alias: string) => {
@@ -455,6 +531,106 @@ export default function SSHDialog({
             )}
           </div>
 
+          {/* Port forwarding (tunnels) */}
+          <div className="grid gap-1.5">
+            <Label className="text-ink-muted text-sm flex items-center gap-1.5">
+              <Waypoints size={12} className="text-ink-subtle" />
+              Port Forwarding (Tunnels){" "}
+              <span className="text-ink-subtle font-normal">(optional)</span>
+            </Label>
+            {form.forwards.length > 0 && (
+              <div className="flex flex-col gap-1">
+                {form.forwards.map((f, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center gap-2 px-2.5 py-1.5 rounded-md bg-elevated/60 border border-hairline/50 text-xs"
+                  >
+                    <span className="flex-1 text-ink-muted font-mono truncate">
+                      {describeForward(f)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeForward(idx)}
+                      className="text-ink-subtle hover:text-danger"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <Select
+                value={forwardDraft.type}
+                onValueChange={(val) =>
+                  setForwardDraft((prev) => ({
+                    ...prev,
+                    type: val as ForwardDraft["type"],
+                  }))
+                }
+              >
+                <SelectTrigger className="bg-elevated/60 border-hairline text-ink w-28 shrink-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-panel border-hairline/50">
+                  <SelectItem value="local">Local (-L)</SelectItem>
+                  <SelectItem value="remote">Remote (-R)</SelectItem>
+                  <SelectItem value="dynamic">Dynamic (-D)</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                placeholder="Port"
+                value={forwardDraft.bindPort}
+                onChange={(e) =>
+                  setForwardDraft((prev) => ({
+                    ...prev,
+                    bindPort: e.target.value,
+                  }))
+                }
+                className="bg-elevated/60 border-hairline text-ink placeholder:text-ink-subtle w-20"
+              />
+              {forwardDraft.type !== "dynamic" && (
+                <>
+                  <Input
+                    placeholder="Dest host"
+                    value={forwardDraft.destHost}
+                    onChange={(e) =>
+                      setForwardDraft((prev) => ({
+                        ...prev,
+                        destHost: e.target.value,
+                      }))
+                    }
+                    className="bg-elevated/60 border-hairline text-ink placeholder:text-ink-subtle flex-1 min-w-0"
+                  />
+                  <Input
+                    placeholder="Dest port"
+                    value={forwardDraft.destPort}
+                    onChange={(e) =>
+                      setForwardDraft((prev) => ({
+                        ...prev,
+                        destPort: e.target.value,
+                      }))
+                    }
+                    className="bg-elevated/60 border-hairline text-ink placeholder:text-ink-subtle w-20"
+                  />
+                </>
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                onClick={addForward}
+                className="shrink-0 border-hairline text-ink-muted hover:text-accent-400"
+                aria-label="Add tunnel"
+              >
+                <Plus size={14} />
+              </Button>
+            </div>
+            {forwardError && (
+              <p className="text-danger text-xs">{forwardError}</p>
+            )}
+          </div>
+
           {/* Vault Credential Selector */}
           {vaultCredentials.length > 0 && (
             <div className="grid gap-1.5">
@@ -514,7 +690,9 @@ export default function SSHDialog({
                           ? `${tag.color}22`
                           : "transparent",
                         color: selected ? tag.color : "var(--ink-muted)",
-                        borderColor: selected ? `${tag.color}60` : "var(--hairline)",
+                        borderColor: selected
+                          ? `${tag.color}60`
+                          : "var(--hairline)",
                       }}
                     >
                       {selected && <Check size={10} />}
@@ -560,7 +738,9 @@ export default function SSHDialog({
                 <Label className="text-ink-muted text-sm flex items-center gap-1.5">
                   <Boxes size={12} className="text-ink-subtle" />
                   External Secret{" "}
-                  <span className="text-ink-subtle font-normal">(optional)</span>
+                  <span className="text-ink-subtle font-normal">
+                    (optional)
+                  </span>
                 </Label>
                 <div className="grid grid-cols-[120px_1fr] gap-2">
                   <Select
@@ -652,7 +832,10 @@ export default function SSHDialog({
                   )}
 
                   <div className="grid gap-1.5">
-                    <Label htmlFor="ssh-password" className="text-ink-muted text-sm">
+                    <Label
+                      htmlFor="ssh-password"
+                      className="text-ink-muted text-sm"
+                    >
                       Password{" "}
                       <span className="text-ink-subtle font-normal">
                         (optional)
@@ -679,8 +862,7 @@ export default function SSHDialog({
                         htmlFor="ssh-confirm-password"
                         className="text-ink-muted text-sm"
                       >
-                        Confirm Password{" "}
-                        <span className="text-danger">*</span>
+                        Confirm Password <span className="text-danger">*</span>
                       </Label>
                       <Input
                         id="ssh-confirm-password"

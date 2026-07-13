@@ -4,10 +4,6 @@ import { TabBadge } from "./tab-badge";
 import { TabEditInput } from "./tab-edit-input";
 import { CustomTag } from "../../types/tabs";
 import { useAppContext } from "../../contexts/app-context";
-import {
-  shouldShowWorkspaceIdentity,
-  workspaceForConnection,
-} from "../../lib/workspace-helpers";
 
 function WorkspaceDot({ connId }: { connId?: string }) {
   const { workspaces, activeWorkspaceId } = useAppContext();
@@ -30,21 +26,6 @@ function WorkspaceDot({ connId }: { connId?: string }) {
       title={tooltip}
     />
   );
-}
-
-function useTabAccent(connId?: string): {
-  borderColor: string | undefined;
-  tintBg: string | undefined;
-} {
-  const { workspaces, activeWorkspaceId, workspaceIdentity } = useAppContext();
-  const ws = workspaceForConnection(workspaces, activeWorkspaceId, connId);
-  if (!shouldShowWorkspaceIdentity(workspaceIdentity, ws) || !ws) {
-    return { borderColor: undefined, tintBg: undefined };
-  }
-  return {
-    borderColor: ws.color,
-    tintBg: workspaceIdentity === "strong" ? `${ws.color}14` : undefined,
-  };
 }
 
 interface TabItemProps {

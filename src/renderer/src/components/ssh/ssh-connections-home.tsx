@@ -6,6 +6,7 @@ import {
   Trash2,
   Terminal,
   KeyRound,
+  Waypoints,
   ChevronDown,
   ChevronRight,
   FileDown,
@@ -425,6 +426,18 @@ function SSHConnectionCard({
               className="text-accent-400/60 flex-shrink-0"
               aria-label="Password saved"
             />
+          )}
+          {conn.forwards && conn.forwards.length > 0 && (
+            <span
+              className="flex items-center gap-0.5 text-accent-400/60 flex-shrink-0"
+              aria-label={`${conn.forwards.length} tunnel(s) configured`}
+              title={`${conn.forwards.length} tunnel(s) configured`}
+            >
+              <Waypoints size={10} />
+              <span className="text-[10px] font-medium">
+                {conn.forwards.length}
+              </span>
+            </span>
           )}
         </div>
         <p className="text-xs text-ink-subtle font-mono truncate mt-0.5">

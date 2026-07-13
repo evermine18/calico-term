@@ -32,6 +32,14 @@ type SSHSecretRefEntry = {
   ref: string;
 };
 
+type SSHForwardEntry = {
+  type: "local" | "remote" | "dynamic";
+  bindAddress?: string;
+  bindPort: number;
+  destHost?: string;
+  destPort?: number;
+};
+
 type SSHConnectionEntry = {
   id: string;
   name: string;
@@ -45,6 +53,7 @@ type SSHConnectionEntry = {
   credentialId?: string;
   passwordRef?: SSHSecretRefEntry;
   tags?: string[];
+  forwards?: SSHForwardEntry[];
 };
 
 type AnsibleSourceEntry = {
